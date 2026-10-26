@@ -332,7 +332,7 @@
         loadData();
       };
 
-      // FIRMA DINÁMICA SEGÚN SELECTOR
+      // FIRMA DINÁMICA CON ACTUALIZACIÓN DIRECTA DE ESTADO
       document.getElementById('btn-execute-sign').onclick = async () => {
         const pin = document.getElementById('signPin').value;
         const reason = document.getElementById('signReason').value;
@@ -346,6 +346,7 @@
         const { data: userGxp } = await supabase.from('usuarios_gxp').select('id').eq('username', 'jaguilar').single();
 
         if (userGxp && selectedDocId) {
+          // 1. Registrar firma en BD
           await supabase.from('firmas_electronicas').insert([{
             tabla_referencia: 'documentos',
             registro_id: selectedDocId,
@@ -353,6 +354,15 @@
             significado_firma: meaning,
             motivo_justificacion: reason || 'Aprobación formal'
           }]);
+
+          // 2. Determinar nuevo estado
+          let nuevoEstado = 'Borrador';
+          if (meaning === 'ELABORO') nuevoEstado = 'En Revisión';
+          else if (meaning === 'REVISO') nuevoEstado = 'En Aprobación';
+          else if (meaning === 'APROBO') nuevoEstado = 'Vigente';
+
+          // 3. Forzar actualización en BD
+          await supabase.from('documentos').update({ estado: nuevoEstado }).eq('id', selectedDocId);
 
           toggleModal('modalSign', false);
           loadData();
