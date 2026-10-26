@@ -164,8 +164,19 @@
     <div class="bg-white rounded-xl max-w-md w-full p-5 border shadow-2xl space-y-3">
       <h3 class="font-bold text-sm">✍️ Firma Electrónica 21 CFR Part 11</h3>
       <p class="text-xs text-slate-500">Firmando registro: <strong id="signTargetCode" class="text-cyan-700"></strong></p>
+      
+      <div>
+        <label class="block text-[11px] font-semibold text-slate-700 mb-1">Significado de la Firma:</label>
+        <select id="signMeaning" class="w-full p-2 border rounded text-xs bg-slate-50 font-semibold">
+          <option value="ELABORO">1. Elaboró (Pasa a En Revisión)</option>
+          <option value="REVISO">2. Revisó (Pasa a En Aprobación)</option>
+          <option value="APROBO">3. Aprobó (Pasa a Vigente)</option>
+        </select>
+      </div>
+
       <input type="text" id="signReason" placeholder="Motivo de la firma" class="w-full p-2 border rounded text-xs" />
       <input type="password" id="signPin" placeholder="PIN de firma (1234)" class="w-full p-2 border rounded text-xs font-mono" />
+      
       <div class="flex justify-end space-x-2 pt-2">
         <button id="btn-close-modal-sign" class="px-3 py-1 border rounded text-xs">Cancelar</button>
         <button id="btn-execute-sign" class="px-3 py-1 bg-cyan-600 text-white rounded text-xs font-bold">Estampar Firma</button>
@@ -278,7 +289,7 @@
         // Render Firmas
         document.getElementById('list-frms').innerHTML = (frms || []).map(f => `
           <div class="p-3 bg-slate-50 rounded border">
-            <strong class="text-cyan-700">${f.significado_firma}</strong> -${f.motivo_justificacion}
+            <strong class="text-cyan-700">${f.significado_firma}</strong> - ${f.motivo_justificacion}
           </div>
         `).join('');
 
@@ -321,9 +332,11 @@
         loadData();
       };
 
+      // FIRMA DINÁMICA SEGÚN SELECTOR
       document.getElementById('btn-execute-sign').onclick = async () => {
         const pin = document.getElementById('signPin').value;
         const reason = document.getElementById('signReason').value;
+        const meaning = document.getElementById('signMeaning').value;
 
         if (pin !== '1234') {
           alert('PIN de firma incorrecto (Prueba: 1234)');
@@ -337,11 +350,10 @@
             tabla_referencia: 'documentos',
             registro_id: selectedDocId,
             usuario_id: userGxp.id,
-            significado_firma: 'APROBO',
+            significado_firma: meaning,
             motivo_justificacion: reason || 'Aprobación formal'
           }]);
 
-          await supabase.from('documentos').update({ estado: 'Vigente' }).eq('id', selectedDocId);
           toggleModal('modalSign', false);
           loadData();
         }
