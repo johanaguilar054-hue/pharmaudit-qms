@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PharmAudit ERP / QMS</title>
+  <!-- React & ReactDOM CDN -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <!-- Babel compiler -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState } = React;
+
+    function PharmAuditApp() {
+      const [activeTab, setActiveTab] = useState('dashboard');
+      const [selectedDoc, setSelectedDoc] = useState(null);
+      const [selectedNC, setSelectedNC] = useState(null);
+      const [selectedEquipo, setSelectedEquipo] = useState(null);
+      const [searchTerm, setSearchTerm] = useState('');
+
+      const kpis = { docsVigentes: 142, desviacionesAbiertas: 3, capasPendientes: 5, cambiosEnRevision: 2, calibracionesCriticas: 1 };
+
+      const documentos = [
+        { id: 'SOP-CAL-001', titulo: 'Procedimiento de Manejo de Desviaciones', tipo: 'SOP', version: '3.0', estado: 'Vigente', vigencia: '2027-05-15', revisor: 'A. Martínez (QA)' },
+        { id: 'SOP-PRO-012', titulo: 'Limpieza e Higienización de Áreas Limpias Class C', tipo: 'SOP', version: '2.1', estado: 'Vigente', vigencia: '2026-11-30', revisor: 'C. López (Prod)' },
+        { id: 'PROT-VAL-088', titulo: 'Protocolo de Calificación de Desempeño (PQ) Autoclave', tipo: 'Protocolo', version: '1.0', estado: 'En Revisión', vigencia: '2026-12-01', revisor: 'J. Aguilar (Val)' },
+        { id: 'MAN-CAL-003', titulo: 'Manual del Sistema de Gestión de Calidad GAMP 5', tipo: 'Manual', version: '5.0', estado: 'Vigente', vigencia: '2028-01-10', revisor: 'M. Gomez (Director)' }
+      ];
+
+      const desviaciones = [
+        { 
+          id: 'DEV-2026-014', fecha: '2026-10-20', area: 'Planta de Producción - Reactores', clasificacion: 'Mayor', 
+          descripcion: 'Excursión de temperatura fuera de especificación (28°C vs máx 25°C) durante granulación batch 4092.',
+          estado: 'Análisis Causa Raíz',
+          ishikawa: { manoObra: 'Falta de re-capacitación nocturna', maquinaria: 'Falla en válvula de agua helada HV-102', metodo: 'SOP sin tolerancia temporal', material: 'Materia prima dentro de CoA', medioAmbiente: 'Humedad elevada' },
+          porques: [
+            '1. ¿Por qué varió la temperatura? Válvula HV-102 se bloqueó al 40%.',
+            '2. ¿Por qué se bloqueó? Acumulación de sedimento en el actuador.',
+            '3. ¿Por qué había sedimento? Mantenimiento preventivo retrasado 12 días.',
+            '4. ¿Por qué se retrasó el mantenimiento? Falta de repuesto crítico en stock.',
+            '5. Causa Raíz: Deficiencia en la reordenación automática de repuestos GxP mínimos.'
+          ]
+        },
+        { id: 'DEV-2026-015', fecha: '2026-10-24', area: 'Laboratorio de Control de Calidad', clasificacion: 'Menor', descripcion: 'Derramamiento menor de fase móvil HPLC en mesón.', estado: 'Investigación', ishikawa: {}, porques: [] }
+      ];
+
+      const capas = [
+        { id: 'CAPA-2026-008', devId: 'DEV-2026-014', plan: 'Implementar stock mínimo automatizado de Válvulas HV-102 en ERP', responsable: 'Ing. Mantenimiento', fechaLimite: '2026-11-15', estado: 'En Ejecución', eficacia: 'Pendiente Evaluación' },
+        { id: 'CAPA-2026-005', devId: 'DEV-2026-009', plan: 'Actualización de SOP-PRO-012 e inducción a 14 operarios', responsable: 'Coordinador QA', fechaLimite: '2026-10-10', estado: 'Completado', eficacia: 'Eficaz (Verificado)' }
+      ];
+
+      const cambios = [
+        { id: 'CC-2026-003', titulo: 'Implementación de Módulo Digital de Firmas 21 CFR Part 11', tipo: 'Sistemas Computarizados', impacto: 'Alto (Calidad / GAMP 5)', solicitante: 'J. Aguilar', estado: 'Aprobación Comité QA' },
+        { id: 'CC-2026-004', titulo: 'Cambio de proveedor de Filtros HEPA Grado A', tipo: 'Insumos / Instalaciones', impacto: 'Medio (Validación)', solicitante: 'L. Torres', estado: 'En Evaluación' }
+      ];
+
+      const equipos = [
+        { id: 'EQ-AUT-01', nombre: 'Autoclave de Esterilización Principal', tipo: 'Crítico GxP', marca: 'Getinge', proximaCalibracion: '2026-11-05', estado: 'Calibrado', certificado: 'CERT-2026-889' },
+        { id: 'EQ-BAL-04', nombre: 'Balanza Analítica Cuatro Decimales', tipo: 'Crítico GxP', marca: 'Mettler Toledo', proximaCalibracion: '2026-10-28', estado: 'Próximo a Vencer', certificado: 'CERT-2026-102' },
+        { id: 'EQ-TERM-09', nombre: 'Termohigrómetro Área Limpia B', tipo: 'Monitoreo', marca: 'Vaisala', proximaCalibracion: '2026-09-30', estado: 'Vencido', certificado: 'CERT-2025-441' }
+      ];
+
+      return (
+        <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col">
+          <header className="bg-slate-900 text-white shadow-lg sticky top-0 z-50 border-b border-cyan-500">
+            <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-lg">
+                  <span className="font-bold text-lg">🛡️</span>
+                </div>
+                <div>
+                  <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-200">PharmAudit</span>
+                  <span className="text-xs text-cyan-400 block font-mono">QMS / GxP ERP Compliance</span>
+                </div>
+              </div>
+              <div className="text-xs font-mono text-emerald-400 bg-emerald-950/80 px-3 py-1 rounded-full border border-emerald-500/30">
+                ✓ 21 CFR Part 11 / GAMP 5 Ready
+              </div>
+            </div>
+          </header>
+
+          <nav className="bg-slate-800 text-slate-300 border-b border-slate-700">
+            <div className="max-w-7xl mx-auto px-4 flex space-x-2 py-2 overflow-x-auto text-xs sm:text-sm font-medium">
+              {[
+                { id: 'dashboard', label: '📊 Dashboard' },
+                { id: 'documentos', label: '📑 Gestión Documental' },
+                { id: 'desviaciones', label: '⚠️ Desviaciones & NC' },
+                { id: 'capa', label: '☑️ Módulo CAPA' },
+                { id: 'cambios', label: '🔄 Control Cambios' },
+                { id: 'metrologia', label: '🛠️ Calibración' }
+              ].map(t => (
+                <button 
+                  key={t.id} 
+                  onClick={() => setActiveTab(t.id)}
+                  className={`px-3 py-2 rounded-md transition ${activeTab === t.id ? 'bg-cyan-600 text-white font-bold' : 'hover:bg-slate-700'}`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          </nav>
+
+          <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-6">
+            {activeTab === 'dashboard' && (
+              <div className="space-y-6">
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex justify-between items-center">
+                  <div>
+                    <h1 className="text-xl font-bold text-slate-900">Estado del Sistema de Gestión de Calidad</h1>
+                    <p className="text-xs text-slate-500">Indicadores de cumplimiento normativo GMP</p>
+                  </div>
+                  <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">Auditoría Interna: Conforme</span>
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                  <div className="bg-white p-4 rounded-xl border border-slate-200 border-l-4 border-l-blue-500">
+                    <div className="text-slate-500 text-xs font-medium">Documentos</div>
+                    <div className="text-2xl font-bold text-slate-800 mt-1">{kpis.docsVigentes}</div>
+                    <div className="text-[10px] text-emerald-600 mt-1">100% al día</div>
+                  </div>
+                  <div className="bg-white p-4 rounded-xl border border-slate-200 border-l-4 border-l-amber-500">
+                    <div className="text-slate-500 text-xs font-medium">Desviaciones</div>
+                    <div className="text-2xl font-bold text-amber-600 mt-1">{kpis.desviacionesAbiertas}</div>
+                    <div className="text-[10px] text-amber-600 mt-1">2 en investigación</div>
+                  </div>
+                  <div className="bg-white p-4 rounded-xl border border-slate-200 border-l-4 border-l-purple-500">
+                    <div className="text-slate-500 text-xs font-medium">CAPAs</div>
+                    <div className="text-2xl font-bold text-purple-600 mt-1">{kpis.capasPendientes}</div>
+                    <div className="text-[10px] text-slate-500 mt-1">1 próx. a vencer</div>
+                  </div>
+                  <div className="bg-white p-4 rounded-xl border border-slate-200 border-l-4 border-l-cyan-500">
+                    <div className="text-slate-500 text-xs font-medium">Cambios</div>
+                    <div className="text-2xl font-bold text-cyan-600 mt-1">{kpis.cambiosEnRevision}</div>
+                    <div className="text-[10px] text-slate-500 mt-1">En Comité QA</div>
+                  </div>
+                  <div className="bg-white p-4 rounded-xl border border-slate-200 border-l-4 border-l-rose-500">
+                    <div className="text-slate-500 text-xs font-medium">Calibraciones</div>
+                    <div className="text-2xl font-bold text-rose-600 mt-1">{kpis.calibracionesCriticas}</div>
+                    <div className="text-[10px] text-rose-600 font-semibold mt-1">1 Vencido</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'documentos' && (
+              <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+                <h2 className="font-bold text-slate-800 text-sm mb-3">Documentos Controlados (SOPs / Protocolos)</h2>
+                <div className="divide-y divide-slate-100">
+                  {documentos.map(doc => (
+                    <div key={doc.id} className="py-3 flex justify-between items-center text-xs">
+                      <div>
+                        <span className="font-mono font-bold text-cyan-700 mr-2">{doc.id}</span>
+                        <span className="font-semibold text-slate-800">{doc.titulo}</span>
+                        <span className="block text-[10px] text-slate-400 mt-0.5">Versión {doc.version} • Revisor: {doc.revisor}</span>
+                      </div>
+                      <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-semibold text-[10px]">{doc.estado}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'desviaciones' && (
