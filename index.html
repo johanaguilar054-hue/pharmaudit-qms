@@ -4,166 +4,351 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PharmAudit ERP / QMS</title>
-  <!-- React & ReactDOM CDN -->
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-  <!-- Babel compiler -->
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body { margin: 0; padding: 0; background-color: #f8fafc; font-family: ui-sans-serif, system-ui, sans-serif; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .modal-backdrop { display: none; }
+    .modal-backdrop.active { display: flex; }
+  </style>
 </head>
-<body class="bg-slate-50 text-slate-800 font-sans antialiased">
-  <div id="root"></div>
+<body class="bg-slate-50 text-slate-800 p-4">
 
-  <script type="text/babel">
-    const { useState } = React;
+  <!-- ENCABEZADO -->
+  <header class="bg-slate-900 text-white p-4 rounded-xl shadow-lg border-b-2 border-cyan-500 mb-4 flex justify-between items-center">
+    <div>
+      <span class="text-xl font-bold text-cyan-400">🛡️ PharmAudit</span>
+      <span class="text-xs text-slate-400 block font-mono">QMS / GxP ERP Compliance · Vercel Active</span>
+    </div>
+    <div class="flex items-center space-x-2">
+      <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+      <span class="text-xs font-mono text-emerald-400 bg-emerald-950 px-3 py-1 rounded-full border border-emerald-500/30">
+        User: J. Aguilar (QA Lead)
+      </span>
+    </div>
+  </header>
 
-    function PharmAuditApp() {
-      const [activeTab, setActiveTab] = useState('dashboard');
-      const [selectedDoc, setSelectedDoc] = useState(null);
-      const [selectedNC, setSelectedNC] = useState(null);
-      const [selectedEquipo, setSelectedEquipo] = useState(null);
-      const [searchTerm, setSearchTerm] = useState('');
+  <!-- NAVEGACIÓN -->
+  <nav class="bg-slate-800 text-slate-300 rounded-xl p-1 mb-4 flex space-x-1 overflow-x-auto text-xs font-medium">
+    <button data-tab="dashboard" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap bg-cyan-600 text-white font-bold">📊 Dashboard</button>
+    <button data-tab="documentos" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700">📑 Gestión Documental</button>
+    <button data-tab="desviaciones" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700">⚠️ Desviaciones & NC</button>
+    <button data-tab="capa" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700">☑️ Módulo CAPA</button>
+    <button data-tab="metrologia" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700">🛠️ Equipos & Calibración</button>
+    <button data-tab="firmas" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700">✍️ Firmas Part 11</button>
+    <button data-tab="audit" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700">📜 Audit Trail (ALCOA+)</button>
+  </nav>
 
-      const kpis = { docsVigentes: 142, desviacionesAbiertas: 3, capasPendientes: 5, cambiosEnRevision: 2, calibracionesCriticas: 1 };
+  <!-- CONTENIDOS -->
+  <main>
+    <!-- DASHBOARD -->
+    <div id="view-dashboard" class="tab-content active space-y-4">
+      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex justify-between items-center">
+        <div>
+          <h1 class="text-base font-bold text-slate-900">Estado del Sistema de Gestión de Calidad (En Vivo)</h1>
+          <p class="text-xs text-slate-500">Integridad de datos ALCOA+ y Supabase PostgreSQL Activo</p>
+        </div>
+        <span class="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">21 CFR Part 11 / EU Annex 11</span>
+      </div>
 
-      const documentos = [
-        { id: 'SOP-CAL-001', titulo: 'Procedimiento de Manejo de Desviaciones', tipo: 'SOP', version: '3.0', estado: 'Vigente', vigencia: '2027-05-15', revisor: 'A. Martínez (QA)' },
-        { id: 'SOP-PRO-012', titulo: 'Limpieza e Higienización de Áreas Limpias Class C', tipo: 'SOP', version: '2.1', estado: 'Vigente', vigencia: '2026-11-30', revisor: 'C. López (Prod)' },
-        { id: 'PROT-VAL-088', titulo: 'Protocolo de Calificación de Desempeño (PQ) Autoclave', tipo: 'Protocolo', version: '1.0', estado: 'En Revisión', vigencia: '2026-12-01', revisor: 'J. Aguilar (Val)' },
-        { id: 'MAN-CAL-003', titulo: 'Manual del Sistema de Gestión de Calidad GAMP 5', tipo: 'Manual', version: '5.0', estado: 'Vigente', vigencia: '2028-01-10', revisor: 'M. Gomez (Director)' }
-      ];
+      <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <div class="bg-white p-3 rounded-xl border-l-4 border-l-blue-500 shadow-sm">
+          <div class="text-slate-500 text-[11px]">Documentos</div>
+          <div id="cnt-docs" class="text-xl font-bold text-slate-800 mt-1">0</div>
+        </div>
+        <div class="bg-white p-3 rounded-xl border-l-4 border-l-amber-500 shadow-sm">
+          <div class="text-slate-500 text-[11px]">Desviaciones / NC</div>
+          <div id="cnt-desvs" class="text-xl font-bold text-amber-600 mt-1">0</div>
+        </div>
+        <div class="bg-white p-3 rounded-xl border-l-4 border-l-purple-500 shadow-sm">
+          <div class="text-slate-500 text-[11px]">CAPAs</div>
+          <div id="cnt-capas" class="text-xl font-bold text-purple-600 mt-1">0</div>
+        </div>
+        <div class="bg-white p-3 rounded-xl border-l-4 border-l-emerald-500 shadow-sm">
+          <div class="text-slate-500 text-[11px]">Equipos GxP</div>
+          <div id="cnt-eqps" class="text-xl font-bold text-emerald-600 mt-1">0</div>
+        </div>
+        <div class="bg-white p-3 rounded-xl border-l-4 border-l-rose-500 shadow-sm">
+          <div class="text-slate-500 text-[11px]">Audit Trail Log</div>
+          <div id="cnt-audit" class="text-xl font-bold text-rose-600 mt-1">0</div>
+        </div>
+      </div>
+    </div>
 
-      const desviaciones = [
-        { 
-          id: 'DEV-2026-014', fecha: '2026-10-20', area: 'Planta de Producción - Reactores', clasificacion: 'Mayor', 
-          descripcion: 'Excursión de temperatura fuera de especificación (28°C vs máx 25°C) durante granulación batch 4092.',
-          estado: 'Análisis Causa Raíz',
-          ishikawa: { manoObra: 'Falta de re-capacitación nocturna', maquinaria: 'Falla en válvula de agua helada HV-102', metodo: 'SOP sin tolerancia temporal', material: 'Materia prima dentro de CoA', medioAmbiente: 'Humedad elevada' },
-          porques: [
-            '1. ¿Por qué varió la temperatura? Válvula HV-102 se bloqueó al 40%.',
-            '2. ¿Por qué se bloqueó? Acumulación de sedimento en el actuador.',
-            '3. ¿Por qué había sedimento? Mantenimiento preventivo retrasado 12 días.',
-            '4. ¿Por qué se retrasó el mantenimiento? Falta de repuesto crítico en stock.',
-            '5. Causa Raíz: Deficiencia en la reordenación automática de repuestos GxP mínimos.'
-          ]
-        },
-        { id: 'DEV-2026-015', fecha: '2026-10-24', area: 'Laboratorio de Control de Calidad', clasificacion: 'Menor', descripcion: 'Derramamiento menor de fase móvil HPLC en mesón.', estado: 'Investigación', ishikawa: {}, porques: [] }
-      ];
+    <!-- DOCUMENTOS -->
+    <div id="view-documentos" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+      <div class="flex justify-between items-center mb-3">
+        <h2 class="font-bold text-slate-800 text-sm">Documentos Controlados</h2>
+        <button id="btn-open-modal-doc" class="bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow">+ Nuevo Documento</button>
+      </div>
+      <div id="list-docs" class="divide-y divide-slate-100 text-xs">Cargando...</div>
+    </div>
 
-      const capas = [
-        { id: 'CAPA-2026-008', devId: 'DEV-2026-014', plan: 'Implementar stock mínimo automatizado de Válvulas HV-102 en ERP', responsable: 'Ing. Mantenimiento', fechaLimite: '2026-11-15', estado: 'En Ejecución', eficacia: 'Pendiente Evaluación' },
-        { id: 'CAPA-2026-005', devId: 'DEV-2026-009', plan: 'Actualización de SOP-PRO-012 e inducción a 14 operarios', responsable: 'Coordinador QA', fechaLimite: '2026-10-10', estado: 'Completado', eficacia: 'Eficaz (Verificado)' }
-      ];
+    <!-- DESVIACIONES -->
+    <div id="view-desviaciones" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-3">
+      <div class="flex justify-between items-center">
+        <h2 class="font-bold text-slate-800 text-sm">Desviaciones & NC</h2>
+        <button id="btn-open-modal-dev" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow">+ Reportar Desviación / NC</button>
+      </div>
+      <div id="list-desvs" class="space-y-2 text-xs">Cargando...</div>
+    </div>
 
-      const cambios = [
-        { id: 'CC-2026-003', titulo: 'Implementación de Módulo Digital de Firmas 21 CFR Part 11', tipo: 'Sistemas Computarizados', impacto: 'Alto (Calidad / GAMP 5)', solicitante: 'J. Aguilar', estado: 'Aprobación Comité QA' },
-        { id: 'CC-2026-004', titulo: 'Cambio de proveedor de Filtros HEPA Grado A', tipo: 'Insumos / Instalaciones', impacto: 'Medio (Validación)', solicitante: 'L. Torres', estado: 'En Evaluación' }
-      ];
+    <!-- CAPA -->
+    <div id="view-capa" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+      <h2 class="font-bold text-slate-800 text-sm mb-3">Planes CAPA Integrados</h2>
+      <div id="list-capas" class="space-y-2 text-xs">Cargando...</div>
+    </div>
 
-      const equipos = [
-        { id: 'EQ-AUT-01', nombre: 'Autoclave de Esterilización Principal', tipo: 'Crítico GxP', marca: 'Getinge', proximaCalibracion: '2026-11-05', estado: 'Calibrado', certificado: 'CERT-2026-889' },
-        { id: 'EQ-BAL-04', nombre: 'Balanza Analítica Cuatro Decimales', tipo: 'Crítico GxP', marca: 'Mettler Toledo', proximaCalibracion: '2026-10-28', estado: 'Próximo a Vencer', certificado: 'CERT-2026-102' },
-        { id: 'EQ-TERM-09', nombre: 'Termohigrómetro Área Limpia B', tipo: 'Monitoreo', marca: 'Vaisala', proximaCalibracion: '2026-09-30', estado: 'Vencido', certificado: 'CERT-2025-441' }
-      ];
+    <!-- METROLOGIA -->
+    <div id="view-metrologia" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+      <div class="flex justify-between items-center mb-3">
+        <h2 class="font-bold text-slate-800 text-sm">Equipos & Metrología GxP</h2>
+        <button id="btn-open-modal-eqp" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow">+ Nuevo Equipo</button>
+      </div>
+      <div id="list-eqps" class="grid grid-cols-1 md:grid-cols-3 gap-2.5 text-xs">Cargando...</div>
+    </div>
 
-      return (
-        <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col">
-          <header className="bg-slate-900 text-white shadow-lg sticky top-0 z-50 border-b border-cyan-500">
-            <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-lg">
-                  <span className="font-bold text-lg">🛡️</span>
-                </div>
-                <div>
-                  <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-200">PharmAudit</span>
-                  <span className="text-xs text-cyan-400 block font-mono">QMS / GxP ERP Compliance</span>
-                </div>
-              </div>
-              <div className="text-xs font-mono text-emerald-400 bg-emerald-950/80 px-3 py-1 rounded-full border border-emerald-500/30">
-                ✓ 21 CFR Part 11 / GAMP 5 Ready
-              </div>
+    <!-- FIRMAS -->
+    <div id="view-firmas" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+      <h2 class="font-bold text-slate-800 text-sm mb-3">Registro de Firmas Electrónicas (21 CFR Part 11)</h2>
+      <div id="list-frms" class="space-y-2 text-xs">Cargando...</div>
+    </div>
+
+    <!-- AUDIT -->
+    <div id="view-audit" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+      <h2 class="font-bold text-slate-800 text-sm mb-3">Audit Trail Inalterable (ALCOA+)</h2>
+      <div id="list-auds" class="space-y-2 max-h-96 overflow-y-auto font-mono text-[11px]">Cargando...</div>
+    </div>
+  </main>
+
+  <!-- MODALES Y LÓGICA -->
+  <div id="modalDoc" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl max-w-md w-full p-5 border shadow-2xl space-y-3">
+      <h3 class="font-bold text-sm">📑 Registrar Nuevo Documento</h3>
+      <input type="text" id="docCode" placeholder="Código (ej. SOP-QA-005)" class="w-full p-2 border rounded text-xs font-mono" />
+      <input type="text" id="docTitle" placeholder="Título del documento" class="w-full p-2 border rounded text-xs" />
+      <div class="flex justify-end space-x-2 pt-2">
+        <button id="btn-close-modal-doc" class="px-3 py-1 border rounded text-xs">Cancelar</button>
+        <button id="btn-save-doc" class="px-3 py-1 bg-cyan-600 text-white rounded text-xs font-bold">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modalDev" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl max-w-md w-full p-5 border shadow-2xl space-y-3">
+      <h3 class="font-bold text-sm">⚠️ Reportar Desviación / NC</h3>
+      <input type="text" id="devCode" placeholder="Código (ej. DEV-2026-015)" class="w-full p-2 border rounded text-xs font-mono" />
+      <textarea id="devDesc" placeholder="Descripción de la desviación..." class="w-full p-2 border rounded text-xs" rows="3"></textarea>
+      <div class="flex justify-end space-x-2 pt-2">
+        <button id="btn-close-modal-dev" class="px-3 py-1 border rounded text-xs">Cancelar</button>
+        <button id="btn-save-dev" class="px-3 py-1 bg-amber-600 text-white rounded text-xs font-bold">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modalEqp" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl max-w-md w-full p-5 border shadow-2xl space-y-3">
+      <h3 class="font-bold text-sm">🛠️ Registrar Equipo GxP</h3>
+      <input type="text" id="eqpCode" placeholder="Código (ej. EQ-BAL-05)" class="w-full p-2 border rounded text-xs font-mono" />
+      <input type="text" id="eqpName" placeholder="Nombre del equipo" class="w-full p-2 border rounded text-xs" />
+      <div class="flex justify-end space-x-2 pt-2">
+        <button id="btn-close-modal-eqp" class="px-3 py-1 border rounded text-xs">Cancelar</button>
+        <button id="btn-save-eqp" class="px-3 py-1 bg-emerald-600 text-white rounded text-xs font-bold">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modalSign" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl max-w-md w-full p-5 border shadow-2xl space-y-3">
+      <h3 class="font-bold text-sm">✍️ Firma Electrónica 21 CFR Part 11</h3>
+      <p class="text-xs text-slate-500">Firmando registro: <strong id="signTargetCode" class="text-cyan-700"></strong></p>
+      <input type="text" id="signReason" placeholder="Motivo de la firma" class="w-full p-2 border rounded text-xs" />
+      <input type="password" id="signPin" placeholder="PIN de firma (1234)" class="w-full p-2 border rounded text-xs font-mono" />
+      <div class="flex justify-end space-x-2 pt-2">
+        <button id="btn-close-modal-sign" class="px-3 py-1 border rounded text-xs">Cancelar</button>
+        <button id="btn-execute-sign" class="px-3 py-1 bg-cyan-600 text-white rounded text-xs font-bold">Estampar Firma</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const SUPABASE_URL = 'https://wmtvlxjzzwwhtybccrpe.supabase.co';
+      const SUPABASE_KEY = 'sb_publishable_i4A7rEjukekMlaCKjXWaNA_ze54EVjl';
+      const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+      let selectedDocId = null;
+
+      // NAVEGACIÓN
+      const navButtons = document.querySelectorAll('.nav-btn');
+      navButtons.forEach(btn => {
+        btn.onclick = function() {
+          const tabName = this.getAttribute('data-tab');
+          document.querySelectorAll('.tab-content').forEach(v => v.classList.remove('active'));
+          navButtons.forEach(b => {
+            b.classList.remove('bg-cyan-600', 'text-white', 'font-bold');
+            b.classList.add('hover:bg-slate-700');
+          });
+          document.getElementById('view-' + tabName).classList.add('active');
+          this.classList.add('bg-cyan-600', 'text-white', 'font-bold');
+          this.classList.remove('hover:bg-slate-700');
+        };
+      });
+
+      function toggleModal(id, show) {
+        const m = document.getElementById(id);
+        if (show) m.classList.add('active'); else m.classList.remove('active');
+      }
+
+      document.getElementById('btn-open-modal-doc').onclick = () => toggleModal('modalDoc', true);
+      document.getElementById('btn-close-modal-doc').onclick = () => toggleModal('modalDoc', false);
+
+      document.getElementById('btn-open-modal-dev').onclick = () => toggleModal('modalDev', true);
+      document.getElementById('btn-close-modal-dev').onclick = () => toggleModal('modalDev', false);
+
+      document.getElementById('btn-open-modal-eqp').onclick = () => toggleModal('modalEqp', true);
+      document.getElementById('btn-close-modal-eqp').onclick = () => toggleModal('modalEqp', false);
+
+      document.getElementById('btn-close-modal-sign').onclick = () => toggleModal('modalSign', false);
+
+      // CARGA DE DATOS DESDE SUPABASE
+      async function loadData() {
+        const { data: docs } = await supabase.from('documentos').select('*');
+        const { data: desvs } = await supabase.from('desviaciones').select('*');
+        const { data: cps } = await supabase.from('capas').select('*');
+        const { data: eqps } = await supabase.from('equipos').select('*');
+        const { data: audit } = await supabase.from('audit_trail').select('*').order('timestamp', { ascending: false });
+        const { data: frms } = await supabase.from('firmas_electronicas').select('*').order('timestamp_firma', { ascending: false });
+
+        document.getElementById('cnt-docs').innerText = docs ? docs.length : 0;
+        document.getElementById('cnt-desvs').innerText = desvs ? desvs.length : 0;
+        document.getElementById('cnt-capas').innerText = cps ? cps.length : 0;
+        document.getElementById('cnt-eqps').innerText = eqps ? eqps.length : 0;
+        document.getElementById('cnt-audit').innerText = audit ? audit.length : 0;
+
+        // Render Documentos
+        document.getElementById('list-docs').innerHTML = (docs || []).map(d => `
+          <div class="py-2.5 flex justify-between items-center">
+            <div>
+              <span class="font-mono font-bold text-cyan-700 mr-2">${d.codigo}</span>
+              <span class="font-semibold text-slate-800">${d.titulo}</span>
+              <span class="block text-[10px] text-slate-400">v${d.version}</span>
             </div>
-          </header>
-
-          <nav className="bg-slate-800 text-slate-300 border-b border-slate-700">
-            <div className="max-w-7xl mx-auto px-4 flex space-x-2 py-2 overflow-x-auto text-xs sm:text-sm font-medium">
-              {[
-                { id: 'dashboard', label: '📊 Dashboard' },
-                { id: 'documentos', label: '📑 Gestión Documental' },
-                { id: 'desviaciones', label: '⚠️ Desviaciones & NC' },
-                { id: 'capa', label: '☑️ Módulo CAPA' },
-                { id: 'cambios', label: '🔄 Control Cambios' },
-                { id: 'metrologia', label: '🛠️ Calibración' }
-              ].map(t => (
-                <button 
-                  key={t.id} 
-                  onClick={() => setActiveTab(t.id)}
-                  className={`px-3 py-2 rounded-md transition ${activeTab === t.id ? 'bg-cyan-600 text-white font-bold' : 'hover:bg-slate-700'}`}
-                >
-                  {t.label}
-                </button>
-              ))}
+            <div class="flex items-center space-x-2">
+              <span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-semibold text-[10px]">${d.estado}</span>${d.estado !== 'Vigente' ? `<button data-id="${d.id}" data-code="${d.codigo}" class="btn-sign bg-cyan-600 hover:bg-cyan-700 text-white px-2 py-1 rounded text-[10px] font-bold">✍️ Firmar</button>` : ''}
             </div>
-          </nav>
+          </div>
+        `).join('');
 
-          <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-6">
-            {activeTab === 'dashboard' && (
-              <div className="space-y-6">
-                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex justify-between items-center">
-                  <div>
-                    <h1 className="text-xl font-bold text-slate-900">Estado del Sistema de Gestión de Calidad</h1>
-                    <p className="text-xs text-slate-500">Indicadores de cumplimiento normativo GMP</p>
-                  </div>
-                  <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">Auditoría Interna: Conforme</span>
-                </div>
+        document.querySelectorAll('.btn-sign').forEach(b => {
+          b.onclick = function() {
+            selectedDocId = this.getAttribute('data-id');
+            document.getElementById('signTargetCode').innerText = this.getAttribute('data-code');
+            toggleModal('modalSign', true);
+          };
+        });
 
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                  <div className="bg-white p-4 rounded-xl border border-slate-200 border-l-4 border-l-blue-500">
-                    <div className="text-slate-500 text-xs font-medium">Documentos</div>
-                    <div className="text-2xl font-bold text-slate-800 mt-1">{kpis.docsVigentes}</div>
-                    <div className="text-[10px] text-emerald-600 mt-1">100% al día</div>
-                  </div>
-                  <div className="bg-white p-4 rounded-xl border border-slate-200 border-l-4 border-l-amber-500">
-                    <div className="text-slate-500 text-xs font-medium">Desviaciones</div>
-                    <div className="text-2xl font-bold text-amber-600 mt-1">{kpis.desviacionesAbiertas}</div>
-                    <div className="text-[10px] text-amber-600 mt-1">2 en investigación</div>
-                  </div>
-                  <div className="bg-white p-4 rounded-xl border border-slate-200 border-l-4 border-l-purple-500">
-                    <div className="text-slate-500 text-xs font-medium">CAPAs</div>
-                    <div className="text-2xl font-bold text-purple-600 mt-1">{kpis.capasPendientes}</div>
-                    <div className="text-[10px] text-slate-500 mt-1">1 próx. a vencer</div>
-                  </div>
-                  <div className="bg-white p-4 rounded-xl border border-slate-200 border-l-4 border-l-cyan-500">
-                    <div className="text-slate-500 text-xs font-medium">Cambios</div>
-                    <div className="text-2xl font-bold text-cyan-600 mt-1">{kpis.cambiosEnRevision}</div>
-                    <div className="text-[10px] text-slate-500 mt-1">En Comité QA</div>
-                  </div>
-                  <div className="bg-white p-4 rounded-xl border border-slate-200 border-l-4 border-l-rose-500">
-                    <div className="text-slate-500 text-xs font-medium">Calibraciones</div>
-                    <div className="text-2xl font-bold text-rose-600 mt-1">{kpis.calibracionesCriticas}</div>
-                    <div className="text-[10px] text-rose-600 font-semibold mt-1">1 Vencido</div>
-                  </div>
-                </div>
-              </div>
-            )}
+        // Render Desviaciones
+        document.getElementById('list-desvs').innerHTML = (desvs || []).map(d => `
+          <div class="p-3 bg-slate-50 rounded border">
+            <div class="flex justify-between font-bold"><span class="font-mono text-amber-700">${d.codigo}</span><span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded">${d.clasificacion || 'MAYOR'}</span></div>
+            <p class="text-slate-700 mt-1">${d.descripcion}</p>
+          </div>
+        `).join('');
 
-            {activeTab === 'documentos' && (
-              <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-                <h2 className="font-bold text-slate-800 text-sm mb-3">Documentos Controlados (SOPs / Protocolos)</h2>
-                <div className="divide-y divide-slate-100">
-                  {documentos.map(doc => (
-                    <div key={doc.id} className="py-3 flex justify-between items-center text-xs">
-                      <div>
-                        <span className="font-mono font-bold text-cyan-700 mr-2">{doc.id}</span>
-                        <span className="font-semibold text-slate-800">{doc.titulo}</span>
-                        <span className="block text-[10px] text-slate-400 mt-0.5">Versión {doc.version} • Revisor: {doc.revisor}</span>
-                      </div>
-                      <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-semibold text-[10px]">{doc.estado}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+        // Render CAPAs
+        document.getElementById('list-capas').innerHTML = (cps || []).map(c => `
+          <div class="p-3 bg-slate-50 rounded border flex justify-between items-center">
+            <div><span class="font-mono font-bold text-purple-700">${c.codigo}</span><p class="mt-0.5">${c.plan_accion}</p></div>
+            <span class="bg-purple-100 text-purple-800 px-2 py-0.5 rounded text-[10px] font-bold">${c.estado}</span>
+          </div>
+        `).join('');
 
-            {activeTab === 'desviaciones' && (
+        // Render Equipos
+        document.getElementById('list-eqps').innerHTML = (eqps || []).map(e => `
+          <div class="p-3 bg-slate-50 rounded border">
+            <span class="font-mono font-bold">${e.codigo}</span>
+            <h3 class="font-bold mt-0.5">${e.nombre}</h3>
+            <span class="inline-block mt-2 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">${e.estado}</span>
+          </div>
+        `).join('');
+
+        // Render Firmas
+        document.getElementById('list-frms').innerHTML = (frms || []).map(f => `
+          <div class="p-3 bg-slate-50 rounded border">
+            <strong class="text-cyan-700">${f.significado_firma}</strong> -${f.motivo_justificacion}
+          </div>
+        `).join('');
+
+        // Render Audit
+        document.getElementById('list-auds').innerHTML = (audit || []).map(a => `
+          <div class="p-2 bg-slate-50 rounded border">
+            <strong class="text-cyan-700">${a.tabla_afectada}</strong> [${a.accion}] - Usuario: ${a.usuario} (${new Date(a.timestamp).toLocaleString('es-CO')})
+          </div>
+        `).join('');
+      }
+
+      // GUARDAR EN SUPABASE REAL
+      document.getElementById('btn-save-doc').onclick = async () => {
+        const codigo = document.getElementById('docCode').value;
+        const titulo = document.getElementById('docTitle').value;
+        if (!codigo || !titulo) return;
+
+        await supabase.from('documentos').insert([{ codigo, titulo, tipo: 'SOP', version: '1.0', estado: 'Borrador' }]);
+        toggleModal('modalDoc', false);
+        loadData();
+      };
+
+      document.getElementById('btn-save-dev').onclick = async () => {
+        const codigo = document.getElementById('devCode').value;
+        const descripcion = document.getElementById('devDesc').value;
+        if (!codigo || !descripcion) return;
+
+        await supabase.from('desviaciones').insert([{ codigo, origen: 'Proceso', clasificacion: 'MAYOR', descripcion }]);
+        toggleModal('modalDev', false);
+        loadData();
+      };
+
+      document.getElementById('btn-save-eqp').onclick = async () => {
+        const codigo = document.getElementById('eqpCode').value;
+        const nombre = document.getElementById('eqpName').value;
+        if (!codigo || !nombre) return;
+
+        await supabase.from('equipos').insert([{ codigo, nombre, tipo: 'Crítico GxP', estado: 'OPERATIVO' }]);
+        toggleModal('modalEqp', false);
+        loadData();
+      };
+
+      document.getElementById('btn-execute-sign').onclick = async () => {
+        const pin = document.getElementById('signPin').value;
+        const reason = document.getElementById('signReason').value;
+
+        if (pin !== '1234') {
+          alert('PIN de firma incorrecto (Prueba: 1234)');
+          return;
+        }
+
+        const { data: userGxp } = await supabase.from('usuarios_gxp').select('id').eq('username', 'jaguilar').single();
+
+        if (userGxp && selectedDocId) {
+          await supabase.from('firmas_electronicas').insert([{
+            tabla_referencia: 'documentos',
+            registro_id: selectedDocId,
+            usuario_id: userGxp.id,
+            significado_firma: 'APROBO',
+            motivo_justificacion: reason || 'Aprobación formal'
+          }]);
+
+          await supabase.from('documentos').update({ estado: 'Vigente' }).eq('id', selectedDocId);
+          toggleModal('modalSign', false);
+          loadData();
+        }
+      };
+
+      loadData();
+    });
+  </script>
+</body>
+</html>
