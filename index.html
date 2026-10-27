@@ -111,19 +111,19 @@
         </div>
       </div>
 
-      <!-- DOCUMENTOS CONTROLADOS -->
+      <!-- DOCUMENTOS CONTROLADOS Y CONTROL DE CAMBIOS -->
       <div id="view-documentos" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4">
         <div class="flex justify-between items-center mb-3">
           <div>
             <h2 class="font-bold text-slate-800 text-sm">Gestión Documental & Workflows</h2>
-            <p class="text-xs text-slate-500">Subida de archivos oficiales y circuito de aprobaciones GxP</p>
+            <p class="text-xs text-slate-500">Control de versiones, subida de archivos y archivo de obsoletos</p>
           </div>
           <button id="btn-open-modal-doc" class="bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow">+ Solicitud / Nuevo Documento</button>
         </div>
         <div id="list-docs" class="divide-y divide-slate-100 text-xs">Cargando...</div>
       </div>
 
-      <!-- DESVIACIONES -->
+      <!-- OTROS MÓDULOS (DESVIACIONES, CAPA, METROLOGÍA, FIRMAS, AUDIT, ADMIN) -->
       <div id="view-desviaciones" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-3">
         <div class="flex justify-between items-center">
           <h2 class="font-bold text-slate-800 text-sm">Desviaciones & NC</h2>
@@ -132,13 +132,11 @@
         <div id="list-desvs" class="space-y-2 text-xs">Cargando...</div>
       </div>
 
-      <!-- CAPA -->
       <div id="view-capa" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4">
         <h2 class="font-bold text-slate-800 text-sm mb-3">Planes CAPA Integrados</h2>
         <div id="list-capas" class="space-y-2 text-xs">Cargando...</div>
       </div>
 
-      <!-- METROLOGIA -->
       <div id="view-metrologia" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4">
         <div class="flex justify-between items-center mb-3">
           <h2 class="font-bold text-slate-800 text-sm">Equipos & Metrología GxP</h2>
@@ -147,19 +145,16 @@
         <div id="list-eqps" class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">Cargando...</div>
       </div>
 
-      <!-- FIRMAS -->
       <div id="view-firmas" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4">
         <h2 class="font-bold text-slate-800 text-sm mb-3">Registro de Firmas Electrónicas (21 CFR Part 11)</h2>
         <div id="list-frms" class="space-y-2 text-xs">Cargando...</div>
       </div>
 
-      <!-- AUDIT -->
       <div id="view-audit" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4">
         <h2 class="font-bold text-slate-800 text-sm mb-3">Audit Trail Inalterable (ALCOA+)</h2>
         <div id="list-auds" class="space-y-2 max-h-96 overflow-y-auto font-mono text-[11px]">Cargando...</div>
       </div>
 
-      <!-- AJUSTES Y ADMINISTRACIÓN DEL ERP -->
       <div id="view-admin" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-4">
         <div class="flex justify-between items-center border-b pb-2">
           <div>
@@ -177,7 +172,45 @@
     </main>
   </div>
 
-  <!-- MODAL DE CARGA DOCUMENTAL AVANZADA CON WORKFLOW -->
+  <!-- MODAL DE CONTROL DE CAMBIOS / NUEVA VERSIÓN -->
+  <div id="modalVersion" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl max-w-lg w-full p-5 border shadow-2xl space-y-3">
+      <div class="border-b pb-2 flex justify-between items-center">
+        <h3 class="font-bold text-sm text-cyan-900">🔄 Crear Nueva Versión (Control de Cambios)</h3>
+        <span id="verTargetCode" class="font-mono text-xs bg-cyan-100 text-cyan-800 px-2 py-0.5 rounded font-bold"></span>
+      </div>
+
+      <div class="space-y-2 text-xs">
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block font-semibold text-slate-700">Versión Actual</label>
+            <input type="text" id="currentVer" readonly class="w-full p-2 border rounded font-mono bg-slate-100 font-bold" />
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700">Nueva Versión Propuesta</label>
+            <input type="text" id="newVerNumber" placeholder="ej. 2.0" class="w-full p-2 border rounded font-mono bg-amber-50 font-bold border-amber-300" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-700">Justificación del Cambio / Control de Cambios GxP</label>
+          <textarea id="changeReason" rows="3" placeholder="Describe los motivos técnicos o normativos que justifican la modificación de este documento..." class="w-full p-2 border rounded text-xs"></textarea>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-700">Nuevo Archivo Digital (PDF / Word)</label>
+          <input type="file" id="newVerFile" accept=".pdf,.doc,.docx" class="w-full p-1.5 border rounded bg-slate-50 text-xs" />
+        </div>
+      </div>
+
+      <div class="flex justify-end space-x-2 pt-2 border-t">
+        <button id="btn-close-modal-version" class="px-3 py-1 border rounded text-xs">Cancelar</button>
+        <button id="btn-save-new-version" class="px-4 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white rounded text-xs font-bold shadow">Generar Versión & Pasar a Borrador</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE REGISTRO DOCUMENTAL INICIAL -->
   <div id="modalDoc" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
     <div class="bg-white rounded-xl max-w-lg w-full p-5 border shadow-2xl space-y-3">
       <h3 class="font-bold text-sm text-cyan-900">📑 Crear / Subir Documento Controlado</h3>
@@ -209,7 +242,6 @@
           <input type="file" id="docFile" accept=".pdf,.doc,.docx" class="w-full p-1.5 border rounded bg-slate-50 text-xs" />
         </div>
 
-        <!-- ASIGNACIÓN DE RESPONSABLES -->
         <div class="border-t pt-2 space-y-2">
           <h4 class="font-bold text-slate-800 text-[11px]">Flujo de Trabajo (Workflow)</h4>
           <div class="grid grid-cols-3 gap-2 text-[11px]">
@@ -236,15 +268,15 @@
     </div>
   </div>
 
-  <!-- MODAL DE REGISTRO DE USUARIO GXP -->
+  <!-- OTROS MODALES (USUARIOS, DESVIACIONES, EQUIPOS, CALIBRACIÓN, RCA, FIRMAS) -->
   <div id="modalUser" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
     <div class="bg-white rounded-xl max-w-md w-full p-5 border shadow-2xl space-y-3">
       <h3 class="font-bold text-sm text-slate-800">👤 Registrar Nuevo Usuario GxP</h3>
       
       <div class="space-y-2 text-xs">
-        <input type="text" id="newUserName" placeholder="Nombre Completo (ej. Carlos Gómez)" class="w-full p-2 border rounded" />
-        <input type="email" id="newUserEmail" placeholder="Correo Corporativo (ej. c.gomez@pharmor.com.co)" class="w-full p-2 border rounded font-mono" />
-        <input type="text" id="newUserCargo" placeholder="Cargo (ej. Analista de Control de Calidad)" class="w-full p-2 border rounded" />
+        <input type="text" id="newUserName" placeholder="Nombre Completo" class="w-full p-2 border rounded" />
+        <input type="email" id="newUserEmail" placeholder="Correo Corporativo" class="w-full p-2 border rounded font-mono" />
+        <input type="text" id="newUserCargo" placeholder="Cargo" class="w-full p-2 border rounded" />
         
         <div class="grid grid-cols-2 gap-2">
           <div>
@@ -270,7 +302,6 @@
     </div>
   </div>
 
-  <!-- MODALES DE OTRAS SECCIONES -->
   <div id="modalDev" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
     <div class="bg-white rounded-xl max-w-md w-full p-5 border shadow-2xl space-y-3">
       <h3 class="font-bold text-sm">⚠️ Reportar Desviación / NC</h3>
@@ -400,6 +431,7 @@
       const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
       let selectedDocId = null;
+      let selectedDocForVersion = null;
       let selectedDevId = null;
       let selectedEqp = null;
       let activeGxpUser = null;
@@ -474,6 +506,7 @@
 
       document.getElementById('btn-open-modal-doc').onclick = () => toggleModal('modalDoc', true);
       document.getElementById('btn-close-modal-doc').onclick = () => toggleModal('modalDoc', false);
+      document.getElementById('btn-close-modal-version').onclick = () => toggleModal('modalVersion', false);
       document.getElementById('btn-open-modal-user').onclick = () => toggleModal('modalUser', true);
       document.getElementById('btn-close-modal-user').onclick = () => toggleModal('modalUser', false);
       document.getElementById('btn-open-modal-dev').onclick = () => toggleModal('modalDev', true);
@@ -484,9 +517,9 @@
       document.getElementById('btn-close-modal-rca').onclick = () => toggleModal('modalRca', false);
       document.getElementById('btn-close-modal-calib').onclick = () => toggleModal('modalCalib', false);
 
-      // CARGA DE DATOS PRINCIPAL
+      // CARGA DE DATOS PRINCIPAL CON CONTROL DE VERSIONES
       async function loadData() {
-        const { data: docs } = await supabase.from('documentos').select('*');
+        const { data: docs } = await supabase.from('documentos').select('*').order('created_at', { ascending: false });
         const { data: desvs } = await supabase.from('desviaciones').select('*');
         const { data: cps } = await supabase.from('capas').select('*');
         const { data: eqps } = await supabase.from('equipos').select('*');
@@ -497,7 +530,6 @@
 
         allUsers = users || [];
 
-        // Llenar dropdowns de workflow
         const userOptions = allUsers.length > 0 
           ? allUsers.map(u => `<option value="${u.id}">${u.nombre_completo} (${u.cargo || 'GxP'})</option>`).join('')
           : `<option value="">Sin usuarios registrados</option>`;
@@ -512,14 +544,17 @@
         document.getElementById('cnt-eqps').innerText = eqps ? eqps.length : 0;
         document.getElementById('cnt-audit').innerText = audit ? audit.length : 0;
 
-        // Render Documentos con descarga y workflow
+        // Render Documentos con Botón de Control de Cambios / Nueva Versión
         document.getElementById('list-docs').innerHTML = (docs || []).map(d => {
           const downloadBtn = d.archivo_url 
             ? `<a href="${d.archivo_url}" target="_blank" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded text-[10px] font-bold border">📥 Archivo Digital</a>` 
             : `<span class="text-slate-400 text-[10px] italic">Sin adjunto</span>`;
 
+          const isObsoleto = d.estado === 'Obsoleto';
+          const badgeClass = isObsoleto ? 'bg-rose-100 text-rose-800' : (d.estado === 'Vigente' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800');
+
           return `
-            <div class="py-3 flex justify-between items-center">
+            <div class="py-3 flex justify-between items-center ${isObsoleto ? 'opacity-60 bg-slate-50 p-2 rounded' : ''}">
               <div>
                 <div class="flex items-center space-x-2">
                   <span class="font-mono font-bold text-cyan-700">${d.codigo}</span>
@@ -528,12 +563,17 @@
                 </div>
                 <div class="mt-1 flex items-center space-x-2">
                   ${downloadBtn}
+                  ${d.justificacion_cambio ? `<span class="text-[10px] text-slate-500 font-mono">Justificación: ${d.justificacion_cambio}</span>` : ''}
                 </div>
               </div>
               <div class="flex items-center space-x-2">
-                <span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-semibold text-[10px]">${d.estado}</span>
-                ${d.estado !== 'Vigente' 
+                <span class="${badgeClass} px-2 py-0.5 rounded font-semibold text-[10px]">${d.estado}</span>
+                ${!isObsoleto && d.estado !== 'Vigente' 
                   ? `<button data-id="${d.id}" data-code="${d.codigo}" class="btn-sign bg-cyan-600 hover:bg-cyan-700 text-white px-2 py-1 rounded text-[10px] font-bold shadow">✍️ Estampar Firma</button>` 
+                  : ''
+                }
+                ${d.estado === 'Vigente'
+                  ? `<button data-id="${d.id}" data-code="${d.codigo}" data-ver="${d.version}" class="btn-open-version bg-amber-600 hover:bg-amber-700 text-white px-2 py-1 rounded text-[10px] font-bold shadow">🔄 Nueva Versión</button>`
                   : ''
                 }
               </div>
@@ -541,6 +581,7 @@
           `;
         }).join('');
 
+        // Listeners de Firma
         document.querySelectorAll('.btn-sign').forEach(b => {
           b.onclick = function() {
             selectedDocId = this.getAttribute('data-id');
@@ -549,7 +590,27 @@
           };
         });
 
-        // Render Lista de Usuarios en Admin
+        // Listeners para Control de Cambios / Nueva Versión
+        document.querySelectorAll('.btn-open-version').forEach(b => {
+          b.onclick = function() {
+            selectedDocForVersion = {
+              id: this.getAttribute('data-id'),
+              code: this.getAttribute('data-code'),
+              version: this.getAttribute('data-ver')
+            };
+            document.getElementById('verTargetCode').innerText = selectedDocForVersion.code;
+            document.getElementById('currentVer').value = selectedDocForVersion.version;
+            
+            // Sugerir número de versión subsiguiente
+            const vParts = selectedDocForVersion.version.split('.');
+            const nextMajor = (parseInt(vParts[0]) + 1) + '.0';
+            document.getElementById('newVerNumber').value = nextMajor;
+
+            toggleModal('modalVersion', true);
+          };
+        });
+
+        // Render Módulo Admin, Desviaciones, Equipos, CAPAs, Firmas y Audit
         document.getElementById('list-users').innerHTML = (allUsers || []).map(u => `
           <div class="py-2 flex justify-between items-center">
             <div>
@@ -563,7 +624,6 @@
           </div>
         `).join('');
 
-        // Render Desviaciones, Equipos, CAPAs, Firmas y Audit
         document.getElementById('list-desvs').innerHTML = (desvs || []).map(d => {
           const hasRca = rcas && rcas.some(r => r.desviacion_id === d.id);
           return `
@@ -651,7 +711,70 @@
         `).join('');
       }
 
-      // GUARDAR DOCUMENTO CON MANEJO DE EXCEPCIONES
+      // GUARDAR NUEVA VERSIÓN (CONTROL DE CAMBIOS & OBSOLESCENCIA)
+      document.getElementById('btn-save-new-version').onclick = async () => {
+        try {
+          const newVersion = document.getElementById('newVerNumber').value;
+          const reason = document.getElementById('changeReason').value;
+          const fileInput = document.getElementById('newVerFile');
+
+          if (!newVersion || !reason) {
+            alert('Debes definir la nueva versión y justificar el cambio.');
+            return;
+          }
+
+          let archivo_url = null;
+
+          // Subida de nuevo archivo digital
+          if (fileInput.files && fileInput.files.length > 0) {
+            const file = fileInput.files[0];
+            const fileExt = file.name.split('.').pop();
+            const filePath = `${selectedDocForVersion.code}_v${newVersion}_${Date.now()}.${fileExt}`;
+
+            const { data: uploadData, error: uploadError } = await supabase.storage
+              .from('documentos-gxp')
+              .upload(filePath, file, { upsert: true });
+
+            if (!uploadError) {
+              const { data: publicUrlData } = supabase.storage
+                .from('documentos-gxp')
+                .getPublicUrl(filePath);
+
+              archivo_url = publicUrlData ? publicUrlData.publicUrl : null;
+            }
+          }
+
+          // 1. Archivar la versión anterior marcándola como 'Obsoleto'
+          await supabase.from('documentos')
+            .update({ estado: 'Obsoleto', es_version_actual: false })
+            .eq('id', selectedDocForVersion.id);
+
+          // 2. Crear el nuevo registro documental en estado 'Borrador'
+          const { data: oldDoc } = await supabase.from('documentos').select('*').eq('id', selectedDocForVersion.id).single();
+
+          await supabase.from('documentos').insert([{
+            codigo: oldDoc.codigo,
+            titulo: oldDoc.titulo,
+            tipo: oldDoc.tipo,
+            version: newVersion,
+            estado: 'Borrador',
+            archivo_url: archivo_url || oldDoc.archivo_url,
+            justificacion_cambio: reason,
+            documento_padre_id: selectedDocForVersion.id,
+            elaborador_id: oldDoc.elaborador_id,
+            revisor_id: oldDoc.revisor_id,
+            aprobador_id: oldDoc.aprobador_id,
+            es_version_actual: true
+          }]);
+
+          toggleModal('modalVersion', false);
+          loadData();
+        } catch (err) {
+          alert('Error al generar la nueva versión: ' + err.message);
+        }
+      };
+
+      // GUARDAR DOCUMENTO INICIAL Y DEMÁS ACCIONES
       document.getElementById('btn-save-doc').onclick = async () => {
         try {
           const codigo = document.getElementById('docCode').value;
@@ -664,10 +787,6 @@
           const revVal = document.getElementById('selectRevisor').value;
           const aprVal = document.getElementById('selectAprobador').value;
 
-          const elaborador_id = elVal || null;
-          const revisor_id = revVal || null;
-          const aprobador_id = aprVal || null;
-
           if (!codigo || !titulo) {
             alert('Debes ingresar el código y el título del documento.');
             return;
@@ -675,7 +794,6 @@
 
           let archivo_url = null;
 
-          // Intento de subida a Supabase Storage
           if (fileInput.files && fileInput.files.length > 0) {
             const file = fileInput.files[0];
             const fileExt = file.name.split('.').pop();
@@ -691,43 +809,25 @@
                 .getPublicUrl(filePath);
 
               archivo_url = publicUrlData ? publicUrlData.publicUrl : null;
-            } else {
-              console.warn('Advertencia en subida de archivo (continuando sin adjunto):', uploadError.message);
             }
           }
 
-          // Inserción en la base de datos de documentos
-          const { error: insertError } = await supabase.from('documentos').insert([{
-            codigo,
-            titulo,
-            tipo,
-            version,
-            estado: 'Borrador',
+          await supabase.from('documentos').insert([{
+            codigo, titulo, tipo, version, estado: 'Borrador',
             archivo_url,
-            elaborador_id,
-            revisor_id,
-            aprobador_id
+            elaborador_id: elVal || null,
+            revisor_id: revVal || null,
+            aprobador_id: aprVal || null,
+            es_version_actual: true
           }]);
 
-          if (insertError) {
-            alert('Error al guardar documento en base de datos: ' + insertError.message);
-            return;
-          }
-
           toggleModal('modalDoc', false);
-          
-          // Limpiar campos del formulario
-          document.getElementById('docCode').value = '';
-          document.getElementById('docTitle').value = '';
-          document.getElementById('docFile').value = '';
-
           loadData();
         } catch (err) {
           alert('Error inesperado: ' + err.message);
         }
       };
 
-      // REGISTRAR NUEVO USUARIO GXP
       document.getElementById('btn-save-user').onclick = async () => {
         const nombre_completo = document.getElementById('newUserName').value;
         const email = document.getElementById('newUserEmail').value;
@@ -740,26 +840,14 @@
           return;
         }
 
-        const { error } = await supabase.from('usuarios_gxp').insert([{
-          username: email,
-          email,
-          nombre_completo,
-          cargo,
-          rol,
-          pin_firma,
-          pin_firma_hash: pin_firma
+        await supabase.from('usuarios_gxp').insert([{
+          username: email, email, nombre_completo, cargo, rol, pin_firma, pin_firma_hash: pin_firma
         }]);
-
-        if (error) {
-          alert('Error al crear usuario: ' + error.message);
-          return;
-        }
 
         toggleModal('modalUser', false);
         loadData();
       };
 
-      // GUARDAR REGISTROS SECUNDARIOS
       document.getElementById('btn-save-eqp').onclick = async () => {
         const codigo = document.getElementById('eqpCode').value;
         const nombre = document.getElementById('eqpName').value;
@@ -794,20 +882,13 @@
         }
 
         await supabase.from('calibraciones_equipos').insert([{
-          equipo_id: selectedEqp.id,
-          fecha_calibracion,
-          error_encontrado,
-          incertidumbre,
-          cumple_emp,
-          certificado_ref,
+          equipo_id: selectedEqp.id, fecha_calibracion, error_encontrado, incertidumbre, cumple_emp, certificado_ref,
           realizado_por: activeGxpUser ? activeGxpUser.id : null
         }]);
 
         const nuevoEstado = cumple_emp ? 'OPERATIVO' : 'FUERA DE SERVICIO';
         await supabase.from('equipos').update({
-          ultima_calibracion: fecha_calibracion,
-          proxima_calibracion,
-          estado: nuevoEstado
+          ultima_calibracion: fecha_calibracion, proxima_calibracion, estado: nuevoEstado
         }).eq('id', selectedEqp.id);
 
         toggleModal('modalCalib', false);
@@ -852,11 +933,7 @@
         if (accionCapa) {
           const capaCode = 'CAPA-' + Math.floor(1000 + Math.random() * 9000);
           await supabase.from('capas').insert([{
-            codigo: capaCode,
-            desviacion_id: selectedDevId,
-            tipo: 'CORRECTIVA',
-            plan_accion: accionCapa,
-            estado: 'ABIERTA'
+            codigo: capaCode, desviacion_id: selectedDevId, tipo: 'CORRECTIVA', plan_accion: accionCapa, estado: 'ABIERTA'
           }]);
         }
 
