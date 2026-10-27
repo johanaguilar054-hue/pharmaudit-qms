@@ -52,11 +52,11 @@
 
         <div id="loginAlert" class="hidden p-2.5 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-lg font-mono"></div>
 
-        <button type="button" onclick="executeLogin()" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2.5 rounded-lg text-xs shadow transition">
+        <button type="button" onclick="window.executeLogin()" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2.5 rounded-lg text-xs shadow transition">
           Iniciar Sesión Segura (21 CFR Part 11)
         </button>
 
-        <button type="button" onclick="bypassLogin()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 rounded-lg text-xs shadow transition">
+        <button type="button" onclick="window.bypassLogin()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 rounded-lg text-xs shadow transition">
           ⚡ Ingreso Directo QA Lead (Johan Aguilar)
         </button>
       </div>
@@ -194,9 +194,7 @@
     <div class="bg-white rounded-xl max-w-3xl w-full p-6 border shadow-2xl space-y-4 max-h-[95vh] flex flex-col">
       <div class="border-b pb-2 flex justify-between items-center shrink-0">
         <h3 class="font-bold text-sm text-slate-800">📜 Vista Previa de Reporte Oficial GxP</h3>
-        <button id="btn-download-pdf-action" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-1.5 rounded-lg text-xs font-bold shadow">
-          ⬇️ Descargar PDF Oficial
-        </button>
+        <button id="btn-close-modal-pdf-top" onclick="window.toggleModal('modalExportPdf', false)" class="text-slate-400 hover:text-slate-600 font-bold text-sm">✕</button>
       </div>
 
       <div class="overflow-y-auto p-2 flex-grow">
@@ -249,8 +247,8 @@
         </div>
       </div>
 
-      <div class="flex justify-end border-t pt-2 shrink-0">
-        <button id="btn-close-modal-pdf" class="px-4 py-1.5 border rounded text-xs">Cerrar Vista Previa</button>
+      <div class="flex justify-end border-t pt-2 shrink-0 space-x-2">
+        <button onclick="window.toggleModal('modalExportPdf', false)" class="px-4 py-1.5 border rounded text-xs">Cerrar Vista Previa</button>
       </div>
     </div>
   </div>
@@ -272,7 +270,7 @@
       </div>
 
       <div class="flex justify-end space-x-2 pt-2 border-t">
-        <button id="btn-close-modal-version" class="px-3 py-1 border rounded text-xs">Cancelar</button>
+        <button onclick="window.toggleModal('modalVersion', false)" class="px-3 py-1 border rounded text-xs">Cancelar</button>
         <button id="btn-save-new-version" class="px-4 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white rounded text-xs font-bold shadow">Generar Versión & Pasar a Borrador</button>
       </div>
     </div>
@@ -297,7 +295,7 @@
       <input type="password" id="signPin" placeholder="PIN de firma (1234)" class="w-full p-2 border rounded text-xs font-mono" />
       
       <div class="flex justify-end space-x-2 pt-2">
-        <button id="btn-close-modal-sign" class="px-3 py-1 border rounded text-xs">Cancelar</button>
+        <button onclick="window.toggleModal('modalSign', false)" class="px-3 py-1 border rounded text-xs">Cancelar</button>
         <button id="btn-execute-sign" class="px-3 py-1 bg-cyan-600 text-white rounded text-xs font-bold">Estampar Firma</button>
       </div>
     </div>
@@ -307,277 +305,4 @@
   <div id="modalDoc" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
     <div class="bg-white rounded-xl max-w-lg w-full p-5 border shadow-2xl space-y-3">
       <h3 class="font-bold text-sm text-cyan-900">📑 Crear / Subir Documento Controlado</h3>
-      <div class="space-y-2 text-xs">
-        <div class="grid grid-cols-3 gap-2">
-          <input type="text" id="docCode" placeholder="Código (ej. SOP-QA-010)" class="col-span-1 p-2 border rounded font-mono" />
-          <input type="text" id="docTitle" placeholder="Título del Documento / SOP" class="col-span-2 p-2 border rounded" />
-        </div>
-        <div class="grid grid-cols-2 gap-2">
-          <div><label class="block font-semibold text-slate-700 text-[11px]">Tipo</label><select id="docType" class="w-full p-2 border rounded bg-slate-50"><option value="SOP">SOP / POE</option><option value="INSTRUCTIVO">Instructivo de Trabajo</option><option value="FORMATO">Formato / Registro</option><option value="ESPECIFICACION">Especificación Técnica</option></select></div>
-          <div><label class="block font-semibold text-slate-700 text-[11px]">Versión</label><input type="text" id="docVersion" value="1.0" class="w-full p-2 border rounded font-mono bg-slate-50" /></div>
-        </div>
-      </div>
-      <div class="flex justify-end space-x-2 pt-2 border-t">
-        <button id="btn-close-modal-doc" class="px-3 py-1 border rounded text-xs">Cancelar</button>
-        <button id="btn-save-doc" class="px-4 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white rounded text-xs font-bold shadow">Guardar Documento</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="modalUser" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
-    <div class="bg-white rounded-xl max-w-md w-full p-5 border shadow-2xl space-y-3">
-      <h3 class="font-bold text-sm text-slate-800">👤 Registrar Nuevo Usuario GxP</h3>
-      <div class="space-y-2 text-xs">
-        <input type="text" id="newUserName" placeholder="Nombre Completo" class="w-full p-2 border rounded" />
-        <input type="email" id="newUserEmail" placeholder="Correo Corporativo" class="w-full p-2 border rounded font-mono" />
-        <input type="text" id="newUserCargo" placeholder="Cargo" class="w-full p-2 border rounded" />
-      </div>
-      <div class="flex justify-end space-x-2 pt-2 border-t">
-        <button id="btn-close-modal-user" class="px-3 py-1 border rounded text-xs">Cancelar</button>
-        <button id="btn-save-user" class="px-4 py-1.5 bg-slate-800 text-white rounded text-xs font-bold shadow">Guardar Usuario</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="modalDev" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
-    <div class="bg-white rounded-xl max-w-md w-full p-5 border shadow-2xl space-y-3">
-      <h3 class="font-bold text-sm">⚠️ Reportar Desviación / NC</h3>
-      <input type="text" id="devCode" placeholder="Código (ej. DEV-2026-015)" class="w-full p-2 border rounded text-xs font-mono" />
-      <textarea id="devDesc" placeholder="Descripción de la desviación..." class="w-full p-2 border rounded text-xs" rows="3"></textarea>
-      <div class="flex justify-end space-x-2 pt-2">
-        <button id="btn-close-modal-dev" class="px-3 py-1 border rounded text-xs">Cancelar</button>
-        <button id="btn-save-dev" class="px-3 py-1 bg-amber-600 text-white rounded text-xs font-bold">Guardar</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="modalEqp" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
-    <div class="bg-white rounded-xl max-w-md w-full p-5 border shadow-2xl space-y-3">
-      <h3 class="font-bold text-sm">🛠️ Registrar Equipo Critical GxP</h3>
-      <input type="text" id="eqpCode" placeholder="Código" class="w-full p-2 border rounded text-xs font-mono" />
-      <input type="text" id="eqpName" placeholder="Nombre" class="w-full p-2 border rounded text-xs" />
-      <div class="flex justify-end space-x-2 pt-2">
-        <button id="btn-close-modal-eqp" class="px-3 py-1 border rounded text-xs">Cancelar</button>
-        <button id="btn-save-eqp" class="px-3 py-1 bg-emerald-600 text-white rounded text-xs font-bold">Guardar</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- SCRIPT LÓGICO Y CONTROL DE FUNCIONES -->
-  <script>
-    const SUPABASE_URL = 'https://wmtvlxjzzwwhtybccrpe.supabase.co';
-    const SUPABASE_KEY = 'sb_publishable_i4A7rEjukekMlaCKjXWaNA_ze54EVjl';
-    let sbClient = null;
-
-    function getSupabase() {
-      if (!sbClient && window.supabase) {
-        sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-      }
-      return sbClient;
-    }
-
-    let activeGxpUser = { id: 'b40e33f1-6196-4b51-bfcb-6604d6daff50', nombre_completo: 'Johan Aguilar', cargo: 'QA Lead' };
-    let cachedDocs = [];
-    let cachedUsers = [];
-    let selectedDocId = null;
-    let selectedDocForVersion = null;
-
-    // INGRESO A LA APLICACIÓN
-    function openPortal(user) {
-      if (user) activeGxpUser = user;
-      document.getElementById('view-login').style.display = 'none';
-      document.getElementById('app-portal').style.display = 'block';
-      document.getElementById('userBadge').innerText = `User: ${activeGxpUser.nombre_completo} (${activeGxpUser.cargo || 'QA Lead'})`;
-      loadAllData();
-    }
-
-    function bypassLogin() {
-      openPortal({ id: 'b40e33f1-6196-4b51-bfcb-6604d6daff50', nombre_completo: 'Johan Aguilar', cargo: 'QA Lead' });
-    }
-
-    // LOGIN CON SUPABASE AUTH / BACKUP
-    async function executeLogin() {
-      const email = document.getElementById('loginEmail').value;
-      const password = document.getElementById('loginPassword').value;
-      const alertBox = document.getElementById('loginAlert');
-      alertBox.classList.add('hidden');
-
-      const client = getSupabase();
-      if (!client) {
-        bypassLogin();
-        return;
-      }
-
-      try {
-        if (password) {
-          const { data, error } = await client.auth.signInWithPassword({ email, password });
-          if (error) {
-            alertBox.innerText = 'Credenciales no coinciden: ' + error.message;
-            alertBox.classList.remove('hidden');
-            return;
-          }
-        }
-
-        const { data: userGxp } = await client.from('usuarios_gxp').select('*').or(`email.eq.${email},username.eq.${email}`);
-        const found = (userGxp && userGxp.length > 0) ? userGxp[0] : null;
-        openPortal(found || { id: 'b40e33f1-6196-4b51-bfcb-6604d6daff50', nombre_completo: email, cargo: 'QA Lead' });
-      } catch (e) {
-        alertBox.innerText = 'Error al conectar con la base de datos: ' + e.message;
-        alertBox.classList.remove('hidden');
-      }
-    }
-
-    function toggleModal(id, show) {
-      const m = document.getElementById(id);
-      if (show) m.classList.add('active'); else m.classList.remove('active');
-    }
-
-    // CARGA DE DATOS Y RENDERIZADO COMPLETO DE ACCIONES
-    async function loadAllData() {
-      const client = getSupabase();
-      if (!client) return;
-
-      try {
-        const { data: docs } = await client.from('documentos').select('*').order('created_at', { ascending: false });
-        const { data: desvs } = await client.from('desviaciones').select('*');
-        const { data: cps } = await client.from('capas').select('*');
-        const { data: eqps } = await client.from('equipos').select('*');
-        const { data: audit } = await client.from('audit_trail').select('*').order('timestamp', { ascending: false });
-        const { data: users } = await client.from('usuarios_gxp').select('*');
-
-        cachedDocs = docs || [];
-        cachedUsers = users || [];
-
-        document.getElementById('cnt-docs').innerText = cachedDocs.length;
-        document.getElementById('cnt-desvs').innerText = desvs ? desvs.length : 0;
-        document.getElementById('cnt-capas').innerText = cps ? cps.length : 0;
-        document.getElementById('cnt-eqps').innerText = eqps ? eqps.length : 0;
-        document.getElementById('cnt-audit').innerText = audit ? audit.length : 0;
-
-        // RENDER DOCUMENTOS COMPLETO CON TODOS SUS BOTONES Y ESTADOS
-        document.getElementById('list-docs').innerHTML = cachedDocs.map(d => {
-          const downloadBtn = d.archivo_url 
-            ? `<a href="${d.archivo_url}" target="_blank" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded text-[10px] font-bold border">📥 Adjunto</a>` 
-            : `<span class="text-slate-400 text-[10px] italic">Sin adjunto</span>`;
-
-          const isObsoleto = d.estado === 'Obsoleto';
-          const badgeClass = isObsoleto ? 'bg-rose-100 text-rose-800' : (d.estado === 'Vigente' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800');
-
-          return `
-            <div class="py-3 flex justify-between items-center ${isObsoleto ? 'opacity-60 bg-slate-50 p-2 rounded' : ''}">
-              <div>
-                <div class="flex items-center space-x-2">
-                  <span class="font-mono font-bold text-cyan-700">${d.codigo}</span>
-                  <span class="font-semibold text-slate-800">${d.titulo}</span>
-                  <span class="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded text-[10px] font-mono">${d.tipo || 'SOP'} v${d.version}</span>
-                </div>
-                <div class="mt-1 flex items-center space-x-2">
-                  ${downloadBtn}
-                  <button onclick="previewPdf('${d.id}')" class="bg-slate-100 hover:bg-slate-200 text-slate-800 px-2 py-1 rounded text-[10px] font-bold border">
-                    🖨️ Previsualizar / Exportar PDF
-                  </button>
-                  ${d.justificacion_cambio ? `<span class="text-[10px] text-slate-500 font-mono">Justificación: ${d.justificacion_cambio}</span>` : ''}
-                </div>
-              </div>
-              <div class="flex items-center space-x-2">
-                <span class="${badgeClass} px-2 py-0.5 rounded font-semibold text-[10px]">${d.estado}</span>
-                ${!isObsoleto && d.estado !== 'Vigente' 
-                  ? `<button onclick="openSignModal('${d.id}', '${d.codigo}')" class="bg-cyan-600 hover:bg-cyan-700 text-white px-2 py-1 rounded text-[10px] font-bold shadow">✍️ Estampar Firma</button>` 
-                  : ''
-                }
-                ${d.estado === 'Vigente'
-                  ? `<button onclick="openVersionModal('${d.id}', '${d.codigo}', '${d.version}')" class="bg-amber-600 hover:bg-amber-700 text-white px-2 py-1 rounded text-[10px] font-bold shadow">🔄 Nueva Versión</button>`
-                  : ''
-                }
-              </div>
-            </div>
-          `;
-        }).join('') || '<div class="py-2 text-slate-400">No hay documentos registrados</div>';
-
-        // Render Usuarios
-        document.getElementById('list-users').innerHTML = cachedUsers.map(u => `
-          <div class="py-2 flex justify-between items-center">
-            <div>
-              <strong class="text-slate-800">${u.nombre_completo}</strong>
-              <span class="text-slate-500 font-mono block text-[11px]">${u.email || u.username}</span>
-            </div>
-            <span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-[10px] font-bold">ACTIVO</span>
-          </div>
-        `).join('') || '<div class="py-2 text-slate-400">Sin usuarios en base de datos</div>';
-
-      } catch (err) {
-        console.error("Error cargando datos:", err);
-      }
-    }
-
-    // FUNCIONES DE INTERACCIÓN
-    async function previewPdf(docId) {
-      const targetDoc = cachedDocs.find(x => x.id === docId);
-      if (!targetDoc) return;
-
-      document.getElementById('pdfDocTitle').innerText = targetDoc.titulo;
-      document.getElementById('pdfDocCode').innerText = targetDoc.codigo;
-      document.getElementById('pdfDocVersion').innerText = targetDoc.version;
-      document.getElementById('pdfDocDate').innerText = new Date(targetDoc.created_at).toLocaleDateString('es-CO');
-      document.getElementById('pdfDocType').innerText = targetDoc.tipo || 'SOP';
-      document.getElementById('pdfDocStatus').innerText = targetDoc.estado;
-      document.getElementById('pdfDocJustification').innerText = targetDoc.justificacion_cambio || 'Sin observaciones.';
-
-      const wm = document.getElementById('pdfWatermark');
-      if (targetDoc.estado === 'Vigente') {
-        wm.innerText = 'COPIA CONTROLADA · VIGENTE';
-        wm.className = 'watermark-text text-emerald-600';
-      } else if (targetDoc.estado === 'Obsoleto') {
-        wm.innerText = 'DOCUMENTO OBSOLETO';
-        wm.className = 'watermark-text text-rose-600';
-      } else {
-        wm.innerText = 'BORRADOR · NO VALIDO PARA USO';
-        wm.className = 'watermark-text text-amber-600';
-      }
-
-      const client = getSupabase();
-      if (client) {
-        const { data: docSigns } = await client.from('firmas_electronicas').select('*').eq('registro_id', docId);
-
-        if (docSigns && docSigns.length > 0) {
-          document.getElementById('pdfSignaturesTable').innerHTML = docSigns.map(s => {
-            const signer = cachedUsers.find(u => u.id === s.usuario_id);
-            return `
-              <tr>
-                <td class="border border-slate-300 p-1.5 font-bold">${s.significado_firma}</td>
-                <td class="border border-slate-300 p-1.5">${signer ? signer.nombre_completo : 'Usuario Autorizado'}</td>
-                <td class="border border-slate-300 p-1.5 font-bold text-emerald-700">✓ FIRMADO ELECTRONICAMENTE</td>
-                <td class="border border-slate-300 p-1.5 font-mono">${new Date(s.timestamp_firma).toLocaleString('es-CO')}</td>
-              </tr>
-            `;
-          }).join('');
-        } else {
-          document.getElementById('pdfSignaturesTable').innerHTML = `
-            <tr><td colspan="4" class="p-2 text-center text-slate-400 italic">Pendiente de circuito de firmas digitales.</td></tr>
-          `;
-        }
-      }
-
-      document.getElementById('pdfSystemHash').innerText = `SHA256-${docId.substring(0,8).toUpperCase()}-${Date.now()}`;
-      toggleModal('modalExportPdf', true);
-    }
-
-    function openSignModal(id, code) {
-      selectedDocId = id;
-      document.getElementById('signTargetCode').innerText = code;
-      toggleModal('modalSign', true);
-    }
-
-    function openVersionModal(id, code, ver) {
-      selectedDocForVersion = { id, code, version: ver };
-      document.getElementById('verTargetCode').innerText = code;
-      document.getElementById('currentVer').value = ver;
-      
-      const vParts = ver.split('.');
-      const nextMajor = (parseInt(vParts[0]) + 1) + '.0';
-      document.getElementById('newVerNumber').value = nextMajor;
-
-      toggleModal('modalVersion', true);
-    }
-
-    // ACCIÓN EJECUTAR FIRMA
+      <div class="space-y-2 text
