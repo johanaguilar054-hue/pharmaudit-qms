@@ -138,9 +138,9 @@
       <div id="view-metrologia" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4">
         <div class="flex justify-between items-center mb-3">
           <h2 class="font-bold text-slate-800 text-sm">Equipos & Metrología GxP</h2>
-          <button id="btn-open-modal-eqp" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow">+ Nuevo Equipo</button>
+          <button id="btn-open-modal-eqp" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow">+ Nuevo Equipo GxP</button>
         </div>
-        <div id="list-eqps" class="grid grid-cols-1 md:grid-cols-3 gap-2.5 text-xs">Cargando...</div>
+        <div id="list-eqps" class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">Cargando...</div>
       </div>
 
       <!-- FIRMAS -->
@@ -157,72 +157,64 @@
     </main>
   </div>
 
-  <!-- MODAL DE ANÁLISIS CAUSA RAÍZ (5M e Ishikawa) -->
-  <div id="modalRca" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
-    <div class="bg-white rounded-xl max-w-2xl w-full p-5 border shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+  <!-- MODAL DE CALIBRACIÓN METROLÓGICA -->
+  <div id="modalCalib" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl max-w-md w-full p-5 border shadow-2xl space-y-3">
       <div class="border-b pb-2 flex justify-between items-center">
-        <h3 class="font-bold text-sm text-amber-800">🔍 Análisis de Causa Raíz (Ishikawa & 5 Porqués)</h3>
-        <span id="rcaDevCode" class="font-mono text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-bold"></span>
+        <h3 class="font-bold text-sm text-emerald-800">📏 Registrar Calibración Metrológica</h3>
+        <span id="calibEqpCode" class="font-mono text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold"></span>
       </div>
 
-      <!-- SECCIÓN ISHIKAWA 5M -->
-      <div>
-        <h4 class="font-bold text-xs text-slate-700 mb-2">1. Diagrama de Ishikawa (Las 5M)</h4>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+      <div class="space-y-2 text-xs">
+        <div>
+          <label class="block font-semibold text-slate-700">Fecha de Calibración Realizada</label>
+          <input type="date" id="calibDate" class="w-full p-2 border rounded bg-slate-50" />
+        </div>
+        <div class="grid grid-cols-2 gap-2">
           <div>
-            <label class="block font-semibold text-slate-600 text-[11px]">👤 Mano de Obra / Personal</label>
-            <input type="text" id="mManpower" placeholder="Capacitación, fatiga, error humano..." class="w-full p-2 border rounded bg-slate-50" />
+            <label class="block font-semibold text-slate-700">Error Encontrado</label>
+            <input type="number" step="0.01" id="calibError" placeholder="0.15" class="w-full p-2 border rounded" />
           </div>
           <div>
-            <label class="block font-semibold text-slate-600 text-[11px]">⚙️ Maquinaria / Equipos</label>
-            <input type="text" id="mMachine" placeholder="Falla mecánica, calibración vencida..." class="w-full p-2 border rounded bg-slate-50" />
-          </div>
-          <div>
-            <label class="block font-semibold text-slate-600 text-[11px]">🧪 Materiales / Insumos</label>
-            <input type="text" id="mMaterial" placeholder="Materia prima fuera de especificación..." class="w-full p-2 border rounded bg-slate-50" />
-          </div>
-          <div>
-            <label class="block font-semibold text-slate-600 text-[11px]">📋 Método / Procedimiento</label>
-            <input type="text" id="mMethod" placeholder="SOP desactualizado, ambigüedad..." class="w-full p-2 border rounded bg-slate-50" />
-          </div>
-          <div class="md:col-span-2">
-            <label class="block font-semibold text-slate-600 text-[11px]">🌡️ Medio Ambiente / Entorno</label>
-            <input type="text" id="mEnvironment" placeholder="Humedad, temperatura, presión de área..." class="w-full p-2 border rounded bg-slate-50" />
+            <label class="block font-semibold text-slate-700">Incertidumbre (k=2)</label>
+            <input type="number" step="0.01" id="calibUncertainty" placeholder="0.02" class="w-full p-2 border rounded" />
           </div>
         </div>
-      </div>
-
-      <!-- SECCIÓN 5 PORQUÉS -->
-      <div class="border-t pt-3">
-        <h4 class="font-bold text-xs text-slate-700 mb-2">2. Árbol de Investigación de los 5 Porqués</h4>
-        <div class="space-y-2 text-xs">
-          <input type="text" id="why1" placeholder="Por qué 1: ¿Por qué ocurrió el problema inmediato?" class="w-full p-2 border rounded" />
-          <input type="text" id="why2" placeholder="Por qué 2: ¿Por qué ocurrió lo anterior?" class="w-full p-2 border rounded" />
-          <input type="text" id="why3" placeholder="Por qué 3: ..." class="w-full p-2 border rounded" />
-          <input type="text" id="why4" placeholder="Por qué 4: ..." class="w-full p-2 border rounded" />
-          <input type="text" id="why5" placeholder="Por qué 5: ..." class="w-full p-2 border rounded" />
+        <div>
+          <label class="block font-semibold text-slate-700">N° Certificado de Calibración / Patronaje</label>
+          <input type="text" id="calibCert" placeholder="CERT-2026-MET-088" class="w-full p-2 border rounded font-mono" />
         </div>
-      </div>
-
-      <!-- CONCLUSIÓN Y VÍNCULO CAPA -->
-      <div class="border-t pt-3 space-y-2">
-        <label class="block font-bold text-xs text-amber-900">🎯 Causa Raíz Conclusiva Requerida</label>
-        <textarea id="rcaConclusive" rows="2" placeholder="Definición clara y concisa de la causa raíz final..." class="w-full p-2 border rounded text-xs font-semibold bg-amber-50/50"></textarea>
-
-        <div class="bg-purple-50 p-3 rounded-lg border border-purple-200 mt-2">
-          <label class="block font-bold text-xs text-purple-900 mb-1">☑️ Generar Plan CAPA Automático</label>
-          <input type="text" id="capaAction" placeholder="Acción correctiva/preventiva para eliminar esta causa raíz..." class="w-full p-2 border rounded text-xs bg-white" />
+        <div>
+          <label class="block font-semibold text-slate-700">Próxima Calibración Programada</label>
+          <input type="date" id="calibNextDate" class="w-full p-2 border rounded bg-slate-50" />
         </div>
       </div>
 
       <div class="flex justify-end space-x-2 pt-2 border-t">
-        <button id="btn-close-modal-rca" class="px-3 py-1.5 border rounded text-xs">Cancelar</button>
-        <button id="btn-save-rca" class="px-4 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded text-xs font-bold shadow">Guardar RCA & Plan CAPA</button>
+        <button id="btn-close-modal-calib" class="px-3 py-1 border rounded text-xs">Cancelar</button>
+        <button id="btn-save-calib" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-bold shadow">Guardar Registro GxP</button>
       </div>
     </div>
   </div>
 
-  <!-- MODALES EXISTENTES -->
+  <!-- MODAL REGISTRO EQUIPO CON EMP -->
+  <div id="modalEqp" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl max-w-md w-full p-5 border shadow-2xl space-y-3">
+      <h3 class="font-bold text-sm">🛠️ Registrar Equipo Critical GxP</h3>
+      <input type="text" id="eqpCode" placeholder="Código (ej. EQ-BAL-05)" class="w-full p-2 border rounded text-xs font-mono" />
+      <input type="text" id="eqpName" placeholder="Nombre del equipo / Balanza / Autoclave" class="w-full p-2 border rounded text-xs" />
+      <div class="grid grid-cols-2 gap-2">
+        <input type="number" step="0.01" id="eqpEmp" placeholder="EMP Máx (ej. 0.5)" class="w-full p-2 border rounded text-xs" />
+        <input type="text" id="eqpUnit" placeholder="Unidad (°C, mg, bar)" class="w-full p-2 border rounded text-xs font-mono" />
+      </div>
+      <div class="flex justify-end space-x-2 pt-2">
+        <button id="btn-close-modal-eqp" class="px-3 py-1 border rounded text-xs">Cancelar</button>
+        <button id="btn-save-eqp" class="px-3 py-1 bg-emerald-600 text-white rounded text-xs font-bold">Guardar Equipo</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODALES PREVIOS -->
   <div id="modalDoc" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
     <div class="bg-white rounded-xl max-w-md w-full p-5 border shadow-2xl space-y-3">
       <h3 class="font-bold text-sm">📑 Registrar Nuevo Documento</h3>
@@ -247,14 +239,48 @@
     </div>
   </div>
 
-  <div id="modalEqp" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
-    <div class="bg-white rounded-xl max-w-md w-full p-5 border shadow-2xl space-y-3">
-      <h3 class="font-bold text-sm">🛠️ Registrar Equipo GxP</h3>
-      <input type="text" id="eqpCode" placeholder="Código (ej. EQ-BAL-05)" class="w-full p-2 border rounded text-xs font-mono" />
-      <input type="text" id="eqpName" placeholder="Nombre del equipo" class="w-full p-2 border rounded text-xs" />
-      <div class="flex justify-end space-x-2 pt-2">
-        <button id="btn-close-modal-eqp" class="px-3 py-1 border rounded text-xs">Cancelar</button>
-        <button id="btn-save-eqp" class="px-3 py-1 bg-emerald-600 text-white rounded text-xs font-bold">Guardar</button>
+  <div id="modalRca" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl max-w-2xl w-full p-5 border shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+      <div class="border-b pb-2 flex justify-between items-center">
+        <h3 class="font-bold text-sm text-amber-800">🔍 Análisis de Causa Raíz (Ishikawa & 5 Porqués)</h3>
+        <span id="rcaDevCode" class="font-mono text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-bold"></span>
+      </div>
+
+      <div>
+        <h4 class="font-bold text-xs text-slate-700 mb-2">1. Diagrama de Ishikawa (Las 5M)</h4>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+          <div><label class="block font-semibold text-slate-600 text-[11px]">👤 Mano de Obra</label><input type="text" id="mManpower" class="w-full p-2 border rounded bg-slate-50" /></div>
+          <div><label class="block font-semibold text-slate-600 text-[11px]">⚙️ Maquinaria</label><input type="text" id="mMachine" class="w-full p-2 border rounded bg-slate-50" /></div>
+          <div><label class="block font-semibold text-slate-600 text-[11px]">🧪 Materiales</label><input type="text" id="mMaterial" class="w-full p-2 border rounded bg-slate-50" /></div>
+          <div><label class="block font-semibold text-slate-600 text-[11px]">📋 Método</label><input type="text" id="mMethod" class="w-full p-2 border rounded bg-slate-50" /></div>
+          <div class="md:col-span-2"><label class="block font-semibold text-slate-600 text-[11px]">🌡️ Medio Ambiente</label><input type="text" id="mEnvironment" class="w-full p-2 border rounded bg-slate-50" /></div>
+        </div>
+      </div>
+
+      <div class="border-t pt-3">
+        <h4 class="font-bold text-xs text-slate-700 mb-2">2. Árbol de Investigación de los 5 Porqués</h4>
+        <div class="space-y-2 text-xs">
+          <input type="text" id="why1" placeholder="Por qué 1..." class="w-full p-2 border rounded" />
+          <input type="text" id="why2" placeholder="Por qué 2..." class="w-full p-2 border rounded" />
+          <input type="text" id="why3" placeholder="Por qué 3..." class="w-full p-2 border rounded" />
+          <input type="text" id="why4" placeholder="Por qué 4..." class="w-full p-2 border rounded" />
+          <input type="text" id="why5" placeholder="Por qué 5..." class="w-full p-2 border rounded" />
+        </div>
+      </div>
+
+      <div class="border-t pt-3 space-y-2">
+        <label class="block font-bold text-xs text-amber-900">🎯 Causa Raíz Conclusiva Requerida</label>
+        <textarea id="rcaConclusive" rows="2" class="w-full p-2 border rounded text-xs font-semibold bg-amber-50/50"></textarea>
+
+        <div class="bg-purple-50 p-3 rounded-lg border border-purple-200 mt-2">
+          <label class="block font-bold text-xs text-purple-900 mb-1">☑️ Generar Plan CAPA Automático</label>
+          <input type="text" id="capaAction" placeholder="Acción correctiva/preventiva..." class="w-full p-2 border rounded text-xs bg-white" />
+        </div>
+      </div>
+
+      <div class="flex justify-end space-x-2 pt-2 border-t">
+        <button id="btn-close-modal-rca" class="px-3 py-1.5 border rounded text-xs">Cancelar</button>
+        <button id="btn-save-rca" class="px-4 py-1.5 bg-amber-600 text-white rounded text-xs font-bold shadow">Guardar RCA & CAPA</button>
       </div>
     </div>
   </div>
@@ -291,6 +317,7 @@
 
       let selectedDocId = null;
       let selectedDevId = null;
+      let selectedEqp = null;
       let activeGxpUser = null;
 
       // LOGIN / LOGOUT
@@ -361,8 +388,9 @@
       document.getElementById('btn-close-modal-eqp').onclick = () => toggleModal('modalEqp', false);
       document.getElementById('btn-close-modal-sign').onclick = () => toggleModal('modalSign', false);
       document.getElementById('btn-close-modal-rca').onclick = () => toggleModal('modalRca', false);
+      document.getElementById('btn-close-modal-calib').onclick = () => toggleModal('modalCalib', false);
 
-      // CARGA DE DATOS
+      // CARGA Y RENDER
       async function loadData() {
         const { data: docs } = await supabase.from('documentos').select('*');
         const { data: desvs } = await supabase.from('desviaciones').select('*');
@@ -400,7 +428,7 @@
           };
         });
 
-        // Render Desviaciones con soporte RCA
+        // Render Desviaciones
         document.getElementById('list-desvs').innerHTML = (desvs || []).map(d => {
           const hasRca = rcas && rcas.some(r => r.desviacion_id === d.id);
           return `
@@ -430,7 +458,46 @@
           };
         });
 
-        // Render CAPAs
+        // Render Equipos con Control Metrológico (EMP)
+        document.getElementById('list-eqps').innerHTML = (eqps || []).map(e => {
+          const isVencido = e.proxima_calibracion && new Date(e.proxima_calibracion) < new Date();
+          const estadoColor = isVencido ? 'bg-rose-100 text-rose-800' : 'bg-emerald-100 text-emerald-800';
+          const estadoTxt = isVencido ? 'FUERA DE SERVICIO (VENCIDO)' : (e.estado || 'OPERATIVO');
+
+          return `
+            <div class="p-3.5 bg-slate-50 rounded-xl border space-y-2">
+              <div class="flex justify-between items-start">
+                <div>
+                  <span class="font-mono font-bold text-emerald-700">${e.codigo}</span>
+                  <h3 class="font-bold text-slate-800">${e.nombre}</h3>
+                </div>
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold ${estadoColor}">${estadoTxt}</span>
+              </div>
+              <div class="text-[11px] text-slate-600 space-y-1 bg-white p-2 rounded border font-mono">
+                <div>EMP Permitido: <strong class="text-slate-900">±${e.emp_permitido || 0.1} ${e.unidad_medida || '°C'}</strong></div>
+                <div>Última Calibración: <strong>${e.ultima_calibracion || 'Pendiente'}</strong></div>
+                <div>Próxima Calibración: <strong class="${isVencido ? 'text-rose-600 font-extrabold' : ''}">${e.proxima_calibracion || 'Pendiente'}</strong></div>
+              </div>
+              <button data-id="${e.id}" data-code="${e.codigo}" data-emp="${e.emp_permitido || 0.1}" class="btn-open-calib w-full bg-emerald-600 hover:bg-emerald-700 text-white py-1.5 rounded text-xs font-bold shadow">
+                📏 Registrar Calibración Metrológica
+              </button>
+            </div>
+          `;
+        }).join('');
+
+        document.querySelectorAll('.btn-open-calib').forEach(b => {
+          b.onclick = function() {
+            selectedEqp = {
+              id: this.getAttribute('data-id'),
+              code: this.getAttribute('data-code'),
+              emp: parseFloat(this.getAttribute('data-emp'))
+            };
+            document.getElementById('calibEqpCode').innerText = selectedEqp.code;
+            toggleModal('modalCalib', true);
+          };
+        });
+
+        // Render CAPAs, Firmas y Audit
         document.getElementById('list-capas').innerHTML = (cps || []).map(c => `
           <div class="p-3 bg-slate-50 rounded border flex justify-between items-center">
             <div><span class="font-mono font-bold text-purple-700">${c.codigo}</span><p class="mt-0.5">${c.plan_accion}</p></div>
@@ -438,23 +505,12 @@
           </div>
         `).join('');
 
-        // Render Equipos
-        document.getElementById('list-eqps').innerHTML = (eqps || []).map(e => `
-          <div class="p-3 bg-slate-50 rounded border">
-            <span class="font-mono font-bold">${e.codigo}</span>
-            <h3 class="font-bold mt-0.5">${e.nombre}</h3>
-            <span class="inline-block mt-2 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">${e.estado}</span>
-          </div>
-        `).join('');
-
-        // Render Firmas
         document.getElementById('list-frms').innerHTML = (frms || []).map(f => `
           <div class="p-3 bg-slate-50 rounded border">
             <strong class="text-cyan-700">${f.significado_firma}</strong> - ${f.motivo_justificacion}
           </div>
         `).join('');
 
-        // Render Audit
         document.getElementById('list-auds').innerHTML = (audit || []).map(a => `
           <div class="p-2 bg-slate-50 rounded border">
             <strong class="text-cyan-700">${a.tabla_afectada}</strong> [${a.accion}] - Usuario: ${a.usuario} (${new Date(a.timestamp).toLocaleString('es-CO')})
@@ -462,7 +518,66 @@
         `).join('');
       }
 
-      // GUARDAR DATOS EN SUPABASE
+      // GUARDAR NUEVO EQUIPO
+      document.getElementById('btn-save-eqp').onclick = async () => {
+        const codigo = document.getElementById('eqpCode').value;
+        const nombre = document.getElementById('eqpName').value;
+        const emp_permitido = parseFloat(document.getElementById('eqpEmp').value) || 0.1;
+        const unidad_medida = document.getElementById('eqpUnit').value || '°C';
+
+        if (!codigo || !nombre) return;
+
+        await supabase.from('equipos').insert([{
+          codigo, nombre, emp_permitido, unidad_medida, tipo: 'Crítico GxP', estado: 'OPERATIVO'
+        }]);
+        toggleModal('modalEqp', false);
+        loadData();
+      };
+
+      // GUARDAR REGISTRO DE CALIBRACIÓN Y EVALUAR EMP
+      document.getElementById('btn-save-calib').onclick = async () => {
+        const fecha_calibracion = document.getElementById('calibDate').value;
+        const error_encontrado = parseFloat(document.getElementById('calibError').value);
+        const incertidumbre = parseFloat(document.getElementById('calibUncertainty').value) || 0;
+        const certificado_ref = document.getElementById('calibCert').value;
+        const proxima_calibracion = document.getElementById('calibNextDate').value;
+
+        if (!fecha_calibracion || isNaN(error_encontrado) || !selectedEqp) {
+          alert('Por favor completa la fecha y el error encontrado.');
+          return;
+        }
+
+        // Evaluación Metrológica contra el EMP
+        const cumple_emp = (Math.abs(error_encontrado) + incertidumbre) <= selectedEqp.emp;
+
+        if (!cumple_emp) {
+          alert(`⚠️ ALERTA GxP: El error (${error_encontrado}) excede el EMP (±${selectedEqp.emp}). El equipo cambiará a FUERA DE SERVICIO.`);
+        }
+
+        // 1. Insertar calibración
+        await supabase.from('calibraciones_equipos').insert([{
+          equipo_id: selectedEqp.id,
+          fecha_calibracion,
+          error_encontrado,
+          incertidumbre,
+          cumple_emp,
+          certificado_ref,
+          realizado_por: activeGxpUser ? activeGxpUser.id : null
+        }]);
+
+        // 2. Actualizar estado del equipo
+        const nuevoEstado = cumple_emp ? 'OPERATIVO' : 'FUERA DE SERVICIO';
+        await supabase.from('equipos').update({
+          ultima_calibracion: fecha_calibracion,
+          proxima_calibracion,
+          estado: nuevoEstado
+        }).eq('id', selectedEqp.id);
+
+        toggleModal('modalCalib', false);
+        loadData();
+      };
+
+      // REGISTROS PREVIOS
       document.getElementById('btn-save-doc').onclick = async () => {
         const codigo = document.getElementById('docCode').value;
         const titulo = document.getElementById('docTitle').value;
@@ -483,17 +598,6 @@
         loadData();
       };
 
-      document.getElementById('btn-save-eqp').onclick = async () => {
-        const codigo = document.getElementById('eqpCode').value;
-        const nombre = document.getElementById('eqpName').value;
-        if (!codigo || !nombre) return;
-
-        await supabase.from('equipos').insert([{ codigo, nombre, tipo: 'Crítico GxP', estado: 'OPERATIVO' }]);
-        toggleModal('modalEqp', false);
-        loadData();
-      };
-
-      // GUARDAR CAUSA RAÍZ (RCA) Y CAPA ASOCIADO
       document.getElementById('btn-save-rca').onclick = async () => {
         const causaConclusiva = document.getElementById('rcaConclusive').value;
         const accionCapa = document.getElementById('capaAction').value;
@@ -503,73 +607,10 @@
           return;
         }
 
-        // 1. Guardar Análisis Ishikawa y 5 Porqués
         await supabase.from('causa_raiz_desviaciones').insert([{
           desviacion_id: selectedDevId,
           m_mano_obra: document.getElementById('mManpower').value,
           m_maquinaria: document.getElementById('mMachine').value,
           m_materiales: document.getElementById('mMaterial').value,
           m_metodo: document.getElementById('mMethod').value,
-          m_medio_ambiente: document.getElementById('mEnvironment').value,
-          porque_1: document.getElementById('why1').value,
-          porque_2: document.getElementById('why2').value,
-          porque_3: document.getElementById('why3').value,
-          porque_4: document.getElementById('why4').value,
-          porque_5: document.getElementById('why5').value,
-          causa_raiz_conclusiva: causaConclusiva,
-          registrado_por: activeGxpUser ? activeGxpUser.id : null
-        }]);
-
-        // 2. Crear Plan CAPA vinculado si fue especificado
-        if (accionCapa) {
-          const capaCode = 'CAPA-' + Math.floor(1000 + Math.random() * 9000);
-          await supabase.from('capas').insert([{
-            codigo: capaCode,
-            desviacion_id: selectedDevId,
-            tipo: 'CORRECTIVA',
-            plan_accion: accionCapa,
-            estado: 'ABIERTA'
-          }]);
-        }
-
-        toggleModal('modalRca', false);
-        loadData();
-      };
-
-      // FIRMAS ELECTRÓNICAS
-      document.getElementById('btn-execute-sign').onclick = async () => {
-        const pin = document.getElementById('signPin').value;
-        const reason = document.getElementById('signReason').value;
-        const meaning = document.getElementById('signMeaning').value;
-
-        if (pin !== '1234') {
-          alert('PIN de firma incorrecto (Prueba: 1234)');
-          return;
-        }
-
-        if (activeGxpUser && selectedDocId) {
-          await supabase.from('firmas_electronicas').insert([{
-            tabla_referencia: 'documentos',
-            registro_id: selectedDocId,
-            usuario_id: activeGxpUser.id,
-            significado_firma: meaning,
-            motivo_justificacion: reason || 'Aprobación formal'
-          }]);
-
-          let nuevoEstado = 'Borrador';
-          if (meaning === 'ELABORO') nuevoEstado = 'En Revisión';
-          else if (meaning === 'REVISO') nuevoEstado = 'En Aprobación';
-          else if (meaning === 'APROBO') nuevoEstado = 'Vigente';
-
-          await supabase.from('documentos').update({ estado: nuevoEstado }).eq('id', selectedDocId);
-
-          toggleModal('modalSign', false);
-          loadData();
-        }
-      };
-
-      checkSession();
-    });
-  </script>
-</body>
-</html>
+          m_medio_ambiente: document.getElementById('
