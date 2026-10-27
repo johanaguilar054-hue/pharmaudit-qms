@@ -72,6 +72,7 @@
       <button data-tab="metrologia" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700">🛠️ Equipos & Calibración</button>
       <button data-tab="firmas" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700">✍️ Firmas Part 11</button>
       <button data-tab="audit" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700">📜 Audit Trail (ALCOA+)</button>
+      <button data-tab="admin" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 bg-slate-700 text-cyan-300">⚙️ Ajustes ERP</button>
     </nav>
 
     <!-- CONTENIDOS -->
@@ -110,11 +111,14 @@
         </div>
       </div>
 
-      <!-- DOCUMENTOS -->
+      <!-- DOCUMENTOS CONTROLADOS -->
       <div id="view-documentos" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4">
         <div class="flex justify-between items-center mb-3">
-          <h2 class="font-bold text-slate-800 text-sm">Documentos Controlados</h2>
-          <button id="btn-open-modal-doc" class="bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow">+ Nuevo Documento</button>
+          <div>
+            <h2 class="font-bold text-slate-800 text-sm">Gestión Documental & Workflows</h2>
+            <p class="text-xs text-slate-500">Subida de archivos oficiales y circuito de aprobaciones GxP</p>
+          </div>
+          <button id="btn-open-modal-doc" class="bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow">+ Solicitud / Nuevo Documento</button>
         </div>
         <div id="list-docs" class="divide-y divide-slate-100 text-xs">Cargando...</div>
       </div>
@@ -154,79 +158,119 @@
         <h2 class="font-bold text-slate-800 text-sm mb-3">Audit Trail Inalterable (ALCOA+)</h2>
         <div id="list-auds" class="space-y-2 max-h-96 overflow-y-auto font-mono text-[11px]">Cargando...</div>
       </div>
+
+      <!-- AJUSTES Y ADMINISTRACIÓN DEL ERP -->
+      <div id="view-admin" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-4">
+        <div class="flex justify-between items-center border-b pb-2">
+          <div>
+            <h2 class="font-bold text-slate-800 text-sm">⚙️ Ajustes del Sistema ERP / QMS</h2>
+            <p class="text-xs text-slate-500">Gestión de usuarios corporativos, roles y credenciales GxP</p>
+          </div>
+          <button id="btn-open-modal-user" class="bg-slate-800 hover:bg-slate-900 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow">+ Registrar Nuevo Usuario GxP</button>
+        </div>
+
+        <div>
+          <h3 class="font-bold text-xs text-slate-700 mb-2">Usuarios y Personal Autorizado</h3>
+          <div id="list-users" class="divide-y divide-slate-100 text-xs">Cargando usuarios...</div>
+        </div>
+      </div>
     </main>
   </div>
 
-  <!-- MODAL DE CALIBRACIÓN METROLÓGICA -->
-  <div id="modalCalib" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
-    <div class="bg-white rounded-xl max-w-md w-full p-5 border shadow-2xl space-y-3">
-      <div class="border-b pb-2 flex justify-between items-center">
-        <h3 class="font-bold text-sm text-emerald-800">📏 Registrar Calibración Metrológica</h3>
-        <span id="calibEqpCode" class="font-mono text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold"></span>
-      </div>
-
+  <!-- MODAL DE CARGA DOCUMENTAL AVANZADA CON WORKFLOW -->
+  <div id="modalDoc" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl max-w-lg w-full p-5 border shadow-2xl space-y-3">
+      <h3 class="font-bold text-sm text-cyan-900">📑 Crear / Subir Documento Controlado</h3>
+      
       <div class="space-y-2 text-xs">
-        <div>
-          <label class="block font-semibold text-slate-700">Fecha de Calibración Realizada</label>
-          <input type="date" id="calibDate" class="w-full p-2 border rounded bg-slate-50" />
+        <div class="grid grid-cols-3 gap-2">
+          <input type="text" id="docCode" placeholder="Código (ej. SOP-QA-010)" class="col-span-1 p-2 border rounded font-mono" />
+          <input type="text" id="docTitle" placeholder="Título del Documento / SOP" class="col-span-2 p-2 border rounded" />
         </div>
+
         <div class="grid grid-cols-2 gap-2">
           <div>
-            <label class="block font-semibold text-slate-700">Error Encontrado</label>
-            <input type="number" step="0.01" id="calibError" placeholder="0.15" class="w-full p-2 border rounded" />
+            <label class="block font-semibold text-slate-700 text-[11px]">Tipo de Documento</label>
+            <select id="docType" class="w-full p-2 border rounded bg-slate-50">
+              <option value="SOP">SOP / POE</option>
+              <option value="INSTRUCTIVO">Instructivo de Trabajo</option>
+              <option value="FORMATO">Formato / Registro</option>
+              <option value="ESPECIFICACION">Especificación Técnica</option>
+            </select>
           </div>
           <div>
-            <label class="block font-semibold text-slate-700">Incertidumbre (k=2)</label>
-            <input type="number" step="0.01" id="calibUncertainty" placeholder="0.02" class="w-full p-2 border rounded" />
+            <label class="block font-semibold text-slate-700 text-[11px]">Versión Inicial</label>
+            <input type="text" id="docVersion" value="1.0" class="w-full p-2 border rounded font-mono bg-slate-50" />
           </div>
         </div>
+
         <div>
-          <label class="block font-semibold text-slate-700">N° Certificado de Calibración / Patronaje</label>
-          <input type="text" id="calibCert" placeholder="CERT-2026-MET-088" class="w-full p-2 border rounded font-mono" />
+          <label class="block font-semibold text-slate-700 text-[11px]">Archivo Digital (PDF / Word)</label>
+          <input type="file" id="docFile" accept=".pdf,.doc,.docx" class="w-full p-1.5 border rounded bg-slate-50 text-xs" />
         </div>
-        <div>
-          <label class="block font-semibold text-slate-700">Próxima Calibración Programada</label>
-          <input type="date" id="calibNextDate" class="w-full p-2 border rounded bg-slate-50" />
+
+        <!-- ASIGNACIÓN DE RESPONSABLES -->
+        <div class="border-t pt-2 space-y-2">
+          <h4 class="font-bold text-slate-800 text-[11px]">Flujo de Trabajo (Workflow)</h4>
+          <div class="grid grid-cols-3 gap-2 text-[11px]">
+            <div>
+              <label class="block text-slate-600">Elaborador</label>
+              <select id="selectElaborador" class="w-full p-1.5 border rounded bg-slate-50"></select>
+            </div>
+            <div>
+              <label class="block text-slate-600">Revisor</label>
+              <select id="selectRevisor" class="w-full p-1.5 border rounded bg-slate-50"></select>
+            </div>
+            <div>
+              <label class="block text-slate-600">Aprobador</label>
+              <select id="selectAprobador" class="w-full p-1.5 border rounded bg-slate-50"></select>
+            </div>
+          </div>
         </div>
       </div>
 
       <div class="flex justify-end space-x-2 pt-2 border-t">
-        <button id="btn-close-modal-calib" class="px-3 py-1 border rounded text-xs">Cancelar</button>
-        <button id="btn-save-calib" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-bold shadow">Guardar Registro GxP</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- MODAL REGISTRO EQUIPO -->
-  <div id="modalEqp" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
-    <div class="bg-white rounded-xl max-w-md w-full p-5 border shadow-2xl space-y-3">
-      <h3 class="font-bold text-sm">🛠️ Registrar Equipo Critical GxP</h3>
-      <input type="text" id="eqpCode" placeholder="Código (ej. EQ-BAL-05)" class="w-full p-2 border rounded text-xs font-mono" />
-      <input type="text" id="eqpName" placeholder="Nombre del equipo / Balanza / Autoclave" class="w-full p-2 border rounded text-xs" />
-      <div class="grid grid-cols-2 gap-2">
-        <input type="number" step="0.01" id="eqpEmp" placeholder="EMP Máx (ej. 0.5)" class="w-full p-2 border rounded text-xs" />
-        <input type="text" id="eqpUnit" placeholder="Unidad (°C, mg, bar)" class="w-full p-2 border rounded text-xs font-mono" />
-      </div>
-      <div class="flex justify-end space-x-2 pt-2">
-        <button id="btn-close-modal-eqp" class="px-3 py-1 border rounded text-xs">Cancelar</button>
-        <button id="btn-save-eqp" class="px-3 py-1 bg-emerald-600 text-white rounded text-xs font-bold">Guardar Equipo</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- MODALES PREVIOS -->
-  <div id="modalDoc" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
-    <div class="bg-white rounded-xl max-w-md w-full p-5 border shadow-2xl space-y-3">
-      <h3 class="font-bold text-sm">📑 Registrar Nuevo Documento</h3>
-      <input type="text" id="docCode" placeholder="Código (ej. SOP-QA-005)" class="w-full p-2 border rounded text-xs font-mono" />
-      <input type="text" id="docTitle" placeholder="Título del documento" class="w-full p-2 border rounded text-xs" />
-      <div class="flex justify-end space-x-2 pt-2">
         <button id="btn-close-modal-doc" class="px-3 py-1 border rounded text-xs">Cancelar</button>
-        <button id="btn-save-doc" class="px-3 py-1 bg-cyan-600 text-white rounded text-xs font-bold">Guardar</button>
+        <button id="btn-save-doc" class="px-4 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white rounded text-xs font-bold shadow">Iniciar Workflow & Subir</button>
       </div>
     </div>
   </div>
 
+  <!-- MODAL DE REGISTRO DE USUARIO GXP -->
+  <div id="modalUser" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl max-w-md w-full p-5 border shadow-2xl space-y-3">
+      <h3 class="font-bold text-sm text-slate-800">👤 Registrar Nuevo Usuario GxP</h3>
+      
+      <div class="space-y-2 text-xs">
+        <input type="text" id="newUserName" placeholder="Nombre Completo (ej. Carlos Gómez)" class="w-full p-2 border rounded" />
+        <input type="email" id="newUserEmail" placeholder="Correo Corporativo (ej. c.gomez@pharmor.com.co)" class="w-full p-2 border rounded font-mono" />
+        <input type="text" id="newUserCargo" placeholder="Cargo (ej. Analista de Control de Calidad)" class="w-full p-2 border rounded" />
+        
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block font-semibold text-slate-700">Rol de Sistema</label>
+            <select id="newUserRol" class="w-full p-2 border rounded bg-slate-50">
+              <option value="ANALISTA">Analista GxP</option>
+              <option value="REVISOR">Revisor de Calidad</option>
+              <option value="QA_LEAD">QA Lead / Director</option>
+              <option value="AUDITOR">Auditor Interno</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700">PIN de Firma</label>
+            <input type="password" id="newUserPin" value="1234" maxlength="4" class="w-full p-2 border rounded font-mono text-center" />
+          </div>
+        </div>
+      </div>
+
+      <div class="flex justify-end space-x-2 pt-2 border-t">
+        <button id="btn-close-modal-user" class="px-3 py-1 border rounded text-xs">Cancelar</button>
+        <button id="btn-save-user" class="px-4 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded text-xs font-bold shadow">Guardar Usuario</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODALES DE OTRAS SECCIONES -->
   <div id="modalDev" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
     <div class="bg-white rounded-xl max-w-md w-full p-5 border shadow-2xl space-y-3">
       <h3 class="font-bold text-sm">⚠️ Reportar Desviación / NC</h3>
@@ -235,6 +279,46 @@
       <div class="flex justify-end space-x-2 pt-2">
         <button id="btn-close-modal-dev" class="px-3 py-1 border rounded text-xs">Cancelar</button>
         <button id="btn-save-dev" class="px-3 py-1 bg-amber-600 text-white rounded text-xs font-bold">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modalEqp" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl max-w-md w-full p-5 border shadow-2xl space-y-3">
+      <h3 class="font-bold text-sm">🛠️ Registrar Equipo Critical GxP</h3>
+      <input type="text" id="eqpCode" placeholder="Código (ej. EQ-BAL-05)" class="w-full p-2 border rounded text-xs font-mono" />
+      <input type="text" id="eqpName" placeholder="Nombre del equipo" class="w-full p-2 border rounded text-xs" />
+      <div class="grid grid-cols-2 gap-2">
+        <input type="number" step="0.01" id="eqpEmp" placeholder="EMP Máx" class="w-full p-2 border rounded text-xs" />
+        <input type="text" id="eqpUnit" placeholder="Unidad (°C, mg)" class="w-full p-2 border rounded text-xs font-mono" />
+      </div>
+      <div class="flex justify-end space-x-2 pt-2">
+        <button id="btn-close-modal-eqp" class="px-3 py-1 border rounded text-xs">Cancelar</button>
+        <button id="btn-save-eqp" class="px-3 py-1 bg-emerald-600 text-white rounded text-xs font-bold">Guardar Equipo</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modalCalib" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl max-w-md w-full p-5 border shadow-2xl space-y-3">
+      <div class="border-b pb-2 flex justify-between items-center">
+        <h3 class="font-bold text-sm text-emerald-800">📏 Registrar Calibración Metrológica</h3>
+        <span id="calibEqpCode" class="font-mono text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold"></span>
+      </div>
+
+      <div class="space-y-2 text-xs">
+        <div><label class="block font-semibold text-slate-700">Fecha de Calibración Realizada</label><input type="date" id="calibDate" class="w-full p-2 border rounded bg-slate-50" /></div>
+        <div class="grid grid-cols-2 gap-2">
+          <div><label class="block font-semibold text-slate-700">Error Encontrado</label><input type="number" step="0.01" id="calibError" placeholder="0.15" class="w-full p-2 border rounded" /></div>
+          <div><label class="block font-semibold text-slate-700">Incertidumbre (k=2)</label><input type="number" step="0.01" id="calibUncertainty" placeholder="0.02" class="w-full p-2 border rounded" /></div>
+        </div>
+        <div><label class="block font-semibold text-slate-700">N° Certificado</label><input type="text" id="calibCert" placeholder="CERT-2026-MET-088" class="w-full p-2 border rounded font-mono" /></div>
+        <div><label class="block font-semibold text-slate-700">Próxima Calibración</label><input type="date" id="calibNextDate" class="w-full p-2 border rounded bg-slate-50" /></div>
+      </div>
+
+      <div class="flex justify-end space-x-2 pt-2 border-t">
+        <button id="btn-close-modal-calib" class="px-3 py-1 border rounded text-xs">Cancelar</button>
+        <button id="btn-save-calib" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-bold shadow">Guardar Registro GxP</button>
       </div>
     </div>
   </div>
@@ -319,8 +403,9 @@
       let selectedDevId = null;
       let selectedEqp = null;
       let activeGxpUser = null;
+      let allUsers = [];
 
-      // LOGIN / LOGOUT ROBUSTO
+      // LOGIN / LOGOUT
       document.getElementById('btn-login').onclick = async () => {
         const email = document.getElementById('loginEmail').value;
         const password = document.getElementById('loginPassword').value;
@@ -389,6 +474,8 @@
 
       document.getElementById('btn-open-modal-doc').onclick = () => toggleModal('modalDoc', true);
       document.getElementById('btn-close-modal-doc').onclick = () => toggleModal('modalDoc', false);
+      document.getElementById('btn-open-modal-user').onclick = () => toggleModal('modalUser', true);
+      document.getElementById('btn-close-modal-user').onclick = () => toggleModal('modalUser', false);
       document.getElementById('btn-open-modal-dev').onclick = () => toggleModal('modalDev', true);
       document.getElementById('btn-close-modal-dev').onclick = () => toggleModal('modalDev', false);
       document.getElementById('btn-open-modal-eqp').onclick = () => toggleModal('modalEqp', true);
@@ -397,7 +484,7 @@
       document.getElementById('btn-close-modal-rca').onclick = () => toggleModal('modalRca', false);
       document.getElementById('btn-close-modal-calib').onclick = () => toggleModal('modalCalib', false);
 
-      // CARGA Y RENDER
+      // CARGA DE DATOS PRINCIPAL
       async function loadData() {
         const { data: docs } = await supabase.from('documentos').select('*');
         const { data: desvs } = await supabase.from('desviaciones').select('*');
@@ -406,6 +493,15 @@
         const { data: audit } = await supabase.from('audit_trail').select('*').order('timestamp', { ascending: false });
         const { data: frms } = await supabase.from('firmas_electronicas').select('*').order('timestamp_firma', { ascending: false });
         const { data: rcas } = await supabase.from('causa_raiz_desviaciones').select('*');
+        const { data: users } = await supabase.from('usuarios_gxp').select('*');
+
+        allUsers = users || [];
+
+        // Llenar dropdowns de workflow de usuarios
+        const userOptions = allUsers.map(u => `<option value="${u.id}">${u.nombre_completo} (${u.cargo || 'GxP'})</option>`).join('');
+        document.getElementById('selectElaborador').innerHTML = userOptions;
+        document.getElementById('selectRevisor').innerHTML = userOptions;
+        document.getElementById('selectAprobador').innerHTML = userOptions;
 
         document.getElementById('cnt-docs').innerText = docs ? docs.length : 0;
         document.getElementById('cnt-desvs').innerText = desvs ? desvs.length : 0;
@@ -413,19 +509,34 @@
         document.getElementById('cnt-eqps').innerText = eqps ? eqps.length : 0;
         document.getElementById('cnt-audit').innerText = audit ? audit.length : 0;
 
-        // Render Documentos
-        document.getElementById('list-docs').innerHTML = (docs || []).map(d => `
-          <div class="py-2.5 flex justify-between items-center">
-            <div>
-              <span class="font-mono font-bold text-cyan-700 mr-2">${d.codigo}</span>
-              <span class="font-semibold text-slate-800">${d.titulo}</span>
-              <span class="block text-[10px] text-slate-400">v${d.version}</span>
+        // Render Documentos con descarga y workflow
+        document.getElementById('list-docs').innerHTML = (docs || []).map(d => {
+          const downloadBtn = d.archivo_url 
+            ? `<a href="${d.archivo_url}" target="_blank" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded text-[10px] font-bold border">📥 Archivo Digital</a>` 
+            : `<span class="text-slate-400 text-[10px] italic">Sin adjunto</span>`;
+
+          return `
+            <div class="py-3 flex justify-between items-center">
+              <div>
+                <div class="flex items-center space-x-2">
+                  <span class="font-mono font-bold text-cyan-700">${d.codigo}</span>
+                  <span class="font-semibold text-slate-800">${d.titulo}</span>
+                  <span class="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded text-[10px] font-mono">${d.tipo || 'SOP'} v${d.version}</span>
+                </div>
+                <div class="mt-1 flex items-center space-x-2">
+                  ${downloadBtn}
+                </div>
+              </div>
+              <div class="flex items-center space-x-2">
+                <span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-semibold text-[10px]">${d.estado}</span>
+                ${d.estado !== 'Vigente' 
+                  ? `<button data-id="${d.id}" data-code="${d.codigo}" class="btn-sign bg-cyan-600 hover:bg-cyan-700 text-white px-2 py-1 rounded text-[10px] font-bold shadow">✍️ Estampar Firma</button>` 
+                  : ''
+                }
+              </div>
             </div>
-            <div class="flex items-center space-x-2">
-              <span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-semibold text-[10px]">${d.estado}</span>${d.estado !== 'Vigente' ? `<button data-id="${d.id}" data-code="${d.codigo}" class="btn-sign bg-cyan-600 hover:bg-cyan-700 text-white px-2 py-1 rounded text-[10px] font-bold">✍️ Firmar</button>` : ''}
-            </div>
-          </div>
-        `).join('');
+          `;
+        }).join('');
 
         document.querySelectorAll('.btn-sign').forEach(b => {
           b.onclick = function() {
@@ -435,7 +546,21 @@
           };
         });
 
-        // Render Desviaciones
+        // Render Lista de Usuarios en el Módulo Admin
+        document.getElementById('list-users').innerHTML = (allUsers || []).map(u => `
+          <div class="py-2 flex justify-between items-center">
+            <div>
+              <strong class="text-slate-800">${u.nombre_completo}</strong>
+              <span class="text-slate-500 font-mono block text-[11px]">${u.email || u.username} · ${u.cargo || 'GxP Role'}</span>
+            </div>
+            <div class="flex items-center space-x-2">
+              <span class="bg-cyan-50 text-cyan-800 border border-cyan-200 px-2 py-0.5 rounded font-mono text-[10px] font-bold">${u.rol || 'ANALISTA'}</span>
+              <span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-[10px] font-bold">ACTIVO</span>
+            </div>
+          </div>
+        `).join('');
+
+        // Render Desviaciones, Equipos, CAPAs, Firmas y Audit
         document.getElementById('list-desvs').innerHTML = (desvs || []).map(d => {
           const hasRca = rcas && rcas.some(r => r.desviacion_id === d.id);
           return `
@@ -465,7 +590,6 @@
           };
         });
 
-        // Render Equipos
         document.getElementById('list-eqps').innerHTML = (eqps || []).map(e => {
           const isVencido = e.proxima_calibracion && new Date(e.proxima_calibracion) < new Date();
           const estadoColor = isVencido ? 'bg-rose-100 text-rose-800' : 'bg-emerald-100 text-emerald-800';
@@ -504,7 +628,6 @@
           };
         });
 
-        // Render CAPAs, Firmas y Audit
         document.getElementById('list-capas').innerHTML = (cps || []).map(c => `
           <div class="p-3 bg-slate-50 rounded border flex justify-between items-center">
             <div><span class="font-mono font-bold text-purple-700">${c.codigo}</span><p class="mt-0.5">${c.plan_accion}</p></div>
@@ -525,7 +648,92 @@
         `).join('');
       }
 
-      // ACCIONES
+      // GUARDAR Y SUBIR DOCUMENTO (CON STORAGE DE SUPABASE)
+      document.getElementById('btn-save-doc').onclick = async () => {
+        const codigo = document.getElementById('docCode').value;
+        const titulo = document.getElementById('docTitle').value;
+        const tipo = document.getElementById('docType').value;
+        const version = document.getElementById('docVersion').value;
+        const fileInput = document.getElementById('docFile');
+
+        const elaborador_id = document.getElementById('selectElaborador').value;
+        const revisor_id = document.getElementById('selectRevisor').value;
+        const aprobador_id = document.getElementById('selectAprobador').value;
+
+        if (!codigo || !titulo) {
+          alert('Debes ingresar el código y el título del documento.');
+          return;
+        }
+
+        let archivo_url = null;
+
+        // Carga física a Supabase Storage
+        if (fileInput.files.length > 0) {
+          const file = fileInput.files[0];
+          const fileExt = file.name.split('.').pop();
+          const filePath = `${codigo}_v${version}_${Date.now()}.${fileExt}`;
+
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('documentos-gxp')
+            .upload(filePath, file);
+
+          if (uploadError) {
+            alert('Error al subir el archivo digital: ' + uploadError.message);
+            return;
+          }
+
+          const { data: publicUrlData } = supabase.storage
+            .from('documentos-gxp')
+            .getPublicUrl(filePath);
+
+          archivo_url = publicUrlData.publicUrl;
+        }
+
+        // Insertar documento con workflow
+        await supabase.from('documentos').insert([{
+          codigo,
+          titulo,
+          tipo,
+          version,
+          estado: 'Borrador',
+          archivo_url,
+          elaborador_id,
+          revisor_id,
+          aprobador_id
+        }]);
+
+        toggleModal('modalDoc', false);
+        loadData();
+      };
+
+      // REGISTRAR NUEVO USUARIO GXP
+      document.getElementById('btn-save-user').onclick = async () => {
+        const nombre_completo = document.getElementById('newUserName').value;
+        const email = document.getElementById('newUserEmail').value;
+        const cargo = document.getElementById('newUserCargo').value;
+        const rol = document.getElementById('newUserRol').value;
+        const pin_firma = document.getElementById('newUserPin').value;
+
+        if (!nombre_completo || !email) {
+          alert('Nombre y correo corporativo son obligatorios.');
+          return;
+        }
+
+        await supabase.from('usuarios_gxp').insert([{
+          username: email,
+          email,
+          nombre_completo,
+          cargo,
+          rol,
+          pin_firma,
+          pin_firma_hash: pin_firma
+        }]);
+
+        toggleModal('modalUser', false);
+        loadData();
+      };
+
+      // GUARDAR Y ACCIONES SECUNDARIAS
       document.getElementById('btn-save-eqp').onclick = async () => {
         const codigo = document.getElementById('eqpCode').value;
         const nombre = document.getElementById('eqpName').value;
@@ -556,7 +764,7 @@
         const cumple_emp = (Math.abs(error_encontrado) + incertidumbre) <= selectedEqp.emp;
 
         if (!cumple_emp) {
-          alert(`⚠️ ALERTA GxP: El error (${error_encontrado}) excede el EMP (±${selectedEqp.emp}). El equipo cambiará a FUERA DE SERVICIO.`);
+          alert(`⚠️ ALERTA GxP: El error excede el EMP (±${selectedEqp.emp}). El equipo cambiará a FUERA DE SERVICIO.`);
         }
 
         await supabase.from('calibraciones_equipos').insert([{
@@ -577,16 +785,6 @@
         }).eq('id', selectedEqp.id);
 
         toggleModal('modalCalib', false);
-        loadData();
-      };
-
-      document.getElementById('btn-save-doc').onclick = async () => {
-        const codigo = document.getElementById('docCode').value;
-        const titulo = document.getElementById('docTitle').value;
-        if (!codigo || !titulo) return;
-
-        await supabase.from('documentos').insert([{ codigo, titulo, tipo: 'SOP', version: '1.0', estado: 'Borrador' }]);
-        toggleModal('modalDoc', false);
         loadData();
       };
 
