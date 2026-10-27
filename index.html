@@ -65,11 +65,11 @@
           <input type="password" id="loginPassword" value="123456" class="w-full p-2.5 border rounded-lg text-xs font-mono bg-slate-50 focus:bg-white" />
         </div>
 
-        <button type="button" id="btn-login-secure" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2.5 rounded-lg text-xs shadow transition cursor-pointer">
+        <button type="button" onclick="window.ejecutarLoginSeguro()" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2.5 rounded-lg text-xs shadow transition cursor-pointer">
           Iniciar Sesión Segura (21 CFR Part 11)
         </button>
 
-        <button type="button" id="btn-login-dev" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 rounded-lg text-xs shadow transition cursor-pointer">
+        <button type="button" onclick="window.ejecutarLoginDev()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 rounded-lg text-xs shadow transition cursor-pointer">
           ⚡ Ingreso Directo QA Lead (Johan Aguilar)
         </button>
       </div>
@@ -92,22 +92,22 @@
         <span id="userBadge" class="text-xs font-mono text-emerald-400 bg-emerald-950 px-3 py-1 rounded-full border border-emerald-500/30">
           Johan Aguilar (QA Lead)
         </span>
-        <button id="btn-logout" class="bg-rose-600 hover:bg-rose-700 text-white px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer">
+        <button type="button" onclick="window.cerrarSesion()" class="bg-rose-600 hover:bg-rose-700 text-white px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer">
           🚪 Salir
         </button>
       </div>
     </header>
 
     <nav class="bg-slate-800 text-slate-300 rounded-xl p-1 mb-4 flex space-x-1 overflow-x-auto text-xs font-medium">
-      <button data-tab="dashboard" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap bg-cyan-600 text-white font-bold cursor-pointer">📊 Dashboard</button>
-      <button data-tab="documentos" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">📑 Gestión Documental</button>
-      <button data-tab="copias" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 text-amber-300 font-bold cursor-pointer">📋 Copias Controladas</button>
-      <button data-tab="desviaciones" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">⚠️ Desviaciones & NC</button>
-      <button data-tab="capa" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">☑️ Módulo CAPA</button>
-      <button data-tab="metrologia" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">🛠️ Equipos & Calibración</button>
-      <button data-tab="firmas" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">✍️ Firmas Part 11</button>
-      <button data-tab="audit" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">📜 Audit Trail (ALCOA+)</button>
-      <button data-tab="admin" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 bg-slate-700 text-cyan-300 cursor-pointer">⚙️ Ajustes ERP</button>
+      <button onclick="window.cambiarPestana('dashboard', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap bg-cyan-600 text-white font-bold cursor-pointer">📊 Dashboard</button>
+      <button onclick="window.cambiarPestana('documentos', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">📑 Gestión Documental</button>
+      <button onclick="window.cambiarPestana('copias', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 text-amber-300 font-bold cursor-pointer">📋 Copias Controladas</button>
+      <button onclick="window.cambiarPestana('desviaciones', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">⚠️ Desviaciones & NC</button>
+      <button onclick="window.cambiarPestana('capa', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">☑️ Módulo CAPA</button>
+      <button onclick="window.cambiarPestana('metrologia', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">🛠️ Equipos & Calibración</button>
+      <button onclick="window.cambiarPestana('firmas', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">✍️ Firmas Part 11</button>
+      <button onclick="window.cambiarPestana('audit', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">📜 Audit Trail (ALCOA+)</button>
+      <button onclick="window.cambiarPestana('admin', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 bg-slate-700 text-cyan-300 cursor-pointer">⚙️ Ajustes ERP</button>
     </nav>
 
     <main>
@@ -150,7 +150,7 @@
             <h2 class="font-bold text-slate-800 text-sm">Gestión Documental & Workflows</h2>
             <p class="text-xs text-slate-500">Control de versiones, subida de archivos y exportación PDF oficial</p>
           </div>
-          <button id="btn-open-modal-doc" class="bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow cursor-pointer">+ Solicitud / Nuevo Documento</button>
+          <button type="button" onclick="window.toggleModal('modalDoc', true)" class="bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow cursor-pointer">+ Solicitud / Nuevo Documento</button>
         </div>
         <div id="list-docs" class="divide-y divide-slate-100 text-xs">Cargando...</div>
       </div>
@@ -189,7 +189,7 @@
       <div id="view-desviaciones" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-3">
         <div class="flex justify-between items-center">
           <h2 class="font-bold text-slate-800 text-sm">Desviaciones & NC</h2>
-          <button id="btn-open-modal-dev" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow cursor-pointer">+ Reportar Desviación / NC</button>
+          <button type="button" onclick="window.toggleModal('modalDev', true)" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow cursor-pointer">+ Reportar Desviación / NC</button>
         </div>
         <div id="list-desvs" class="space-y-2 text-xs">Cargando...</div>
       </div>
@@ -202,7 +202,7 @@
       <div id="view-metrologia" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4">
         <div class="flex justify-between items-center mb-3">
           <h2 class="font-bold text-slate-800 text-sm">Equipos & Metrología GxP</h2>
-          <button id="btn-open-modal-eqp" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow cursor-pointer">+ Nuevo Equipo GxP</button>
+          <button type="button" onclick="window.toggleModal('modalEqp', true)" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow cursor-pointer">+ Nuevo Equipo GxP</button>
         </div>
         <div id="list-eqps" class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">Cargando...</div>
       </div>
@@ -223,7 +223,7 @@
             <h2 class="font-bold text-slate-800 text-sm">⚙️ Ajustes del Sistema ERP / QMS</h2>
             <p class="text-xs text-slate-500">Gestión de usuarios corporativos, roles y credenciales GxP</p>
           </div>
-          <button id="btn-open-modal-user" class="bg-slate-800 hover:bg-slate-900 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow cursor-pointer">+ Registrar Nuevo Usuario GxP</button>
+          <button type="button" onclick="window.toggleModal('modalUser', true)" class="bg-slate-800 hover:bg-slate-900 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow cursor-pointer">+ Registrar Nuevo Usuario GxP</button>
         </div>
 
         <div>
@@ -240,10 +240,10 @@
       <div class="border-b pb-2 flex justify-between items-center shrink-0">
         <h3 class="font-bold text-sm text-slate-800">📜 Vista Previa & Impresión de Copia Controlada GxP</h3>
         <div class="flex items-center space-x-2">
-          <button id="btn-print-top" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow cursor-pointer">
+          <button type="button" onclick="window.print()" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow cursor-pointer">
             🖨️ Imprimir Copia Controlada
           </button>
-          <button id="btn-close-pdf" class="text-slate-400 hover:text-slate-600 font-bold text-base px-2 cursor-pointer">✕</button>
+          <button type="button" onclick="window.toggleModal('modalExportPdf', false)" class="text-slate-400 hover:text-slate-600 font-bold text-base px-2 cursor-pointer">✕</button>
         </div>
       </div>
 
@@ -278,9 +278,7 @@
 
           <div id="document-file-container" class="space-y-3">
             <h4 class="font-bold text-xs uppercase border-b pb-1 text-slate-800">Cuerpo del Documento Oficial GxP</h4>
-            <div id="pdfViewerArea" class="w-full min-h-[300px] border rounded bg-slate-100 flex items-center justify-center p-4">
-              <!-- Renderizado del documento -->
-            </div>
+            <div id="pdfViewerArea" class="w-full min-h-[300px] border rounded bg-slate-100 flex items-center justify-center p-4"></div>
           </div>
 
           <div class="space-y-2 border-t pt-4">
@@ -308,10 +306,10 @@
       </div>
 
       <div class="flex justify-end border-t pt-2 shrink-0 space-x-2">
-        <button id="btn-print-bottom" class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-1.5 rounded text-xs font-bold shadow cursor-pointer">
+        <button type="button" onclick="window.print()" class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-1.5 rounded text-xs font-bold shadow cursor-pointer">
           🖨️ Imprimir Copia Controlada
         </button>
-        <button id="btn-close-pdf-bottom" class="px-4 py-1.5 border rounded text-xs cursor-pointer">Cerrar Vista Previa</button>
+        <button type="button" onclick="window.toggleModal('modalExportPdf', false)" class="px-4 py-1.5 border rounded text-xs cursor-pointer">Cerrar Vista Previa</button>
       </div>
     </div>
   </div>
@@ -347,8 +345,8 @@
       </div>
 
       <div class="flex justify-end space-x-2 pt-2 border-t">
-        <button id="btn-close-emitir" class="px-3 py-1 border rounded text-xs cursor-pointer">Cancelar</button>
-        <button id="btn-confirmar-emitir" class="px-4 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded text-xs font-bold shadow cursor-pointer">Generar & Imprimir Copia</button>
+        <button type="button" onclick="window.toggleModal('modalEmitirCopia', false)" class="px-3 py-1 border rounded text-xs cursor-pointer">Cancelar</button>
+        <button type="button" onclick="window.confirmarEmitirCopia()" class="px-4 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded text-xs font-bold shadow cursor-pointer">Generar & Imprimir Copia</button>
       </div>
     </div>
   </div>
@@ -374,8 +372,8 @@
       </div>
 
       <div class="flex justify-end space-x-2 pt-2 border-t">
-        <button id="btn-close-version" class="px-3 py-1 border rounded text-xs cursor-pointer">Cancelar</button>
-        <button id="btn-confirmar-version" class="px-4 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white rounded text-xs font-bold shadow cursor-pointer">Generar Versión & Pasar a Borrador</button>
+        <button type="button" onclick="window.toggleModal('modalVersion', false)" class="px-3 py-1 border rounded text-xs cursor-pointer">Cancelar</button>
+        <button type="button" onclick="window.confirmarNuevaVersion()" class="px-4 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white rounded text-xs font-bold shadow cursor-pointer">Generar Versión & Pasar a Borrador</button>
       </div>
     </div>
   </div>
@@ -399,370 +397,333 @@
       <input type="password" id="signPin" placeholder="PIN de firma (1234)" class="w-full p-2 border rounded text-xs font-mono" />
       
       <div class="flex justify-end space-x-2 pt-2">
-        <button id="btn-close-sign" class="px-3 py-1 border rounded text-xs cursor-pointer">Cancelar</button>
-        <button id="btn-confirmar-sign" class="px-3 py-1 bg-cyan-600 text-white rounded text-xs font-bold cursor-pointer">Estampar Firma</button>
+        <button type="button" onclick="window.toggleModal('modalSign', false)" class="px-3 py-1 border rounded text-xs cursor-pointer">Cancelar</button>
+        <button type="button" onclick="window.confirmarFirma()" class="px-3 py-1 bg-cyan-600 text-white rounded text-xs font-bold cursor-pointer">Estampar Firma</button>
       </div>
     </div>
   </div>
 
-  <!-- MODAL GENÉRICO PARA CIERRE -->
+  <!-- MODALES SIMPLES -->
   <div id="modalDoc" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
     <div class="bg-white rounded-xl max-w-lg w-full p-5 border shadow-2xl space-y-3">
       <h3 class="font-bold text-sm text-cyan-900">📑 Crear / Subir Documento Controlado</h3>
-      <div class="flex justify-end pt-2 border-t"><button id="btn-close-doc" class="px-3 py-1 border rounded text-xs cursor-pointer">Cerrar</button></div>
+      <div class="flex justify-end pt-2 border-t"><button type="button" onclick="window.toggleModal('modalDoc', false)" class="px-3 py-1 border rounded text-xs cursor-pointer">Cerrar</button></div>
     </div>
   </div>
   <div id="modalUser" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
     <div class="bg-white rounded-xl max-w-md w-full p-5 border shadow-2xl space-y-3">
       <h3 class="font-bold text-sm text-slate-800">👤 Registrar Usuario GxP</h3>
-      <div class="flex justify-end pt-2 border-t"><button id="btn-close-user" class="px-3 py-1 border rounded text-xs cursor-pointer">Cerrar</button></div>
+      <div class="flex justify-end pt-2 border-t"><button type="button" onclick="window.toggleModal('modalUser', false)" class="px-3 py-1 border rounded text-xs cursor-pointer">Cerrar</button></div>
     </div>
   </div>
   <div id="modalDev" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
     <div class="bg-white rounded-xl max-w-md w-full p-5 border shadow-2xl space-y-3">
       <h3 class="font-bold text-sm">⚠️ Reportar Desviación / NC</h3>
-      <div class="flex justify-end pt-2 border-t"><button id="btn-close-dev" class="px-3 py-1 border rounded text-xs cursor-pointer">Cerrar</button></div>
+      <div class="flex justify-end pt-2 border-t"><button type="button" onclick="window.toggleModal('modalDev', false)" class="px-3 py-1 border rounded text-xs cursor-pointer">Cerrar</button></div>
     </div>
   </div>
   <div id="modalEqp" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
     <div class="bg-white rounded-xl max-w-md w-full p-5 border shadow-2xl space-y-3">
       <h3 class="font-bold text-sm">🛠️ Registrar Equipo GxP</h3>
-      <div class="flex justify-end pt-2 border-t"><button id="btn-close-eqp" class="px-3 py-1 border rounded text-xs cursor-pointer">Cerrar</button></div>
+      <div class="flex justify-end pt-2 border-t"><button type="button" onclick="window.toggleModal('modalEqp', false)" class="px-3 py-1 border rounded text-xs cursor-pointer">Cerrar</button></div>
     </div>
   </div>
 
-  <!-- SCRIPT ROBUSTO CON EVENT LISTENERS NATIVOS -->
+  <!-- SCRIPT CON FUNCIONES 100% GLOBALES (INVITABLES A FALLOS DE CACHÉ) -->
   <script>
-    (function() {
-      window.activeGxpUser = { id: 'b40e33f1-6196-4b51-bfcb-6604d6daff50', nombre_completo: 'Johan Aguilar', cargo: 'QA Lead' };
+    window.activeGxpUser = { id: 'b40e33f1-6196-4b51-bfcb-6604d6daff50', nombre_completo: 'Johan Aguilar', cargo: 'QA Lead' };
 
-      window.cachedDocs = [
-        { id: '1', codigo: 'PH-GPD-F0-01', titulo: 'Lista de Chequeo Batch y Liberación de PT', tipo: 'FORMATO', version: '2.0', estado: 'Vigente', created_at: '2026-10-15', archivo_url: '' },
-        { id: '2', codigo: 'PH-GPD-F0-01', titulo: 'Lista de Chequeo Batch y Liberación de PT', tipo: 'FORMATO', version: '1.0', estado: 'Obsoleto', created_at: '2026-05-10', archivo_url: '' },
-        { id: '3', codigo: 'SOP-PRO-012', titulo: 'Limpieza e Higienización de Áreas Limpias Class C', tipo: 'SOP', version: '2.1', estado: 'Vigente', created_at: '2026-09-01', archivo_url: '' },
-        { id: '4', codigo: 'SOP-QA-001', titulo: 'Procedimiento de Manejo de Desviaciones y NC', tipo: 'SOP', version: '3.0', estado: 'Vigente', created_at: '2026-08-20', archivo_url: '' },
-        { id: '5', codigo: 'PROT-VAL-088', titulo: 'Protocolo de Calificación de Desempeño (PQ) Autoclave', tipo: 'ESPECIFICACION', version: '1.0', estado: 'Vigente', created_at: '2026-07-11', archivo_url: '' }
-      ];
+    window.cachedDocs = [
+      { id: '1', codigo: 'PH-GPD-F0-01', titulo: 'Lista de Chequeo Batch y Liberación de PT', tipo: 'FORMATO', version: '2.0', estado: 'Vigente', created_at: '2026-10-15', archivo_url: '' },
+      { id: '2', codigo: 'PH-GPD-F0-01', titulo: 'Lista de Chequeo Batch y Liberación de PT', tipo: 'FORMATO', version: '1.0', estado: 'Obsoleto', created_at: '2026-05-10', archivo_url: '' },
+      { id: '3', codigo: 'SOP-PRO-012', titulo: 'Limpieza e Higienización de Áreas Limpias Class C', tipo: 'SOP', version: '2.1', estado: 'Vigente', created_at: '2026-09-01', archivo_url: '' },
+      { id: '4', codigo: 'SOP-QA-001', titulo: 'Procedimiento de Manejo de Desviaciones y NC', tipo: 'SOP', version: '3.0', estado: 'Vigente', created_at: '2026-08-20', archivo_url: '' },
+      { id: '5', codigo: 'PROT-VAL-088', titulo: 'Protocolo de Calificación de Desempeño (PQ) Autoclave', tipo: 'ESPECIFICACION', version: '1.0', estado: 'Vigente', created_at: '2026-07-11', archivo_url: '' }
+    ];
 
-      window.cachedCopias = [
-        { id: 'c1', codigo_copia: 'COP-PH-GPD-F0-01-C01', documento_codigo: 'PH-GPD-F0-01', version: '2.0', area_destino: 'Planta de Producción', custodio: 'Carlos Mendoza', fecha_emision: '2026-10-16', estado: 'ACTIVA' },
-        { id: 'c2', codigo_copia: 'COP-PH-GPD-F0-01-C02', documento_codigo: 'PH-GPD-F0-01', version: '1.0', area_destino: 'Laboratorio QC', custodio: 'Laura Restrepo', fecha_emision: '2026-05-11', estado: 'DESTRUIDA' },
-        { id: 'c3', codigo_copia: 'COP-SOP-PRO-012-C01', documento_codigo: 'SOP-PRO-012', version: '2.1', area_destino: 'Bodega / Almacén', custodio: 'Johan Aguilar', fecha_emision: '2026-09-02', estado: 'ACTIVA' }
-      ];
+    window.cachedCopias = [
+      { id: 'c1', codigo_copia: 'COP-PH-GPD-F0-01-C01', documento_codigo: 'PH-GPD-F0-01', version: '2.0', area_destino: 'Planta de Producción', custodio: 'Carlos Mendoza', fecha_emision: '2026-10-16', estado: 'ACTIVA' },
+      { id: 'c2', codigo_copia: 'COP-PH-GPD-F0-01-C02', documento_codigo: 'PH-GPD-F0-01', version: '1.0', area_destino: 'Laboratorio QC', custodio: 'Laura Restrepo', fecha_emision: '2026-05-11', estado: 'DESTRUIDA' },
+      { id: 'c3', codigo_copia: 'COP-SOP-PRO-012-C01', documento_codigo: 'SOP-PRO-012', version: '2.1', area_destino: 'Bodega / Almacén', custodio: 'Johan Aguilar', fecha_emision: '2026-09-02', estado: 'ACTIVA' }
+    ];
 
-      window.selectedDocId = null;
-      window.selectedDocForCopia = null;
-      window.selectedDocForVersion = null;
+    window.selectedDocId = null;
+    window.selectedDocForCopia = null;
+    window.selectedDocForVersion = null;
 
-      function toggleModal(id, show) {
-        const m = document.getElementById(id);
-        if (m) {
-          if (show) m.classList.add('active'); else m.classList.remove('active');
-        }
+    window.toggleModal = function(id, show) {
+      const m = document.getElementById(id);
+      if (m) {
+        if (show) m.classList.add('active'); else m.classList.remove('active');
       }
+    };
 
-      function openPortal(user) {
-        if (user) window.activeGxpUser = user;
-        document.getElementById('view-login').style.display = 'none';
-        document.getElementById('app-portal').style.display = 'block';
-        document.getElementById('userBadge').innerText = `User: ${window.activeGxpUser.nombre_completo} (${window.activeGxpUser.cargo || 'QA Lead'})`;
-        renderAllData();
-      }
+    window.ejecutarLoginDev = function() {
+      window.abrirPortal({ id: 'b40e33f1-6196-4b51-bfcb-6604d6daff50', nombre_completo: 'Johan Aguilar', cargo: 'QA Lead' });
+    };
 
-      function renderAllData() {
-        const copiasActivas = window.cachedCopias.filter(c => c.estado === 'ACTIVA').length;
+    window.ejecutarLoginSeguro = function() {
+      const email = document.getElementById('loginEmail').value;
+      window.abrirPortal({ id: 'b40e33f1-6196-4b51-bfcb-6604d6daff50', nombre_completo: email || 'Johan Aguilar', cargo: 'QA Lead' });
+    };
 
-        document.getElementById('cnt-docs').innerText = window.cachedDocs.length;
-        document.getElementById('cnt-copias').innerText = copiasActivas;
-        document.getElementById('cnt-capas').innerText = '1';
-        document.getElementById('cnt-eqps').innerText = '4';
-        document.getElementById('cnt-audit').innerText = '12';
+    window.abrirPortal = function(user) {
+      if (user) window.activeGxpUser = user;
+      document.getElementById('view-login').style.display = 'none';
+      document.getElementById('app-portal').style.display = 'block';
+      document.getElementById('userBadge').innerText = `User: ${window.activeGxpUser.nombre_completo} (${window.activeGxpUser.cargo || 'QA Lead'})`;
+      window.renderAllData();
+    };
 
-        // RENDER DOCUMENTOS
-        const listDocs = document.getElementById('list-docs');
-        if (listDocs) {
-          listDocs.innerHTML = window.cachedDocs.map(d => {
-            const downloadBtn = d.archivo_url 
-              ? `<a href="${d.archivo_url}" target="_blank" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded text-[10px] font-bold border">📥 Adjunto</a>` 
-              : `<span class="text-slate-400 text-[10px] italic">Sin adjunto</span>`;
+    window.cerrarSesion = function() {
+      location.reload();
+    };
 
-            const isObsoleto = d.estado === 'Obsoleto';
-            const isVigente = d.estado === 'Vigente';
-            const badgeClass = isObsoleto ? 'bg-rose-100 text-rose-800' : (isVigente ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800');
+    window.cambiarPestana = function(tabName, btnEl) {
+      document.querySelectorAll('.tab-content').forEach(v => v.classList.remove('active'));
+      document.querySelectorAll('.nav-btn').forEach(b => {
+        b.classList.remove('bg-cyan-600', 'text-white', 'font-bold');
+        b.classList.add('hover:bg-slate-700');
+      });
+      document.getElementById('view-' + tabName).classList.add('active');
+      btnEl.classList.add('bg-cyan-600', 'text-white', 'font-bold');
+      btnEl.classList.remove('hover:bg-slate-700');
+    };
 
-            return `
-              <div class="py-3 flex justify-between items-center ${isObsoleto ? 'opacity-60 bg-slate-50 p-2 rounded' : ''}">
-                <div>
-                  <div class="flex items-center space-x-2">
-                    <span class="font-mono font-bold text-cyan-700">${d.codigo}</span>
-                    <span class="font-semibold text-slate-800">${d.titulo}</span>
-                    <span class="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded text-[10px] font-mono">${d.tipo || 'SOP'} v${d.version}</span>
-                  </div>
-                  <div class="mt-1 flex items-center space-x-2">
-                    ${downloadBtn}
-                    <button type="button" data-action="preview" data-id="${d.id}" class="btn-action bg-slate-100 hover:bg-slate-200 text-slate-800 px-2 py-1 rounded text-[10px] font-bold border cursor-pointer">
-                      🖨️ Previsualizar / Exportar PDF
-                    </button>
-                    ${isVigente 
-                      ? `<button type="button" data-action="emitir" data-id="${d.id}" data-code="${d.codigo}" data-ver="${d.version}" class="btn-action bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 px-2 py-1 rounded text-[10px] font-bold cursor-pointer">
-                          📋 Emitir Copia Controlada
-                        </button>` 
-                      : ''
-                    }
-                    ${d.justificacion_cambio ? `<span class="text-[10px] text-slate-500 font-mono">Justificación: ${d.justificacion_cambio}</span>` : ''}
-                  </div>
-                </div>
+    window.renderAllData = function() {
+      const copiasActivas = window.cachedCopias.filter(c => c.estado === 'ACTIVA').length;
+
+      document.getElementById('cnt-docs').innerText = window.cachedDocs.length;
+      document.getElementById('cnt-copias').innerText = copiasActivas;
+      document.getElementById('cnt-capas').innerText = '1';
+      document.getElementById('cnt-eqps').innerText = '4';
+      document.getElementById('cnt-audit').innerText = '12';
+
+      // RENDER DOCUMENTOS
+      const listDocs = document.getElementById('list-docs');
+      if (listDocs) {
+        listDocs.innerHTML = window.cachedDocs.map(d => {
+          const downloadBtn = d.archivo_url 
+            ? `<a href="${d.archivo_url}" target="_blank" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded text-[10px] font-bold border">📥 Adjunto</a>` 
+            : `<span class="text-slate-400 text-[10px] italic">Sin adjunto</span>`;
+
+          const isObsoleto = d.estado === 'Obsoleto';
+          const isVigente = d.estado === 'Vigente';
+          const badgeClass = isObsoleto ? 'bg-rose-100 text-rose-800' : (isVigente ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800');
+
+          return `
+            <div class="py-3 flex justify-between items-center ${isObsoleto ? 'opacity-60 bg-slate-50 p-2 rounded' : ''}">
+              <div>
                 <div class="flex items-center space-x-2">
-                  <span class="${badgeClass} px-2 py-0.5 rounded font-semibold text-[10px]">${d.estado}</span>
-                  ${!isObsoleto && !isVigente 
-                    ? `<button type="button" data-action="sign" data-id="${d.id}" data-code="${d.codigo}" class="btn-action bg-cyan-600 hover:bg-cyan-700 text-white px-2 py-1 rounded text-[10px] font-bold shadow cursor-pointer">✍️ Estampar Firma</button>` 
+                  <span class="font-mono font-bold text-cyan-700">${d.codigo}</span>
+                  <span class="font-semibold text-slate-800">${d.titulo}</span>
+                  <span class="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded text-[10px] font-mono">${d.tipo || 'SOP'} v${d.version}</span>
+                </div>
+                <div class="mt-1 flex items-center space-x-2">
+                  ${downloadBtn}
+                  <button type="button" onclick="window.previewPdf('${d.id}')" class="bg-slate-100 hover:bg-slate-200 text-slate-800 px-2 py-1 rounded text-[10px] font-bold border cursor-pointer">
+                    🖨️ Previsualizar / Exportar PDF
+                  </button>
+                  ${isVigente 
+                    ? `<button type="button" onclick="window.openEmitirCopia('${d.id}', '${d.codigo}', '${d.version}')" class="bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 px-2 py-1 rounded text-[10px] font-bold cursor-pointer">
+                        📋 Emitir Copia Controlada
+                      </button>` 
                     : ''
                   }
-                  ${isVigente
-                    ? `<button type="button" data-action="version" data-id="${d.id}" data-code="${d.codigo}" data-ver="${d.version}" class="btn-action bg-amber-600 hover:bg-amber-700 text-white px-2 py-1 rounded text-[10px] font-bold shadow cursor-pointer">🔄 Nueva Versión</button>`
-                    : ''
-                  }
+                  ${d.justificacion_cambio ? `<span class="text-[10px] text-slate-500 font-mono">Justificación: ${d.justificacion_cambio}</span>` : ''}
                 </div>
               </div>
-            `;
-          }).join('');
-        }
-
-        // RENDER COPIAS
-        const listCopias = document.getElementById('list-copias-body');
-        if (listCopias) {
-          listCopias.innerHTML = window.cachedCopias.map(c => {
-            let estadoClass = 'bg-emerald-100 text-emerald-800';
-            if (c.estado === 'PENDIENTE DE RETIRO') estadoClass = 'bg-amber-100 text-amber-800 font-bold';
-            if (c.estado === 'DESTRUIDA') estadoClass = 'bg-slate-100 text-slate-500 line-through';
-
-            return `
-              <tr class="hover:bg-slate-50">
-                <td class="p-2 border font-bold text-amber-900">${c.codigo_copia}</td>
-                <td class="p-2 border">${c.documento_codigo} <span class="text-slate-500 text-[10px]">v${c.version}</span></td>
-                <td class="p-2 border">${c.area_destino}</td>
-                <td class="p-2 border">${c.custodio}</td>
-                <td class="p-2 border">${c.fecha_emision}</td>
-                <td class="p-2 border"><span class="px-2 py-0.5 rounded text-[10px] ${estadoClass}">${c.estado}</span></td>
-                <td class="p-2 border text-center">
-                  ${c.estado === 'ACTIVA' || c.estado === 'PENDIENTE DE RETIRO'
-                    ? `<button type="button" data-action="destruir" data-id="${c.id}" class="btn-action bg-rose-600 hover:bg-rose-700 text-white px-2 py-0.5 rounded text-[10px] font-bold shadow cursor-pointer">
-                        🔥 Registrar Destrucción
-                      </button>`
-                    : `<span class="text-slate-400 text-[10px]">Conciliado</span>`
-                  }
-                </td>
-              </tr>
-            `;
-          }).join('');
-        }
-      }
-
-      function previewPdf(docId) {
-        const targetDoc = window.cachedDocs.find(x => x.id === docId);
-        if (!targetDoc) return;
-
-        document.getElementById('pdfDocTitle').innerText = targetDoc.titulo;
-        document.getElementById('pdfDocCode').innerText = targetDoc.codigo;
-        document.getElementById('pdfDocVersion').innerText = targetDoc.version;
-        document.getElementById('pdfDocDate').innerText = new Date().toLocaleDateString('es-CO');
-        document.getElementById('pdfDocType').innerText = targetDoc.tipo || 'SOP';
-        document.getElementById('pdfDocStatus').innerText = targetDoc.estado;
-        document.getElementById('pdfDocJustification').innerText = targetDoc.justificacion_cambio || 'Sin observaciones.';
-
-        const wm = document.getElementById('pdfWatermark');
-        if (targetDoc.estado === 'Vigente') {
-          wm.innerText = 'COPIA CONTROLADA · VIGENTE';
-          wm.className = 'watermark-text text-emerald-600';
-        } else if (targetDoc.estado === 'Obsoleto') {
-          wm.innerText = 'DOCUMENTO OBSOLETO';
-          wm.className = 'watermark-text text-rose-600';
-        } else {
-          wm.innerText = 'BORRADOR · NO VALIDO PARA USO';
-          wm.className = 'watermark-text text-amber-600';
-        }
-
-        const viewerArea = document.getElementById('pdfViewerArea');
-        if (targetDoc.archivo_url) {
-          viewerArea.innerHTML = `<iframe src="${targetDoc.archivo_url}" class="w-full h-[500px] border rounded"></iframe>`;
-        } else {
-          viewerArea.innerHTML = `
-            <div class="p-6 text-center space-y-2">
-              <div class="text-slate-400 text-3xl">📄</div>
-              <div class="font-bold text-slate-700">Documento Digital en Sistema GxP</div>
-              <p class="text-slate-500 text-[11px]">Versión oficial validada (${targetDoc.codigo} v${targetDoc.version}). Al adjuntar el archivo en el control de cambios, se proyectará en este visor.</p>
+              <div class="flex items-center space-x-2">
+                <span class="${badgeClass} px-2 py-0.5 rounded font-semibold text-[10px]">${d.estado}</span>
+                ${!isObsoleto && !isVigente 
+                  ? `<button type="button" onclick="window.openSignModal('${d.id}', '${d.codigo}')" class="bg-cyan-600 hover:bg-cyan-700 text-white px-2 py-1 rounded text-[10px] font-bold shadow cursor-pointer">✍️ Estampar Firma</button>` 
+                  : ''
+                }
+                ${isVigente
+                  ? `<button type="button" onclick="window.openVersionModal('${d.id}', '${d.codigo}', '${d.version}')" class="bg-amber-600 hover:bg-amber-700 text-white px-2 py-1 rounded text-[10px] font-bold shadow cursor-pointer">🔄 Nueva Versión</button>`
+                  : ''
+                }
+              </div>
             </div>
           `;
-        }
-
-        const qrImg = document.getElementById('pdfQrImage');
-        if (qrImg) {
-          const verifyData = encodeURIComponent(`PHARMOR-QMS:${targetDoc.codigo}:v${targetDoc.version}:${targetDoc.estado}`);
-          qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${verifyData}`;
-        }
-
-        document.getElementById('pdfSignaturesTable').innerHTML = `
-          <tr>
-            <td class="border border-slate-300 p-1.5 font-bold">APROBO</td>
-            <td class="border border-slate-300 p-1.5">Johan Aguilar (QA Lead)</td>
-            <td class="border border-slate-300 p-1.5 font-bold text-emerald-700">✓ FIRMADO ELECTRONICAMENTE</td>
-            <td class="border border-slate-300 p-1.5 font-mono">${new Date().toLocaleString('es-CO')}</td>
-          </tr>
-        `;
-
-        document.getElementById('pdfSystemHash').innerText = `SHA256-${docId.substring(0,8).toUpperCase()}-${Date.now()}`;
-        toggleModal('modalExportPdf', true);
+        }).join('');
       }
 
-      // ASIGNACIÓN UNIVERSAL DE EVENTOS AL CARGAR LA PÁGINA
-      document.addEventListener('DOMContentLoaded', function() {
-        // LOGIN
-        document.getElementById('btn-login-secure').addEventListener('click', function() {
-          const email = document.getElementById('loginEmail').value;
-          openPortal({ id: 'b40e33f1-6196-4b51-bfcb-6604d6daff50', nombre_completo: email || 'Johan Aguilar', cargo: 'QA Lead' });
-        });
+      // RENDER COPIAS
+      const listCopias = document.getElementById('list-copias-body');
+      if (listCopias) {
+        listCopias.innerHTML = window.cachedCopias.map(c => {
+          let estadoClass = 'bg-emerald-100 text-emerald-800';
+          if (c.estado === 'PENDIENTE DE RETIRO') estadoClass = 'bg-amber-100 text-amber-800 font-bold';
+          if (c.estado === 'DESTRUIDA') estadoClass = 'bg-slate-100 text-slate-500 line-through';
 
-        document.getElementById('btn-login-dev').addEventListener('click', function() {
-          openPortal({ id: 'b40e33f1-6196-4b51-bfcb-6604d6daff50', nombre_completo: 'Johan Aguilar', cargo: 'QA Lead' });
-        });
+          return `
+            <tr class="hover:bg-slate-50">
+              <td class="p-2 border font-bold text-amber-900">${c.codigo_copia}</td>
+              <td class="p-2 border">${c.documento_codigo} <span class="text-slate-500 text-[10px]">v${c.version}</span></td>
+              <td class="p-2 border">${c.area_destino}</td>
+              <td class="p-2 border">${c.custodio}</td>
+              <td class="p-2 border">${c.fecha_emision}</td>
+              <td class="p-2 border"><span class="px-2 py-0.5 rounded text-[10px] ${estadoClass}">${c.estado}</span></td>
+              <td class="p-2 border text-center">
+                ${c.estado === 'ACTIVA' || c.estado === 'PENDIENTE DE RETIRO'
+                  ? `<button type="button" onclick="window.destruirCopia('${c.id}')" class="bg-rose-600 hover:bg-rose-700 text-white px-2 py-0.5 rounded text-[10px] font-bold shadow cursor-pointer">
+                      🔥 Registrar Destrucción
+                    </button>`
+                  : `<span class="text-slate-400 text-[10px]">Conciliado</span>`
+                }
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
+    };
 
-        // NAVEGACIÓN TABS
-        document.querySelectorAll('.nav-btn').forEach(btn => {
-          btn.addEventListener('click', function() {
-            const tabName = this.getAttribute('data-tab');
-            document.querySelectorAll('.tab-content').forEach(v => v.classList.remove('active'));
-            document.querySelectorAll('.nav-btn').forEach(b => {
-              b.classList.remove('bg-cyan-600', 'text-white', 'font-bold');
-              b.classList.add('hover:bg-slate-700');
-            });
-            document.getElementById('view-' + tabName).classList.add('active');
-            this.classList.add('bg-cyan-600', 'text-white', 'font-bold');
-            this.classList.remove('hover:bg-slate-700');
-          });
-        });
+    window.previewPdf = function(docId) {
+      const targetDoc = window.cachedDocs.find(x => x.id === docId);
+      if (!targetDoc) return;
 
-        // DELEGACIÓN DE CLICS EN TABLAS Y ACCIONES
-        document.addEventListener('click', function(e) {
-          const target = e.target.closest('.btn-action');
-          if (!target) return;
+      document.getElementById('pdfDocTitle').innerText = targetDoc.titulo;
+      document.getElementById('pdfDocCode').innerText = targetDoc.codigo;
+      document.getElementById('pdfDocVersion').innerText = targetDoc.version;
+      document.getElementById('pdfDocDate').innerText = new Date().toLocaleDateString('es-CO');
+      document.getElementById('pdfDocType').innerText = targetDoc.tipo || 'SOP';
+      document.getElementById('pdfDocStatus').innerText = targetDoc.estado;
+      document.getElementById('pdfDocJustification').innerText = targetDoc.justificacion_cambio || 'Sin observaciones.';
 
-          const action = target.getAttribute('data-action');
-          const id = target.getAttribute('data-id');
-          const code = target.getAttribute('data-code');
-          const ver = target.getAttribute('data-ver');
+      const wm = document.getElementById('pdfWatermark');
+      if (targetDoc.estado === 'Vigente') {
+        wm.innerText = 'COPIA CONTROLADA · VIGENTE';
+        wm.className = 'watermark-text text-emerald-600';
+      } else if (targetDoc.estado === 'Obsoleto') {
+        wm.innerText = 'DOCUMENTO OBSOLETO';
+        wm.className = 'watermark-text text-rose-600';
+      } else {
+        wm.innerText = 'BORRADOR · NO VALIDO PARA USO';
+        wm.className = 'watermark-text text-amber-600';
+      }
 
-          if (action === 'preview') {
-            previewPdf(id);
-          } else if (action === 'emitir') {
-            window.selectedDocForCopia = { id, code, version: ver };
-            document.getElementById('copiaTargetCode').innerText = `${code} v${ver}`;
-            toggleModal('modalEmitirCopia', true);
-          } else if (action === 'destruir') {
-            const item = window.cachedCopias.find(c => c.id === id);
-            if (item) {
-              item.estado = 'DESTRUIDA';
-              alert(`Copia ${item.codigo_copia} registrada como DESTRUIDA.`);
-              renderAllData();
-            }
-          } else if (action === 'sign') {
-            window.selectedDocId = id;
-            document.getElementById('signTargetCode').innerText = code;
-            toggleModal('modalSign', true);
-          } else if (action === 'version') {
-            window.selectedDocForVersion = { id, code, version: ver };
-            document.getElementById('verTargetCode').innerText = code;
-            document.getElementById('currentVer').value = ver;
-            const vParts = ver.split('.');
-            document.getElementById('newVerNumber').value = (parseInt(vParts[0]) + 1) + '.0';
-            toggleModal('modalVersion', true);
-          }
-        });
+      const viewerArea = document.getElementById('pdfViewerArea');
+      if (targetDoc.archivo_url) {
+        viewerArea.innerHTML = `<iframe src="${targetDoc.archivo_url}" class="w-full h-[500px] border rounded"></iframe>`;
+      } else {
+        viewerArea.innerHTML = `
+          <div class="p-6 text-center space-y-2">
+            <div class="text-slate-400 text-3xl">📄</div>
+            <div class="font-bold text-slate-700">Documento Digital en Sistema GxP</div>
+            <p class="text-slate-500 text-[11px]">Versión oficial validada (${targetDoc.codigo} v${targetDoc.version}). Al adjuntar el archivo en el control de cambios, se proyectará en este visor.</p>
+          </div>
+        `;
+      }
 
-        // CIERRE DE MODALES
-        document.getElementById('btn-close-pdf').addEventListener('click', () => toggleModal('modalExportPdf', false));
-        document.getElementById('btn-close-pdf-bottom').addEventListener('click', () => toggleModal('modalExportPdf', false));
-        document.getElementById('btn-close-emitir').addEventListener('click', () => toggleModal('modalEmitirCopia', false));
-        document.getElementById('btn-close-version').addEventListener('click', () => toggleModal('modalVersion', false));
-        document.getElementById('btn-close-sign').addEventListener('click', () => toggleModal('modalSign', false));
-        document.getElementById('btn-close-doc').addEventListener('click', () => toggleModal('modalDoc', false));
-        document.getElementById('btn-close-user').addEventListener('click', () => toggleModal('modalUser', false));
-        document.getElementById('btn-close-dev').addEventListener('click', () => toggleModal('modalDev', false));
-        document.getElementById('btn-close-eqp').addEventListener('click', () => toggleModal('modalEqp', false));
+      const qrImg = document.getElementById('pdfQrImage');
+      if (qrImg) {
+        const verifyData = encodeURIComponent(`PHARMOR-QMS:${targetDoc.codigo}:v${targetDoc.version}:${targetDoc.estado}`);
+        qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${verifyData}`;
+      }
 
-        // ABRIR MODALES SUPERIORES
-        document.getElementById('btn-open-modal-doc').addEventListener('click', () => toggleModal('modalDoc', true));
-        document.getElementById('btn-open-modal-user').addEventListener('click', () => toggleModal('modalUser', true));
-        document.getElementById('btn-open-modal-dev').addEventListener('click', () => toggleModal('modalDev', true));
-        document.getElementById('btn-open-modal-eqp').addEventListener('click', () => toggleModal('modalEqp', true));
+      document.getElementById('pdfSignaturesTable').innerHTML = `
+        <tr>
+          <td class="border border-slate-300 p-1.5 font-bold">APROBO</td>
+          <td class="border border-slate-300 p-1.5">Johan Aguilar (QA Lead)</td>
+          <td class="border border-slate-300 p-1.5 font-bold text-emerald-700">✓ FIRMADO ELECTRONICAMENTE</td>
+          <td class="border border-slate-300 p-1.5 font-mono">${new Date().toLocaleString('es-CO')}</td>
+        </tr>
+      `;
 
-        // IMPRESIÓN
-        const printAction = () => window.print();
-        document.getElementById('btn-print-top').addEventListener('click', printAction);
-        document.getElementById('btn-print-bottom').addEventListener('click', printAction);
+      document.getElementById('pdfSystemHash').innerText = `SHA256-${docId.substring(0,8).toUpperCase()}-${Date.now()}`;
+      window.toggleModal('modalExportPdf', true);
+    };
 
-        // CONFIRMAR EMITIR COPIA
-        document.getElementById('btn-confirmar-emitir').addEventListener('click', function() {
-          const area = document.getElementById('copiaArea').value;
-          const custodio = document.getElementById('copiaCustodio').value;
-          if (!window.selectedDocForCopia) return;
+    window.openEmitirCopia = function(id, code, ver) {
+      window.selectedDocForCopia = { id, code, version: ver };
+      document.getElementById('copiaTargetCode').innerText = `${code} v${ver}`;
+      window.toggleModal('modalEmitirCopia', true);
+    };
 
-          const nextNum = window.cachedCopias.length + 1;
-          const nuevoCodigoCopia = `COP-${window.selectedDocForCopia.code}-C0${nextNum}`;
+    window.confirmarEmitirCopia = function() {
+      const area = document.getElementById('copiaArea').value;
+      const custodio = document.getElementById('copiaCustodio').value;
 
-          window.cachedCopias.unshift({
-            id: `c_${Date.now()}`,
-            codigo_copia: nuevoCodigoCopia,
-            documento_codigo: window.selectedDocForCopia.code,
-            version: window.selectedDocForCopia.version,
-            area_destino: area,
-            custodio: custodio,
-            fecha_emision: new Date().toISOString().split('T')[0],
-            estado: 'ACTIVA'
-          });
+      if (!window.selectedDocForCopia) return;
 
-          toggleModal('modalEmitirCopia', false);
-          document.getElementById('pdfCopiaCode').innerText = nuevoCodigoCopia;
-          document.getElementById('pdfCopiaArea').innerText = area;
-          document.getElementById('pdfCopiaCustodio').innerText = custodio;
-          previewPdf(window.selectedDocForCopia.id);
-          renderAllData();
-        });
+      const nextNum = window.cachedCopias.length + 1;
+      const nuevoCodigoCopia = `COP-${window.selectedDocForCopia.code}-C0${nextNum}`;
 
-        // CONFIRMAR NUEVA VERSIÓN
-        document.getElementById('btn-confirmar-version').addEventListener('click', function() {
-          const newVersion = document.getElementById('newVerNumber').value;
-          const reason = document.getElementById('changeReason').value;
-
-          if (!newVersion || !reason) {
-            alert('Debes definir la nueva versión y justificar el cambio.');
-            return;
-          }
-
-          if (window.selectedDocForVersion) {
-            window.cachedCopias.forEach(c => {
-              if (c.documento_codigo === window.selectedDocForVersion.code && c.estado === 'ACTIVA') {
-                c.estado = 'PENDIENTE DE RETIRO';
-              }
-            });
-          }
-
-          alert(`Nueva versión v${newVersion} creada en Borrador.`);
-          toggleModal('modalVersion', false);
-          renderAllData();
-        });
-
-        // CONFIRMAR FIRMA
-        document.getElementById('btn-confirmar-sign').addEventListener('click', function() {
-          const pin = document.getElementById('signPin').value;
-          if (pin !== '1234') {
-            alert('PIN incorrecto (PIN de prueba: 1234)');
-            return;
-          }
-          alert('Firma estampada con éxito (21 CFR Part 11)');
-          toggleModal('modalSign', false);
-        });
+      window.cachedCopias.unshift({
+        id: `c_${Date.now()}`,
+        codigo_copia: nuevoCodigoCopia,
+        documento_codigo: window.selectedDocForCopia.code,
+        version: window.selectedDocForCopia.version,
+        area_destino: area,
+        custodio: custodio,
+        fecha_emision: new Date().toISOString().split('T')[0],
+        estado: 'ACTIVA'
       });
-    })();
+
+      window.toggleModal('modalEmitirCopia', false);
+      document.getElementById('pdfCopiaCode').innerText = nuevoCodigoCopia;
+      document.getElementById('pdfCopiaArea').innerText = area;
+      document.getElementById('pdfCopiaCustodio').innerText = custodio;
+      window.previewPdf(window.selectedDocForCopia.id);
+      window.renderAllData();
+    };
+
+    window.destruirCopia = function(copiaId) {
+      const item = window.cachedCopias.find(c => c.id === copiaId);
+      if (item) {
+        item.estado = 'DESTRUIDA';
+        alert(`Copia ${item.codigo_copia} registrada como DESTRUIDA.`);
+        window.renderAllData();
+      }
+    };
+
+    window.openSignModal = function(id, code) {
+      window.selectedDocId = id;
+      document.getElementById('signTargetCode').innerText = code;
+      window.toggleModal('modalSign', true);
+    };
+
+    window.confirmarFirma = function() {
+      const pin = document.getElementById('signPin').value;
+      if (pin !== '1234') {
+        alert('PIN incorrecto (PIN de prueba: 1234)');
+        return;
+      }
+      alert('Firma estampada con éxito (21 CFR Part 11)');
+      window.toggleModal('modalSign', false);
+    };
+
+    window.openVersionModal = function(id, code, ver) {
+      window.selectedDocForVersion = { id, code, version: ver };
+      document.getElementById('verTargetCode').innerText = code;
+      document.getElementById('currentVer').value = ver;
+      const vParts = ver.split('.');
+      document.getElementById('newVerNumber').value = (parseInt(vParts[0]) + 1) + '.0';
+      window.toggleModal('modalVersion', true);
+    };
+
+    window.confirmarNuevaVersion = function() {
+      const newVersion = document.getElementById('newVerNumber').value;
+      const reason = document.getElementById('changeReason').value;
+
+      if (!newVersion || !reason) {
+        alert('Debes definir la nueva versión y justificar el cambio.');
+        return;
+      }
+
+      if (window.selectedDocForVersion) {
+        window.cachedCopias.forEach(c => {
+          if (c.documento_codigo === window.selectedDocForVersion.code && c.estado === 'ACTIVA') {
+            c.estado = 'PENDIENTE DE RETIRO';
+          }
+        });
+      }
+
+      alert(`Nueva versión v${newVersion} creada en Borrador.`);
+      window.toggleModal('modalVersion', false);
+      window.renderAllData();
+    };
   </script>
 </body>
 </html>
