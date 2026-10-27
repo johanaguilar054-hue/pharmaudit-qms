@@ -6,6 +6,8 @@
   <title>PharmAudit ERP / QMS - Pharmor</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Librería ligera para generar QR en tiempo real -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <style>
     body { margin: 0; padding: 0; background-color: #f8fafc; font-family: ui-sans-serif, system-ui, sans-serif; }
     .tab-content { display: none; }
@@ -88,6 +90,7 @@
     <nav class="bg-slate-800 text-slate-300 rounded-xl p-1 mb-4 flex space-x-1 overflow-x-auto text-xs font-medium">
       <button data-tab="dashboard" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap bg-cyan-600 text-white font-bold">📊 Dashboard</button>
       <button data-tab="documentos" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700">📑 Gestión Documental</button>
+      <button data-tab="copias" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 text-amber-300">📋 Copias Controladas</button>
       <button data-tab="desviaciones" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700">⚠️ Desviaciones & NC</button>
       <button data-tab="capa" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700">☑️ Módulo CAPA</button>
       <button data-tab="metrologia" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700">🛠️ Equipos & Calibración</button>
@@ -112,8 +115,8 @@
             <div id="cnt-docs" class="text-xl font-bold text-slate-800 mt-1">0</div>
           </div>
           <div class="bg-white p-3 rounded-xl border-l-4 border-l-amber-500 shadow-sm">
-            <div class="text-slate-500 text-[11px]">Desviaciones / NC</div>
-            <div id="cnt-desvs" class="text-xl font-bold text-amber-600 mt-1">0</div>
+            <div class="text-slate-500 text-[11px]">Copias Impresas Activas</div>
+            <div id="cnt-copias" class="text-xl font-bold text-amber-600 mt-1">0</div>
           </div>
           <div class="bg-white p-3 rounded-xl border-l-4 border-l-purple-500 shadow-sm">
             <div class="text-slate-500 text-[11px]">CAPAs</div>
@@ -139,6 +142,38 @@
           <button id="btn-open-modal-doc" class="bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow">+ Solicitud / Nuevo Documento</button>
         </div>
         <div id="list-docs" class="divide-y divide-slate-100 text-xs">Cargando...</div>
+      </div>
+
+      <!-- NUEVO MÓDULO: CONTROL DE COPIAS IMPRESAS -->
+      <div id="view-copias" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-4">
+        <div class="flex justify-between items-center border-b pb-3">
+          <div>
+            <h2 class="font-bold text-slate-800 text-sm">📋 Control y Emisión de Copias Controladas (GxP)</h2>
+            <p class="text-xs text-slate-500">Trazabilidad de copias en físico distribuidas en planta con QR de verificación</p>
+          </div>
+          <div class="bg-amber-50 border border-amber-200 px-3 py-1 rounded-lg text-xs text-amber-800 font-mono font-bold">
+            Conciliación Planta: <span id="formula-status">E = R + D (100%)</span>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full border-collapse text-left text-xs font-mono">
+            <thead>
+              <tr class="bg-slate-100 text-slate-700 border-b">
+                <th class="p-2 border font-bold">Consecutivo Copia</th>
+                <th class="p-2 border font-bold">Documento / Versión</th>
+                <th class="p-2 border font-bold">Área Destino</th>
+                <th class="p-2 border font-bold">Custodio / Responsable</th>
+                <th class="p-2 border font-bold">Fecha Emisión</th>
+                <th class="p-2 border font-bold">Estado Físico</th>
+                <th class="p-2 border font-bold text-center">Acción GxP</th>
+              </tr>
+            </thead>
+            <tbody id="list-copias-body" class="divide-y divide-slate-100">
+              <tr><td colspan="7" class="p-4 text-center text-slate-400">Cargando registros de copias...</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <div id="view-desviaciones" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-3">
@@ -189,7 +224,7 @@
     </main>
   </div>
 
-  <!-- MODAL PDF PREVIEW -->
+  <!-- MODAL PDF PREVIEW CON QR EN VIVO Y DATOS DE COPIA -->
   <div id="modalExportPdf" class="modal-backdrop fixed inset-0 bg-slate-900/70 backdrop-blur-sm items-center justify-center p-4 z-50">
     <div class="bg-white rounded-xl max-w-3xl w-full p-6 border shadow-2xl space-y-4 max-h-[95vh] flex flex-col">
       <div class="border-b pb-2 flex justify-between items-center shrink-0">
@@ -207,10 +242,23 @@
               <div class="text-[9px] font-normal text-slate-600">QMS Compliance</div>
             </div>
             <div class="col-span-2 text-xs uppercase px-2" id="pdfDocTitle">SISTEMA DE GESTIÓN DE CALIDAD</div>
-            <div class="col-span-1 border-l-2 border-slate-800 pl-2 text-[10px] text-left space-y-0.5">
+            <div class="col-span-1 border-l-2 border-slate-800 pl-2 text-[10px] text-left space-y-0.5 relative">
               <div>Código: <span id="pdfDocCode" class="font-bold text-cyan-800"></span></div>
               <div>Versión: <span id="pdfDocVersion"></span></div>
               <div>Fecha: <span id="pdfDocDate"></span></div>
+            </div>
+          </div>
+
+          <!-- ENCABEZADO CON QR Y DATOS DE COPIA CONTROLADA -->
+          <div class="bg-amber-50/60 border border-amber-300 p-3 rounded-lg flex justify-between items-center font-mono text-[11px]">
+            <div class="space-y-1">
+              <div><strong>N° Consecutivo Copia:</strong> <span id="pdfCopiaCode" class="font-bold text-amber-900">COP-OFFICIAL-DIGITAL</span></div>
+              <div><strong>Área de Asignación:</strong> <span id="pdfCopiaArea">Aseguramiento de Calidad</span></div>
+              <div><strong>Custodio Autorizado:</strong> <span id="pdfCopiaCustodio">Johan Aguilar (QA Lead)</span></div>
+            </div>
+            <div class="flex flex-col items-center">
+              <div id="qrcode-canvas" class="p-1 bg-white border border-slate-300 rounded"></div>
+              <span class="text-[8px] text-slate-500 mt-0.5">Escanea para verificar vigencia</span>
             </div>
           </div>
 
@@ -253,7 +301,49 @@
     </div>
   </div>
 
-  <!-- MODAL VERSION CON CAMPO DE ARCHIVO -->
+  <!-- MODAL SOLICITAR / EMITIR COPIA CONTROLADA -->
+  <div id="modalEmitirCopia" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl max-w-md w-full p-5 border shadow-2xl space-y-3">
+      <div class="border-b pb-2 flex justify-between items-center">
+        <h3 class="font-bold text-sm text-amber-900">🖨️ Emitir Copia Controlada en Físico</h3>
+        <span id="copiaTargetCode" class="font-mono text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-bold"></span>
+      </div>
+
+      <div class="space-y-2.5 text-xs">
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Área Destinataria en Planta</label>
+          <select id="copiaArea" class="w-full p-2 border rounded bg-slate-50 font-semibold">
+            <option value="Planta de Producción">Planta de Producción (Sólidos / Líquidos)</option>
+            <option value="Control de Calidad">Laboratorio de Control de Calidad (QC)</option>
+            <option value="Aseguramiento de Calidad">Aseguramiento de Calidad (QA)</option>
+            <option value="Bodega / Almacén">Bodega y Almacén de Materias Primas</option>
+            <option value="Mantenimiento y Metrología">Mantenimiento y Metrología</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Custodio / Responsable de Recibir</label>
+          <select id="copiaCustodio" class="w-full p-2 border rounded bg-slate-50 font-semibold">
+            <option value="Johan Aguilar (QA Lead)">Johan Aguilar (QA Lead)</option>
+            <option value="Carlos Mendoza (Supervisor Producción)">Carlos Mendoza (Supervisor Producción)</option>
+            <option value="Laura Restrepo (Analista QC)">Laura Restrepo (Analista QC)</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Motivo / Destino de la Copia</label>
+          <input type="text" id="copiaMotivo" value="Ejecución de Lote de Fabricación" class="w-full p-2 border rounded" />
+        </div>
+      </div>
+
+      <div class="flex justify-end space-x-2 pt-2 border-t">
+        <button id="btn-close-emitir-copia" class="px-3 py-1 border rounded text-xs">Cancelar</button>
+        <button id="btn-save-emitir-copia" class="px-4 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded text-xs font-bold shadow">Generar & Imprimir Copia</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL VERSION -->
   <div id="modalVersion" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
     <div class="bg-white rounded-xl max-w-lg w-full p-5 border shadow-2xl space-y-3">
       <div class="border-b pb-2 flex justify-between items-center">
@@ -369,7 +459,7 @@
     </div>
   </div>
 
-  <!-- SCRIPT LÓGICO ROBUSTO Y AISLADO -->
+  <!-- SCRIPT LÓGICO COMPLETO -->
   <script>
     (function() {
       const SUPABASE_URL = 'https://wmtvlxjzzwwhtybccrpe.supabase.co';
@@ -397,6 +487,12 @@
         { id: '5', codigo: 'PROT-VAL-088', titulo: 'Protocolo de Calificación de Desempeño (PQ) Autoclave', tipo: 'ESPECIFICACION', version: '1.0', estado: 'Vigente', created_at: '2026-07-11' }
       ];
 
+      const fallbackCopias = [
+        { id: 'c1', codigo_copia: 'COP-PH-GPD-F0-01-C01', documento_codigo: 'PH-GPD-F0-01', version: '2.0', area_destino: 'Planta de Producción', custodio: 'Carlos Mendoza', fecha_emision: '2026-10-16', estado: 'ACTIVA' },
+        { id: 'c2', codigo_copia: 'COP-PH-GPD-F0-01-C02', documento_codigo: 'PH-GPD-F0-01', version: '1.0', area_destino: 'Laboratorio QC', custodio: 'Laura Restrepo', fecha_emision: '2026-05-11', estado: 'DESTRUIDA' },
+        { id: 'c3', codigo_copia: 'COP-SOP-PRO-012-C01', documento_codigo: 'SOP-PRO-012', version: '2.1', area_destino: 'Bodega / Almacén', custodio: 'Johan Aguilar', fecha_emision: '2026-09-02', estado: 'ACTIVA' }
+      ];
+
       const fallbackUsers = [
         { id: 'b40e33f1-6196-4b51-bfcb-6604d6daff50', nombre_completo: 'Johan Aguilar', email: 'j.aguilar@pharmor.com.co', cargo: 'QA Lead' },
         { id: '2', nombre_completo: 'Carlos Mendoza', email: 'c.mendoza@pharmor.com.co', cargo: 'Revisor de Calidad' },
@@ -404,8 +500,10 @@
       ];
 
       let cachedDocs = fallbackDocs;
+      let cachedCopias = fallbackCopias;
       let cachedUsers = fallbackUsers;
       let selectedDocId = null;
+      let selectedDocForCopia = null;
       let selectedDocForVersion = null;
 
       function toggleModal(id, show) {
@@ -434,16 +532,20 @@
         if (client) {
           try {
             const { data: docs } = await client.from('documentos').select('*').order('created_at', { ascending: false });
+            const { data: copias } = await client.from('copias_impresas_gxp').select('*').order('created_at', { ascending: false });
             const { data: users } = await client.from('usuarios_gxp').select('*');
             if (docs && docs.length > 0) cachedDocs = docs;
+            if (copias && copias.length > 0) cachedCopias = copias;
             if (users && users.length > 0) cachedUsers = users;
           } catch (e) {
             console.warn("Usando catálogo de respaldo GxP");
           }
         }
 
+        const copiasActivas = cachedCopias.filter(c => c.estado === 'ACTIVA').length;
+
         document.getElementById('cnt-docs').innerText = cachedDocs.length;
-        document.getElementById('cnt-desvs').innerText = '2';
+        document.getElementById('cnt-copias').innerText = copiasActivas;
         document.getElementById('cnt-capas').innerText = '1';
         document.getElementById('cnt-eqps').innerText = '4';
         document.getElementById('cnt-audit').innerText = '12';
@@ -457,7 +559,8 @@
               : `<span class="text-slate-400 text-[10px] italic">Sin adjunto</span>`;
 
             const isObsoleto = d.estado === 'Obsoleto';
-            const badgeClass = isObsoleto ? 'bg-rose-100 text-rose-800' : (d.estado === 'Vigente' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800');
+            const isVigente = d.estado === 'Vigente';
+            const badgeClass = isObsoleto ? 'bg-rose-100 text-rose-800' : (isVigente ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800');
 
             return `
               <div class="py-3 flex justify-between items-center ${isObsoleto ? 'opacity-60 bg-slate-50 p-2 rounded' : ''}">
@@ -472,21 +575,56 @@
                     <button data-action="preview" data-id="${d.id}" class="btn-action bg-slate-100 hover:bg-slate-200 text-slate-800 px-2 py-1 rounded text-[10px] font-bold border">
                       🖨️ Previsualizar / Exportar PDF
                     </button>
+                    ${isVigente 
+                      ? `<button data-action="emitir-copia" data-id="${d.id}" data-code="${d.codigo}" data-version="${d.version}" class="btn-action bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 px-2 py-1 rounded text-[10px] font-bold">
+                          📋 Emitir Copia Controlada
+                        </button>` 
+                      : ''
+                    }
                     ${d.justificacion_cambio ? `<span class="text-[10px] text-slate-500 font-mono">Justificación: ${d.justificacion_cambio}</span>` : ''}
                   </div>
                 </div>
                 <div class="flex items-center space-x-2">
                   <span class="${badgeClass} px-2 py-0.5 rounded font-semibold text-[10px]">${d.estado}</span>
-                  ${!isObsoleto && d.estado !== 'Vigente' 
+                  ${!isObsoleto && !isVigente 
                     ? `<button data-action="sign" data-id="${d.id}" data-code="${d.codigo}" class="btn-action bg-cyan-600 hover:bg-cyan-700 text-white px-2 py-1 rounded text-[10px] font-bold shadow">✍️ Estampar Firma</button>` 
                     : ''
                   }
-                  ${d.estado === 'Vigente'
+                  ${isVigente
                     ? `<button data-action="version" data-id="${d.id}" data-code="${d.codigo}" data-version="${d.version}" class="btn-action bg-amber-600 hover:bg-amber-700 text-white px-2 py-1 rounded text-[10px] font-bold shadow">🔄 Nueva Versión</button>`
                     : ''
                   }
                 </div>
               </div>
+            `;
+          }).join('');
+        }
+
+        // RENDER TABLA DE COPIAS CONTROLADAS
+        const listCopias = document.getElementById('list-copias-body');
+        if (listCopias) {
+          listCopias.innerHTML = cachedCopias.map(c => {
+            let estadoClass = 'bg-emerald-100 text-emerald-800';
+            if (c.estado === 'PENDIENTE DE RETIRO') estadoClass = 'bg-amber-100 text-amber-800 font-bold';
+            if (c.estado === 'DESTRUIDA') estadoClass = 'bg-slate-100 text-slate-500 line-through';
+
+            return `
+              <tr class="hover:bg-slate-50">
+                <td class="p-2 border font-bold text-amber-900">${c.codigo_copia}</td>
+                <td class="p-2 border">${c.documento_codigo} <span class="text-slate-500 text-[10px]">v${c.version}</span></td>
+                <td class="p-2 border">${c.area_destino}</td>
+                <td class="p-2 border">${c.custodio}</td>
+                <td class="p-2 border">${c.fecha_emision}</td>
+                <td class="p-2 border"><span class="px-2 py-0.5 rounded text-[10px] ${estadoClass}">${c.estado}</span></td>
+                <td class="p-2 border text-center">
+                  ${c.estado === 'ACTIVA' || c.estado === 'PENDIENTE DE RETIRO'
+                    ? `<button data-action="retirar-copia" data-id="${c.id}" class="btn-action bg-rose-600 hover:bg-rose-700 text-white px-2 py-0.5 rounded text-[10px] font-bold shadow">
+                        🔥 Registrar Destrucción
+                      </button>`
+                    : `<span class="text-slate-400 text-[10px]">Conciliado</span>`
+                  }
+                </td>
+              </tr>
             `;
           }).join('');
         }
@@ -530,6 +668,21 @@
           wm.className = 'watermark-text text-amber-600';
         }
 
+        // GENERAR QR DINÁMICO EN EL ENCABEZADO
+        const qrContainer = document.getElementById('qrcode-canvas');
+        if (qrContainer) {
+          qrContainer.innerHTML = '';
+          const verifyUrl = `${window.location.origin}/verificar?code=${targetDoc.codigo}&ver=${targetDoc.version}&status=${targetDoc.estado}`;
+          new QRCode(qrContainer, {
+            text: verifyUrl,
+            width: 50,
+            height: 50,
+            colorDark : "#000000",
+            colorLight : "#ffffff",
+            correctLevel : QRCode.CorrectLevel.H
+          });
+        }
+
         document.getElementById('pdfSignaturesTable').innerHTML = `
           <tr>
             <td class="border border-slate-300 p-1.5 font-bold">APROBO</td>
@@ -543,7 +696,7 @@
         toggleModal('modalExportPdf', true);
       }
 
-      // VINCULACIÓN SEGURA DE EVENTOS
+      // VINCULACIÓN DE EVENTOS
       document.addEventListener('click', function(e) {
         const target = e.target;
 
@@ -584,6 +737,17 @@
 
           if (action === 'preview') {
             previewPdf(docId);
+          } else if (action === 'emitir-copia') {
+            selectedDocForCopia = { id: docId, code: target.getAttribute('data-code'), version: target.getAttribute('data-version') };
+            document.getElementById('copiaTargetCode').innerText = `${target.getAttribute('data-code')} v${target.getAttribute('data-version')}`;
+            toggleModal('modalEmitirCopia', true);
+          } else if (action === 'retirar-copia') {
+            const copiaItem = cachedCopias.find(c => c.id === docId);
+            if (copiaItem) {
+              copiaItem.estado = 'DESTRUIDA';
+              alert(`Copia ${copiaItem.codigo_copia} marcada como DESTRUIDA y conciliada del inventario físico.`);
+              loadAllData();
+            }
           } else if (action === 'sign') {
             selectedDocId = docId;
             document.getElementById('signTargetCode').innerText = target.getAttribute('data-code');
@@ -601,101 +765,4 @@
 
         if (target && target.id === 'btn-close-pdf') toggleModal('modalExportPdf', false);
         if (target && target.id === 'btn-close-pdf-bottom') toggleModal('modalExportPdf', false);
-        if (target && target.id === 'btn-close-doc') toggleModal('modalDoc', false);
-        if (target && target.id === 'btn-close-user') toggleModal('modalUser', false);
-        if (target && target.id === 'btn-close-dev') toggleModal('modalDev', false);
-        if (target && target.id === 'btn-close-eqp') toggleModal('modalEqp', false);
-        if (target && target.id === 'btn-close-version') toggleModal('modalVersion', false);
-        if (target && target.id === 'btn-close-sign') toggleModal('modalSign', false);
-
-        if (target && target.id === 'btn-open-modal-doc') toggleModal('modalDoc', true);
-        if (target && target.id === 'btn-open-modal-user') toggleModal('modalUser', true);
-        if (target && target.id === 'btn-open-modal-dev') toggleModal('modalDev', true);
-        if (target && target.id === 'btn-open-modal-eqp') toggleModal('modalEqp', true);
-      });
-
-      document.addEventListener('DOMContentLoaded', function() {
-        const btnExecSign = document.getElementById('btn-execute-sign');
-        if (btnExecSign) {
-          btnExecSign.onclick = function() {
-            const pin = document.getElementById('signPin').value;
-            if (pin !== '1234') {
-              alert('PIN incorrecto (PIN de prueba: 1234)');
-              return;
-            }
-            alert('Firma estampada con éxito (21 CFR Part 11)');
-            toggleModal('modalSign', false);
-          };
-        }
-
-        // GUARDAR NUEVA VERSIÓN CON SUBIDA DE ARCHIVO
-        const btnSaveVer = document.getElementById('btn-save-new-version');
-        if (btnSaveVer) {
-          btnSaveVer.onclick = async function() {
-            const newVersion = document.getElementById('newVerNumber').value;
-            const reason = document.getElementById('changeReason').value;
-            const fileInput = document.getElementById('newVerFile');
-
-            if (!newVersion || !reason) {
-              alert('Debes definir la nueva versión y justificar el cambio.');
-              return;
-            }
-
-            const client = getSupabase();
-            let archivo_url = null;
-
-            if (client && selectedDocForVersion) {
-              try {
-                // Subir archivo a Supabase Storage si se seleccionó uno
-                if (fileInput && fileInput.files && fileInput.files.length > 0) {
-                  const file = fileInput.files[0];
-                  const fileExt = file.name.split('.').pop();
-                  const filePath = `${selectedDocForVersion.code}_v${newVersion}_${Date.now()}.${fileExt}`;
-
-                  const { error: uploadError } = await client.storage
-                    .from('documentos-gxp')
-                    .upload(filePath, file, { upsert: true });
-
-                  if (!uploadError) {
-                    const { data: publicUrlData } = client.storage
-                      .from('documentos-gxp')
-                      .getPublicUrl(filePath);
-                    archivo_url = publicUrlData ? publicUrlData.publicUrl : null;
-                  }
-                }
-
-                // Obtener documento padre
-                const { data: oldDoc } = await client.from('documentos').select('*').eq('id', selectedDocForVersion.id).single();
-
-                if (oldDoc) {
-                  // Marcar versión anterior como obsoleta
-                  await client.from('documentos').update({ estado: 'Obsoleto', es_version_actual: false }).eq('id', selectedDocForVersion.id);
-
-                  // Crear nuevo registro en estado Borrador
-                  await client.from('documentos').insert([{
-                    codigo: oldDoc.codigo,
-                    titulo: oldDoc.titulo,
-                    tipo: oldDoc.tipo,
-                    version: newVersion,
-                    estado: 'Borrador',
-                    archivo_url: archivo_url || oldDoc.archivo_url,
-                    justificacion_cambio: reason,
-                    documento_padre_id: selectedDocForVersion.id,
-                    es_version_actual: true
-                  }]);
-                }
-              } catch (err) {
-                console.warn("Error guardando versión en Supabase, aplicando en cliente local:", err);
-              }
-            }
-
-            alert(`Nueva versión v${newVersion} creada correctamente en estado Borrador.`);
-            toggleModal('modalVersion', false);
-            loadAllData();
-          };
-        }
-      });
-    })();
-  </script>
-</body>
-</html>
+        if (target && target.id === 'btn-close-doc') toggleModal('modalDoc
