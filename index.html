@@ -65,11 +65,11 @@
           <input type="password" id="loginPassword" value="123456" class="w-full p-2.5 border rounded-lg text-xs font-mono bg-slate-50 focus:bg-white" />
         </div>
 
-        <button type="button" onclick="window.ejecutarLoginSeguro()" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2.5 rounded-lg text-xs shadow transition cursor-pointer">
+        <button type="button" onclick="ejecutarLoginSeguro()" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2.5 rounded-lg text-xs shadow transition cursor-pointer">
           Iniciar Sesión Segura (21 CFR Part 11)
         </button>
 
-        <button type="button" onclick="window.ejecutarLoginDev()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 rounded-lg text-xs shadow transition cursor-pointer">
+        <button type="button" onclick="ejecutarLoginDev()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 rounded-lg text-xs shadow transition cursor-pointer">
           ⚡ Ingreso Directo QA Lead (Johan Aguilar)
         </button>
       </div>
@@ -92,22 +92,22 @@
         <span id="userBadge" class="text-xs font-mono text-emerald-400 bg-emerald-950 px-3 py-1 rounded-full border border-emerald-500/30">
           Johan Aguilar (QA Lead)
         </span>
-        <button type="button" onclick="window.cerrarSesion()" class="bg-rose-600 hover:bg-rose-700 text-white px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer">
+        <button type="button" onclick="cerrarSesion()" class="bg-rose-600 hover:bg-rose-700 text-white px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer">
           🚪 Salir
         </button>
       </div>
     </header>
 
     <nav class="bg-slate-800 text-slate-300 rounded-xl p-1 mb-4 flex space-x-1 overflow-x-auto text-xs font-medium">
-      <button onclick="window.cambiarPestana('dashboard', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap bg-cyan-600 text-white font-bold cursor-pointer">📊 Dashboard</button>
-      <button onclick="window.cambiarPestana('documentos', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">📑 Gestión Documental</button>
-      <button onclick="window.cambiarPestana('copias', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 text-amber-300 font-bold cursor-pointer">📋 Copias Controladas</button>
-      <button onclick="window.cambiarPestana('desviaciones', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">⚠️ Desviaciones & NC</button>
-      <button onclick="window.cambiarPestana('capa', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">☑️ Módulo CAPA</button>
-      <button onclick="window.cambiarPestana('metrologia', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">🛠️ Equipos & Calibración</button>
-      <button onclick="window.cambiarPestana('firmas', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">✍️ Firmas Part 11</button>
-      <button onclick="window.cambiarPestana('audit', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">📜 Audit Trail (ALCOA+)</button>
-      <button onclick="window.cambiarPestana('admin', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 bg-slate-700 text-cyan-300 cursor-pointer">⚙️ Ajustes ERP</button>
+      <button onclick="cambiarPestana('dashboard', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap bg-cyan-600 text-white font-bold cursor-pointer">📊 Dashboard</button>
+      <button onclick="cambiarPestana('documentos', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">📑 Gestión Documental</button>
+      <button onclick="cambiarPestana('copias', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 text-amber-300 font-bold cursor-pointer">📋 Copias Controladas</button>
+      <button onclick="cambiarPestana('desviaciones', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">⚠️ Desviaciones & NC</button>
+      <button onclick="cambiarPestana('capa', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">☑️ Módulo CAPA</button>
+      <button onclick="cambiarPestana('metrologia', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">🛠️ Equipos & Calibración</button>
+      <button onclick="cambiarPestana('firmas', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">✍️ Firmas Part 11</button>
+      <button onclick="cambiarPestana('audit', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">📜 Audit Trail (ALCOA+)</button>
+      <button onclick="cambiarPestana('admin', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 bg-slate-700 text-cyan-300 cursor-pointer">⚙️ Ajustes ERP</button>
     </nav>
 
     <main>
@@ -150,7 +150,7 @@
             <h2 class="font-bold text-slate-800 text-sm">Gestión Documental & Workflows</h2>
             <p class="text-xs text-slate-500">Control de versiones, subida de archivos y exportación PDF oficial</p>
           </div>
-          <button type="button" onclick="window.toggleModal('modalDoc', true)" class="bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow cursor-pointer">+ Solicitud / Nuevo Documento</button>
+          <button type="button" onclick="toggleModal('modalDoc', true)" class="bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow cursor-pointer">+ Solicitud / Nuevo Documento</button>
         </div>
         <div id="list-docs" class="divide-y divide-slate-100 text-xs">Cargando...</div>
       </div>
@@ -189,7 +189,7 @@
       <div id="view-desviaciones" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-3">
         <div class="flex justify-between items-center">
           <h2 class="font-bold text-slate-800 text-sm">Desviaciones & NC</h2>
-          <button type="button" onclick="window.toggleModal('modalDev', true)" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow cursor-pointer">+ Reportar Desviación / NC</button>
+          <button type="button" onclick="toggleModal('modalDev', true)" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow cursor-pointer">+ Reportar Desviación / NC</button>
         </div>
         <div id="list-desvs" class="space-y-2 text-xs">Cargando...</div>
       </div>
@@ -202,7 +202,7 @@
       <div id="view-metrologia" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4">
         <div class="flex justify-between items-center mb-3">
           <h2 class="font-bold text-slate-800 text-sm">Equipos & Metrología GxP</h2>
-          <button type="button" onclick="window.toggleModal('modalEqp', true)" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow cursor-pointer">+ Nuevo Equipo GxP</button>
+          <button type="button" onclick="toggleModal('modalEqp', true)" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow cursor-pointer">+ Nuevo Equipo GxP</button>
         </div>
         <div id="list-eqps" class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">Cargando...</div>
       </div>
@@ -223,7 +223,7 @@
             <h2 class="font-bold text-slate-800 text-sm">⚙️ Ajustes del Sistema ERP / QMS</h2>
             <p class="text-xs text-slate-500">Gestión de usuarios corporativos, roles y credenciales GxP</p>
           </div>
-          <button type="button" onclick="window.toggleModal('modalUser', true)" class="bg-slate-800 hover:bg-slate-900 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow cursor-pointer">+ Registrar Nuevo Usuario GxP</button>
+          <button type="button" onclick="toggleModal('modalUser', true)" class="bg-slate-800 hover:bg-slate-900 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow cursor-pointer">+ Registrar Nuevo Usuario GxP</button>
         </div>
 
         <div>
@@ -243,7 +243,7 @@
           <button type="button" onclick="window.print()" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow cursor-pointer">
             🖨️ Imprimir Copia Controlada
           </button>
-          <button type="button" onclick="window.toggleModal('modalExportPdf', false)" class="text-slate-400 hover:text-slate-600 font-bold text-base px-2 cursor-pointer">✕</button>
+          <button type="button" onclick="toggleModal('modalExportPdf', false)" class="text-slate-400 hover:text-slate-600 font-bold text-base px-2 cursor-pointer">✕</button>
         </div>
       </div>
 
@@ -309,7 +309,7 @@
         <button type="button" onclick="window.print()" class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-1.5 rounded text-xs font-bold shadow cursor-pointer">
           🖨️ Imprimir Copia Controlada
         </button>
-        <button type="button" onclick="window.toggleModal('modalExportPdf', false)" class="px-4 py-1.5 border rounded text-xs cursor-pointer">Cerrar Vista Previa</button>
+        <button type="button" onclick="toggleModal('modalExportPdf', false)" class="px-4 py-1.5 border rounded text-xs cursor-pointer">Cerrar Vista Previa</button>
       </div>
     </div>
   </div>
@@ -329,161 +329,4 @@
             <option value="Planta de Producción">Planta de Producción (Sólidos / Líquidos)</option>
             <option value="Control de Calidad">Laboratorio de Control de Calidad (QC)</option>
             <option value="Aseguramiento de Calidad">Aseguramiento de Calidad (QA)</option>
-            <option value="Bodega / Almacén">Bodega y Almacén de Materias Primas</option>
-            <option value="Mantenimiento y Metrología">Mantenimiento y Metrología</option>
-          </select>
-        </div>
-
-        <div>
-          <label class="block font-semibold text-slate-700 mb-1">Custodio / Responsable de Recibir</label>
-          <select id="copiaCustodio" class="w-full p-2 border rounded bg-slate-50 font-semibold">
-            <option value="Johan Aguilar (QA Lead)">Johan Aguilar (QA Lead)</option>
-            <option value="Carlos Mendoza (Supervisor Producción)">Carlos Mendoza (Supervisor Producción)</option>
-            <option value="Laura Restrepo (Analista QC)">Laura Restrepo (Analista QC)</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="flex justify-end space-x-2 pt-2 border-t">
-        <button type="button" onclick="window.toggleModal('modalEmitirCopia', false)" class="px-3 py-1 border rounded text-xs cursor-pointer">Cancelar</button>
-        <button type="button" onclick="window.confirmarEmitirCopia()" class="px-4 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded text-xs font-bold shadow cursor-pointer">Generar & Imprimir Copia</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- MODAL NUEVA VERSIÓN -->
-  <div id="modalVersion" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
-    <div class="bg-white rounded-xl max-w-lg w-full p-5 border shadow-2xl space-y-3">
-      <div class="border-b pb-2 flex justify-between items-center">
-        <h3 class="font-bold text-sm text-cyan-900">🔄 Crear Nueva Versión (Control de Cambios)</h3>
-        <span id="verTargetCode" class="font-mono text-xs bg-cyan-100 text-cyan-800 px-2 py-0.5 rounded font-bold"></span>
-      </div>
-
-      <div class="space-y-2 text-xs">
-        <div class="grid grid-cols-2 gap-2">
-          <div><label class="block font-semibold text-slate-700">Versión Actual</label><input type="text" id="currentVer" readonly class="w-full p-2 border rounded font-mono bg-slate-100 font-bold" /></div>
-          <div><label class="block font-semibold text-slate-700">Nueva Versión Propuesta</label><input type="text" id="newVerNumber" placeholder="ej. 2.0" class="w-full p-2 border rounded font-mono bg-amber-50 font-bold border-amber-300" /></div>
-        </div>
-        <div><label class="block font-semibold text-slate-700">Justificación del Cambio / Control de Cambios GxP</label><textarea id="changeReason" rows="3" class="w-full p-2 border rounded text-xs" placeholder="Describa el motivo de la modificación..."></textarea></div>
-        <div>
-          <label class="block font-semibold text-slate-700 mb-1">Nuevo Archivo Digital (.pdf, .doc, .docx)</label>
-          <input type="file" id="newVerFile" accept=".pdf,.doc,.docx" class="w-full p-2 border rounded bg-slate-50 text-xs font-mono" />
-        </div>
-      </div>
-
-      <div class="flex justify-end space-x-2 pt-2 border-t">
-        <button type="button" onclick="window.toggleModal('modalVersion', false)" class="px-3 py-1 border rounded text-xs cursor-pointer">Cancelar</button>
-        <button type="button" onclick="window.confirmarNuevaVersion()" class="px-4 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white rounded text-xs font-bold shadow cursor-pointer">Generar Versión & Pasar a Borrador</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- MODAL FIRMA -->
-  <div id="modalSign" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
-    <div class="bg-white rounded-xl max-w-md w-full p-5 border shadow-2xl space-y-3">
-      <h3 class="font-bold text-sm">✍️ Firma Electrónica 21 CFR Part 11</h3>
-      <p class="text-xs text-slate-500">Firmando registro: <strong id="signTargetCode" class="text-cyan-700"></strong></p>
-      
-      <div>
-        <label class="block text-[11px] font-semibold text-slate-700 mb-1">Significado de la Firma:</label>
-        <select id="signMeaning" class="w-full p-2 border rounded text-xs bg-slate-50 font-semibold">
-          <option value="ELABORO">1. Elaboró (Pasa a En Revisión)</option>
-          <option value="REVISO">2. Revisó (Pasa a En Aprobación)</option>
-          <option value="APROBO">3. Aprobó (Pasa a Vigente)</option>
-        </select>
-      </div>
-
-      <input type="text" id="signReason" placeholder="Motivo de la firma" class="w-full p-2 border rounded text-xs" />
-      <input type="password" id="signPin" placeholder="PIN de firma (1234)" class="w-full p-2 border rounded text-xs font-mono" />
-      
-      <div class="flex justify-end space-x-2 pt-2">
-        <button type="button" onclick="window.toggleModal('modalSign', false)" class="px-3 py-1 border rounded text-xs cursor-pointer">Cancelar</button>
-        <button type="button" onclick="window.confirmarFirma()" class="px-3 py-1 bg-cyan-600 text-white rounded text-xs font-bold cursor-pointer">Estampar Firma</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- MODALES SIMPLES -->
-  <div id="modalDoc" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
-    <div class="bg-white rounded-xl max-w-lg w-full p-5 border shadow-2xl space-y-3">
-      <h3 class="font-bold text-sm text-cyan-900">📑 Crear / Subir Documento Controlado</h3>
-      <div class="flex justify-end pt-2 border-t"><button type="button" onclick="window.toggleModal('modalDoc', false)" class="px-3 py-1 border rounded text-xs cursor-pointer">Cerrar</button></div>
-    </div>
-  </div>
-  <div id="modalUser" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
-    <div class="bg-white rounded-xl max-w-md w-full p-5 border shadow-2xl space-y-3">
-      <h3 class="font-bold text-sm text-slate-800">👤 Registrar Usuario GxP</h3>
-      <div class="flex justify-end pt-2 border-t"><button type="button" onclick="window.toggleModal('modalUser', false)" class="px-3 py-1 border rounded text-xs cursor-pointer">Cerrar</button></div>
-    </div>
-  </div>
-  <div id="modalDev" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
-    <div class="bg-white rounded-xl max-w-md w-full p-5 border shadow-2xl space-y-3">
-      <h3 class="font-bold text-sm">⚠️ Reportar Desviación / NC</h3>
-      <div class="flex justify-end pt-2 border-t"><button type="button" onclick="window.toggleModal('modalDev', false)" class="px-3 py-1 border rounded text-xs cursor-pointer">Cerrar</button></div>
-    </div>
-  </div>
-  <div id="modalEqp" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
-    <div class="bg-white rounded-xl max-w-md w-full p-5 border shadow-2xl space-y-3">
-      <h3 class="font-bold text-sm">🛠️ Registrar Equipo GxP</h3>
-      <div class="flex justify-end pt-2 border-t"><button type="button" onclick="window.toggleModal('modalEqp', false)" class="px-3 py-1 border rounded text-xs cursor-pointer">Cerrar</button></div>
-    </div>
-  </div>
-
-  <!-- SCRIPT CON FUNCIONES 100% GLOBALES -->
-  <script>
-    window.activeGxpUser = { id: 'b40e33f1-6196-4b51-bfcb-6604d6daff50', nombre_completo: 'Johan Aguilar', cargo: 'QA Lead' };
-
-    window.cachedDocs = [
-      { id: '1', codigo: 'PH-GPD-F0-01', titulo: 'Lista de Chequeo Batch y Liberación de PT', tipo: 'FORMATO', version: '2.0', estado: 'Vigente', created_at: '2026-10-15', archivo_url: '' },
-      { id: '2', codigo: 'PH-GPD-F0-01', titulo: 'Lista de Chequeo Batch y Liberación de PT', tipo: 'FORMATO', version: '1.0', estado: 'Obsoleto', created_at: '2026-05-10', archivo_url: '' },
-      { id: '3', codigo: 'SOP-PRO-012', titulo: 'Limpieza e Higienización de Áreas Limpias Class C', tipo: 'SOP', version: '2.1', estado: 'Vigente', created_at: '2026-09-01', archivo_url: '' },
-      { id: '4', codigo: 'SOP-QA-001', titulo: 'Procedimiento de Manejo de Desviaciones y NC', tipo: 'SOP', version: '3.0', estado: 'Vigente', created_at: '2026-08-20', archivo_url: '' },
-      { id: '5', codigo: 'PROT-VAL-088', titulo: 'Protocolo de Calificación de Desempeño (PQ) Autoclave', tipo: 'ESPECIFICACION', version: '1.0', estado: 'Vigente', created_at: '2026-07-11', archivo_url: '' }
-    ];
-
-    window.cachedCopias = [
-      { id: 'c1', codigo_copia: 'COP-PH-GPD-F0-01-C01', documento_codigo: 'PH-GPD-F0-01', version: '2.0', area_destino: 'Planta de Producción', custodio: 'Carlos Mendoza', fecha_emision: '2026-10-16', estado: 'ACTIVA' },
-      { id: 'c2', codigo_copia: 'COP-PH-GPD-F0-01-C02', documento_codigo: 'PH-GPD-F0-01', version: '1.0', area_destino: 'Laboratorio QC', custodio: 'Laura Restrepo', fecha_emision: '2026-05-11', estado: 'DESTRUIDA' },
-      { id: 'c3', codigo_copia: 'COP-SOP-PRO-012-C01', documento_codigo: 'SOP-PRO-012', version: '2.1', area_destino: 'Bodega / Almacén', custodio: 'Johan Aguilar', fecha_emision: '2026-09-02', estado: 'ACTIVA' }
-    ];
-
-    window.selectedDocId = null;
-    window.selectedDocForCopia = null;
-    window.selectedDocForVersion = null;
-
-    window.toggleModal = function(id, show) {
-      const m = document.getElementById(id);
-      if (m) {
-        if (show) m.classList.add('active'); else m.classList.remove('active');
-      }
-    };
-
-    window.ejecutarLoginDev = function() {
-      window.abrirPortal({ id: 'b40e33f1-6196-4b51-bfcb-6604d6daff50', nombre_completo: 'Johan Aguilar', cargo: 'QA Lead' });
-    };
-
-    window.ejecutarLoginSeguro = function() {
-      const email = document.getElementById('loginEmail').value;
-      window.abrirPortal({ id: 'b40e33f1-6196-4b51-bfcb-6604d6daff50', nombre_completo: email || 'Johan Aguilar', cargo: 'QA Lead' });
-    };
-
-    window.abrirPortal = function(user) {
-      if (user) window.activeGxpUser = user;
-      document.getElementById('view-login').style.display = 'none';
-      document.getElementById('app-portal').style.display = 'block';
-      document.getElementById('userBadge').innerText = `User: ${window.activeGxpUser.nombre_completo} (${window.activeGxpUser.cargo || 'QA Lead'})`;
-      window.renderAllData();
-    };
-
-    window.cerrarSesion = function() {
-      location.reload();
-    };
-
-    window.cambiarPestana = function(tabName, btnEl) {
-      document.querySelectorAll('.tab-content').forEach(v => v.classList.remove('active'));
-      document.querySelectorAll('.nav-btn').forEach(b => {
-        b.classList.remove('bg-cyan-600', 'text-white', 'font-bold');
-        b.classList.add('hover:bg-slate-700');
-      });
-      document.getElementById('view-' + tabName).classList.add('active');
-      btnEl.classList.add('bg-cyan-600', 'text-white', 'font-bold');
+            <option value="Bodega / Almacén">Bodega y Almacén de Materias Primas</option
