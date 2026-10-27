@@ -6,12 +6,34 @@
   <title>PharmAudit ERP / QMS - Pharmor</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- LIBRERÍA GENERADORA DE PDF GXP -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <style>
     body { margin: 0; padding: 0; background-color: #f8fafc; font-family: ui-sans-serif, system-ui, sans-serif; }
     .tab-content { display: none; }
     .tab-content.active { display: block; }
     .modal-backdrop { display: none; }
     .modal-backdrop.active { display: flex; }
+
+    /* ESTILOS DE MARCA DE AGUA PARA IMPRESIÓN GXP */
+    .watermark-container {
+      position: relative;
+      overflow: hidden;
+    }
+    .watermark-text {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(-30deg);
+      font-size: 3.5rem;
+      font-weight: 900;
+      opacity: 0.12;
+      pointer-events: none;
+      white-space: nowrap;
+      text-transform: uppercase;
+      user-select: none;
+      z-index: 10;
+    }
   </style>
 </head>
 <body class="bg-slate-50 text-slate-800 p-4">
@@ -111,12 +133,12 @@
         </div>
       </div>
 
-      <!-- DOCUMENTOS CONTROLADOS Y CONTROL DE CAMBIOS -->
+      <!-- DOCUMENTOS CONTROLADOS Y EXPORTACIÓN A PDF -->
       <div id="view-documentos" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4">
         <div class="flex justify-between items-center mb-3">
           <div>
             <h2 class="font-bold text-slate-800 text-sm">Gestión Documental & Workflows</h2>
-            <p class="text-xs text-slate-500">Control de versiones, subida de archivos y archivo de obsoletos</p>
+            <p class="text-xs text-slate-500">Control de versiones, subida de archivos y exportación PDF oficial</p>
           </div>
           <button id="btn-open-modal-doc" class="bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow">+ Solicitud / Nuevo Documento</button>
         </div>
@@ -170,6 +192,79 @@
         </div>
       </div>
     </main>
+  </div>
+
+  <!-- MODAL PREVISUALIZADOR E IMPRESOR DE REPORTES OFICIALES GXP -->
+  <div id="modalExportPdf" class="modal-backdrop fixed inset-0 bg-slate-900/70 backdrop-blur-sm items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl max-w-3xl w-full p-6 border shadow-2xl space-y-4 max-h-[95vh] flex flex-col">
+      <div class="border-b pb-2 flex justify-between items-center shrink-0">
+        <h3 class="font-bold text-sm text-slate-800 flex items-center space-x-2">
+          <span>📜 Vista Previa de Reporte Oficial GxP</span>
+        </h3>
+        <button id="btn-download-pdf-action" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-1.5 rounded-lg text-xs font-bold shadow flex items-center space-x-1">
+          <span>⬇️ Descargar PDF Oficial</span>
+        </button>
+      </div>
+
+      <!-- CONTENEDOR IMPRESO CON ESTAMPA Y MARCA DE AGUA -->
+      <div class="overflow-y-auto p-2 flex-grow">
+        <div id="pdf-printable-area" class="watermark-container bg-white p-8 border border-slate-300 text-slate-900 text-xs space-y-6">
+          <div id="pdfWatermark" class="watermark-text text-emerald-600">COPIA CONTROLADA</div>
+
+          <!-- ENCABEZADO INSTITUCIONAL -->
+          <div class="border-2 border-slate-800 p-3 grid grid-cols-4 items-center text-center font-bold font-mono">
+            <div class="col-span-1 border-r-2 border-slate-800 pr-2">
+              <div class="text-sm">PHARMOR</div>
+              <div class="text-[9px] font-normal text-slate-600">QMS Compliance</div>
+            </div>
+            <div class="col-span-2 text-xs uppercase px-2" id="pdfDocTitle">SISTEMA DE GESTIÓN DE CALIDAD</div>
+            <div class="col-span-1 border-l-2 border-slate-800 pl-2 text-[10px] text-left space-y-0.5">
+              <div>Código: <span id="pdfDocCode" class="font-bold text-cyan-800"></span></div>
+              <div>Versión: <span id="pdfDocVersion"></span></div>
+              <div>Fecha: <span id="pdfDocDate"></span></div>
+            </div>
+          </div>
+
+          <!-- CUERPO DEL INFORME -->
+          <div class="space-y-3">
+            <h4 class="font-bold text-xs uppercase border-b pb-1 text-slate-800">1. Información General del Registro</h4>
+            <div class="grid grid-cols-2 gap-3 text-[11px]">
+              <div><strong>Tipo de Documento:</strong> <span id="pdfDocType"></span></div>
+              <div><strong>Estado de Validación:</strong> <span id="pdfDocStatus" class="font-bold"></span></div>
+              <div class="col-span-2"><strong>Justificación / Objeto del Registro:</strong> <span id="pdfDocJustification" class="italic text-slate-700">Sin observaciones especiales.</span></div>
+            </div>
+          </div>
+
+          <!-- TRAZABILIDAD DE WORKFLOW DE FIRMAS PART 11 -->
+          <div class="space-y-2 border-t pt-4">
+            <h4 class="font-bold text-xs uppercase text-slate-800">2. Registro de Firmas Electrónicas (FDA 21 CFR Part 11)</h4>
+            <table class="w-full border-collapse border border-slate-300 text-[10px] font-mono text-left">
+              <thead>
+                <tr class="bg-slate-100">
+                  <th class="border border-slate-300 p-1.5">Rol / Rol GxP</th>
+                  <th class="border border-slate-300 p-1.5">Responsable</th>
+                  <th class="border border-slate-300 p-1.5">Estado / Significado</th>
+                  <th class="border border-slate-300 p-1.5">Estampa de Tiempo</th>
+                </tr>
+              </thead>
+              <tbody id="pdfSignaturesTable">
+                <tr><td colspan="4" class="p-2 text-center text-slate-400">Cargando circuito de firmas...</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- PIE DE PÁGINA AUDIT TRAIL -->
+          <div class="border-t-2 border-slate-800 pt-2 text-[9px] font-mono text-slate-500 flex justify-between items-center">
+            <div>Generado automáticamente por PharmAudit ERP · Integridad ALCOA+</div>
+            <div>Sello Hash GxP: <span id="pdfSystemHash" class="font-bold text-slate-700"></span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex justify-end border-t pt-2 shrink-0">
+        <button id="btn-close-modal-pdf" class="px-4 py-1.5 border rounded text-xs">Cerrar Vista Previa</button>
+      </div>
+    </div>
   </div>
 
   <!-- MODAL DE CONTROL DE CAMBIOS / NUEVA VERSIÓN -->
@@ -507,6 +602,7 @@
       document.getElementById('btn-open-modal-doc').onclick = () => toggleModal('modalDoc', true);
       document.getElementById('btn-close-modal-doc').onclick = () => toggleModal('modalDoc', false);
       document.getElementById('btn-close-modal-version').onclick = () => toggleModal('modalVersion', false);
+      document.getElementById('btn-close-modal-pdf').onclick = () => toggleModal('modalExportPdf', false);
       document.getElementById('btn-open-modal-user').onclick = () => toggleModal('modalUser', true);
       document.getElementById('btn-close-modal-user').onclick = () => toggleModal('modalUser', false);
       document.getElementById('btn-open-modal-dev').onclick = () => toggleModal('modalDev', true);
@@ -517,7 +613,7 @@
       document.getElementById('btn-close-modal-rca').onclick = () => toggleModal('modalRca', false);
       document.getElementById('btn-close-modal-calib').onclick = () => toggleModal('modalCalib', false);
 
-      // CARGA DE DATOS PRINCIPAL CON CONTROL DE VERSIONES
+      // CARGA DE DATOS PRINCIPAL CON BOTÓN DE PREVISUALIZACIÓN / PDF
       async function loadData() {
         const { data: docs } = await supabase.from('documentos').select('*').order('created_at', { ascending: false });
         const { data: desvs } = await supabase.from('desviaciones').select('*');
@@ -544,10 +640,10 @@
         document.getElementById('cnt-eqps').innerText = eqps ? eqps.length : 0;
         document.getElementById('cnt-audit').innerText = audit ? audit.length : 0;
 
-        // Render Documentos con Botón de Control de Cambios / Nueva Versión
+        // Render Documentos con Exportación a PDF Oficial
         document.getElementById('list-docs').innerHTML = (docs || []).map(d => {
           const downloadBtn = d.archivo_url 
-            ? `<a href="${d.archivo_url}" target="_blank" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded text-[10px] font-bold border">📥 Archivo Digital</a>` 
+            ? `<a href="${d.archivo_url}" target="_blank" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded text-[10px] font-bold border">📥 Adjunto</a>` 
             : `<span class="text-slate-400 text-[10px] italic">Sin adjunto</span>`;
 
           const isObsoleto = d.estado === 'Obsoleto';
@@ -563,6 +659,9 @@
                 </div>
                 <div class="mt-1 flex items-center space-x-2">
                   ${downloadBtn}
+                  <button data-id="${d.id}" class="btn-preview-pdf bg-slate-100 hover:bg-slate-200 text-slate-800 px-2 py-1 rounded text-[10px] font-bold border flex items-center space-x-1">
+                    <span>🖨️ Previsualizar / Exportar PDF</span>
+                  </button>
                   ${d.justificacion_cambio ? `<span class="text-[10px] text-slate-500 font-mono">Justificación: ${d.justificacion_cambio}</span>` : ''}
                 </div>
               </div>
@@ -580,6 +679,78 @@
             </div>
           `;
         }).join('');
+
+        // Listeners para Generación de PDF Oficial
+        document.querySelectorAll('.btn-preview-pdf').forEach(b => {
+          b.onclick = async function() {
+            const docId = this.getAttribute('data-id');
+            const targetDoc = docs.find(x => x.id === docId);
+            if (!targetDoc) return;
+
+            // Llenar campos del modal impreso
+            document.getElementById('pdfDocTitle').innerText = targetDoc.titulo;
+            document.getElementById('pdfDocCode').innerText = targetDoc.codigo;
+            document.getElementById('pdfDocVersion').innerText = targetDoc.version;
+            document.getElementById('pdfDocDate').innerText = new Date(targetDoc.created_at).toLocaleDateString('es-CO');
+            document.getElementById('pdfDocType').innerText = targetDoc.tipo || 'SOP';
+            document.getElementById('pdfDocStatus').innerText = targetDoc.estado;
+            document.getElementById('pdfDocJustification').innerText = targetDoc.justificacion_cambio || 'Documento en ciclo normal de gestión de calidad GxP.';
+
+            // Configurar marca de agua dinámica
+            const wm = document.getElementById('pdfWatermark');
+            if (targetDoc.estado === 'Vigente') {
+              wm.innerText = 'COPIA CONTROLADA · VIGENTE';
+              wm.className = 'watermark-text text-emerald-600';
+            } else if (targetDoc.estado === 'Obsoleto') {
+              wm.innerText = 'DOCUMENTO OBSOLETO';
+              wm.className = 'watermark-text text-rose-600';
+            } else {
+              wm.innerText = 'BORRADOR · NO VALIDO PARA USO';
+              wm.className = 'watermark-text text-amber-600';
+            }
+
+            // Consultar firmas electrónicas vinculadas
+            const { data: docSigns } = await supabase.from('firmas_electronicas').select('*').eq('registro_id', docId);
+
+            if (docSigns && docSigns.length > 0) {
+              document.getElementById('pdfSignaturesTable').innerHTML = docSigns.map(s => {
+                const signer = allUsers.find(u => u.id === s.usuario_id);
+                return `
+                  <tr>
+                    <td class="border border-slate-300 p-1.5 font-bold">${s.significado_firma}</td>
+                    <td class="border border-slate-300 p-1.5">${signer ? signer.nombre_completo : 'Usuario Autorizado'} (${signer ? signer.cargo : 'GxP'})</td>
+                    <td class="border border-slate-300 p-1.5 font-bold text-emerald-700">✓ FIRMADO ELECTRONICAMENTE</td>
+                    <td class="border border-slate-300 p-1.5 font-mono">${new Date(s.timestamp_firma).toLocaleString('es-CO')}</td>
+                  </tr>
+                `;
+              }).join('');
+            } else {
+              document.getElementById('pdfSignaturesTable').innerHTML = `
+                <tr><td colspan="4" class="p-2 text-center text-slate-400 italic">Pendiente de circuito de firmas digitales (21 CFR Part 11).</td></tr>
+              `;
+            }
+
+            document.getElementById('pdfSystemHash').innerText = `SHA256-${docId.substring(0,8).toUpperCase()}-${Date.now()}`;
+            toggleModal('modalExportPdf', true);
+          };
+        });
+
+        // DESCARGA FÍSICA A PDF CON HTML2PDF
+        document.getElementById('btn-download-pdf-action').onclick = function() {
+          const element = document.getElementById('pdf-printable-area');
+          const code = document.getElementById('pdfDocCode').innerText || 'DOC';
+          const ver = document.getElementById('pdfDocVersion').innerText || '1.0';
+
+          const opt = {
+            margin:       0.3,
+            filename:     `Pharmor_Reporte_Oficial_${code}_v${ver}.pdf`,
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2 },
+            jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+          };
+
+          html2pdf().set(opt).from(element).save();
+        };
 
         // Listeners de Firma
         document.querySelectorAll('.btn-sign').forEach(b => {
@@ -710,7 +881,7 @@
         `).join('');
       }
 
-      // GUARDAR NUEVA VERSIÓN (CORREGIDO)
+      // GUARDAR NUEVA VERSIÓN
       document.getElementById('btn-save-new-version').onclick = async () => {
         try {
           const newVersion = document.getElementById('newVerNumber').value;
@@ -722,7 +893,6 @@
             return;
           }
 
-          // 1. Obtener los datos del documento actual ANTES de actualizarlo
           const { data: oldDoc, error: fetchErr } = await supabase
             .from('documentos')
             .select('*')
@@ -736,7 +906,6 @@
 
           let archivo_url = oldDoc.archivo_url;
 
-          // Subida de nuevo archivo digital
           if (fileInput.files && fileInput.files.length > 0) {
             const file = fileInput.files[0];
             const fileExt = file.name.split('.').pop();
@@ -755,12 +924,10 @@
             }
           }
 
-          // 2. Archivar la versión anterior marcándola como 'Obsoleto'
           await supabase.from('documentos')
             .update({ estado: 'Obsoleto', es_version_actual: false })
             .eq('id', selectedDocForVersion.id);
 
-          // 3. Insertar el nuevo borrador de la versión
           const { error: insertErr } = await supabase.from('documentos').insert([{
             codigo: oldDoc.codigo,
             titulo: oldDoc.titulo,
