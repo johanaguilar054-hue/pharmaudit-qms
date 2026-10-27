@@ -44,7 +44,7 @@
     </div>
   </div>
 
-  <!-- APLICACIÓN PRINCIPAL (OCULTA HASTA AUTENTICAR) -->
+  <!-- APLICACIÓN PRINCIPAL -->
   <div id="app-portal" class="hidden">
     <!-- ENCABEZADO -->
     <header class="bg-slate-900 text-white p-4 rounded-xl shadow-lg border-b-2 border-cyan-500 mb-4 flex justify-between items-center">
@@ -157,7 +157,72 @@
     </main>
   </div>
 
-  <!-- MODALES Y LÓGICA -->
+  <!-- MODAL DE ANÁLISIS CAUSA RAÍZ (5M e Ishikawa) -->
+  <div id="modalRca" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl max-w-2xl w-full p-5 border shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+      <div class="border-b pb-2 flex justify-between items-center">
+        <h3 class="font-bold text-sm text-amber-800">🔍 Análisis de Causa Raíz (Ishikawa & 5 Porqués)</h3>
+        <span id="rcaDevCode" class="font-mono text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-bold"></span>
+      </div>
+
+      <!-- SECCIÓN ISHIKAWA 5M -->
+      <div>
+        <h4 class="font-bold text-xs text-slate-700 mb-2">1. Diagrama de Ishikawa (Las 5M)</h4>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+          <div>
+            <label class="block font-semibold text-slate-600 text-[11px]">👤 Mano de Obra / Personal</label>
+            <input type="text" id="mManpower" placeholder="Capacitación, fatiga, error humano..." class="w-full p-2 border rounded bg-slate-50" />
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-600 text-[11px]">⚙️ Maquinaria / Equipos</label>
+            <input type="text" id="mMachine" placeholder="Falla mecánica, calibración vencida..." class="w-full p-2 border rounded bg-slate-50" />
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-600 text-[11px]">🧪 Materiales / Insumos</label>
+            <input type="text" id="mMaterial" placeholder="Materia prima fuera de especificación..." class="w-full p-2 border rounded bg-slate-50" />
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-600 text-[11px]">📋 Método / Procedimiento</label>
+            <input type="text" id="mMethod" placeholder="SOP desactualizado, ambigüedad..." class="w-full p-2 border rounded bg-slate-50" />
+          </div>
+          <div class="md:col-span-2">
+            <label class="block font-semibold text-slate-600 text-[11px]">🌡️ Medio Ambiente / Entorno</label>
+            <input type="text" id="mEnvironment" placeholder="Humedad, temperatura, presión de área..." class="w-full p-2 border rounded bg-slate-50" />
+          </div>
+        </div>
+      </div>
+
+      <!-- SECCIÓN 5 PORQUÉS -->
+      <div class="border-t pt-3">
+        <h4 class="font-bold text-xs text-slate-700 mb-2">2. Árbol de Investigación de los 5 Porqués</h4>
+        <div class="space-y-2 text-xs">
+          <input type="text" id="why1" placeholder="Por qué 1: ¿Por qué ocurrió el problema inmediato?" class="w-full p-2 border rounded" />
+          <input type="text" id="why2" placeholder="Por qué 2: ¿Por qué ocurrió lo anterior?" class="w-full p-2 border rounded" />
+          <input type="text" id="why3" placeholder="Por qué 3: ..." class="w-full p-2 border rounded" />
+          <input type="text" id="why4" placeholder="Por qué 4: ..." class="w-full p-2 border rounded" />
+          <input type="text" id="why5" placeholder="Por qué 5: ..." class="w-full p-2 border rounded" />
+        </div>
+      </div>
+
+      <!-- CONCLUSIÓN Y VÍNCULO CAPA -->
+      <div class="border-t pt-3 space-y-2">
+        <label class="block font-bold text-xs text-amber-900">🎯 Causa Raíz Conclusiva Requerida</label>
+        <textarea id="rcaConclusive" rows="2" placeholder="Definición clara y concisa de la causa raíz final..." class="w-full p-2 border rounded text-xs font-semibold bg-amber-50/50"></textarea>
+
+        <div class="bg-purple-50 p-3 rounded-lg border border-purple-200 mt-2">
+          <label class="block font-bold text-xs text-purple-900 mb-1">☑️ Generar Plan CAPA Automático</label>
+          <input type="text" id="capaAction" placeholder="Acción correctiva/preventiva para eliminar esta causa raíz..." class="w-full p-2 border rounded text-xs bg-white" />
+        </div>
+      </div>
+
+      <div class="flex justify-end space-x-2 pt-2 border-t">
+        <button id="btn-close-modal-rca" class="px-3 py-1.5 border rounded text-xs">Cancelar</button>
+        <button id="btn-save-rca" class="px-4 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded text-xs font-bold shadow">Guardar RCA & Plan CAPA</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODALES EXISTENTES -->
   <div id="modalDoc" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
     <div class="bg-white rounded-xl max-w-md w-full p-5 border shadow-2xl space-y-3">
       <h3 class="font-bold text-sm">📑 Registrar Nuevo Documento</h3>
@@ -225,9 +290,10 @@
       const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
       let selectedDocId = null;
+      let selectedDevId = null;
       let activeGxpUser = null;
 
-      // LOGIN / LOGOUT CONTROLES
+      // LOGIN / LOGOUT
       document.getElementById('btn-login').onclick = async () => {
         const email = document.getElementById('loginEmail').value;
         const password = document.getElementById('loginPassword').value;
@@ -294,6 +360,7 @@
       document.getElementById('btn-open-modal-eqp').onclick = () => toggleModal('modalEqp', true);
       document.getElementById('btn-close-modal-eqp').onclick = () => toggleModal('modalEqp', false);
       document.getElementById('btn-close-modal-sign').onclick = () => toggleModal('modalSign', false);
+      document.getElementById('btn-close-modal-rca').onclick = () => toggleModal('modalRca', false);
 
       // CARGA DE DATOS
       async function loadData() {
@@ -303,6 +370,7 @@
         const { data: eqps } = await supabase.from('equipos').select('*');
         const { data: audit } = await supabase.from('audit_trail').select('*').order('timestamp', { ascending: false });
         const { data: frms } = await supabase.from('firmas_electronicas').select('*').order('timestamp_firma', { ascending: false });
+        const { data: rcas } = await supabase.from('causa_raiz_desviaciones').select('*');
 
         document.getElementById('cnt-docs').innerText = docs ? docs.length : 0;
         document.getElementById('cnt-desvs').innerText = desvs ? desvs.length : 0;
@@ -332,13 +400,35 @@
           };
         });
 
-        // Render Desviaciones
-        document.getElementById('list-desvs').innerHTML = (desvs || []).map(d => `
-          <div class="p-3 bg-slate-50 rounded border">
-            <div class="flex justify-between font-bold"><span class="font-mono text-amber-700">${d.codigo}</span><span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded">${d.clasificacion || 'MAYOR'}</span></div>
-            <p class="text-slate-700 mt-1">${d.descripcion}</p>
-          </div>
-        `).join('');
+        // Render Desviaciones con soporte RCA
+        document.getElementById('list-desvs').innerHTML = (desvs || []).map(d => {
+          const hasRca = rcas && rcas.some(r => r.desviacion_id === d.id);
+          return `
+            <div class="p-3 bg-slate-50 rounded border flex justify-between items-center">
+              <div>
+                <div class="flex items-center space-x-2">
+                  <span class="font-mono font-bold text-amber-700">${d.codigo}</span>
+                  <span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-[10px] font-bold">${d.clasificacion || 'MAYOR'}</span>
+                </div>
+                <p class="text-slate-700 mt-1">${d.descripcion}</p>
+              </div>
+              <div>
+                ${hasRca 
+                  ? `<span class="bg-emerald-100 text-emerald-800 px-2 py-1 rounded text-[10px] font-bold">✓ RCA Completado</span>`
+                  : `<button data-id="${d.id}" data-code="${d.codigo}" class="btn-open-rca bg-amber-600 hover:bg-amber-700 text-white px-2.5 py-1 rounded text-[10px] font-bold">🔍 Analizar Causa Raíz</button>`
+                }
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        document.querySelectorAll('.btn-open-rca').forEach(b => {
+          b.onclick = function() {
+            selectedDevId = this.getAttribute('data-id');
+            document.getElementById('rcaDevCode').innerText = this.getAttribute('data-code');
+            toggleModal('modalRca', true);
+          };
+        });
 
         // Render CAPAs
         document.getElementById('list-capas').innerHTML = (cps || []).map(c => `
@@ -372,7 +462,7 @@
         `).join('');
       }
 
-      // GUARDAR EN SUPABASE REAL
+      // GUARDAR DATOS EN SUPABASE
       document.getElementById('btn-save-doc').onclick = async () => {
         const codigo = document.getElementById('docCode').value;
         const titulo = document.getElementById('docTitle').value;
@@ -403,7 +493,50 @@
         loadData();
       };
 
-      // FIRMA VINCULADA AL USUARIO AUTENTICADO
+      // GUARDAR CAUSA RAÍZ (RCA) Y CAPA ASOCIADO
+      document.getElementById('btn-save-rca').onclick = async () => {
+        const causaConclusiva = document.getElementById('rcaConclusive').value;
+        const accionCapa = document.getElementById('capaAction').value;
+
+        if (!causaConclusiva) {
+          alert('Debes ingresar la Causa Raíz Conclusiva.');
+          return;
+        }
+
+        // 1. Guardar Análisis Ishikawa y 5 Porqués
+        await supabase.from('causa_raiz_desviaciones').insert([{
+          desviacion_id: selectedDevId,
+          m_mano_obra: document.getElementById('mManpower').value,
+          m_maquinaria: document.getElementById('mMachine').value,
+          m_materiales: document.getElementById('mMaterial').value,
+          m_metodo: document.getElementById('mMethod').value,
+          m_medio_ambiente: document.getElementById('mEnvironment').value,
+          porque_1: document.getElementById('why1').value,
+          porque_2: document.getElementById('why2').value,
+          porque_3: document.getElementById('why3').value,
+          porque_4: document.getElementById('why4').value,
+          porque_5: document.getElementById('why5').value,
+          causa_raiz_conclusiva: causaConclusiva,
+          registrado_por: activeGxpUser ? activeGxpUser.id : null
+        }]);
+
+        // 2. Crear Plan CAPA vinculado si fue especificado
+        if (accionCapa) {
+          const capaCode = 'CAPA-' + Math.floor(1000 + Math.random() * 9000);
+          await supabase.from('capas').insert([{
+            codigo: capaCode,
+            desviacion_id: selectedDevId,
+            tipo: 'CORRECTIVA',
+            plan_accion: accionCapa,
+            estado: 'ABIERTA'
+          }]);
+        }
+
+        toggleModal('modalRca', false);
+        loadData();
+      };
+
+      // FIRMAS ELECTRÓNICAS
       document.getElementById('btn-execute-sign').onclick = async () => {
         const pin = document.getElementById('signPin').value;
         const reason = document.getElementById('signReason').value;
