@@ -197,7 +197,7 @@
     </div>
   </div>
 
-  <!-- MODAL REGISTRO EQUIPO CON EMP -->
+  <!-- MODAL REGISTRO EQUIPO -->
   <div id="modalEqp" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
     <div class="bg-white rounded-xl max-w-md w-full p-5 border shadow-2xl space-y-3">
       <h3 class="font-bold text-sm">🛠️ Registrar Equipo Critical GxP</h3>
@@ -320,14 +320,14 @@
       let selectedEqp = null;
       let activeGxpUser = null;
 
-      // LOGIN / LOGOUT
+      // LOGIN / LOGOUT ROBUSTO
       document.getElementById('btn-login').onclick = async () => {
         const email = document.getElementById('loginEmail').value;
         const password = document.getElementById('loginPassword').value;
 
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) {
-          alert('Error de inicio de sesión: ' + error.message);
+          alert('Error al iniciar sesión: ' + error.message);
           return;
         }
         checkSession();
@@ -339,23 +339,30 @@
       };
 
       async function checkSession() {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-          document.getElementById('view-login').classList.add('hidden');
-          document.getElementById('app-portal').classList.remove('hidden');
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session) {
+            document.getElementById('view-login').classList.add('hidden');
+            document.getElementById('app-portal').classList.remove('hidden');
 
-          const { data: userGxp } = await supabase.from('usuarios_gxp')
-            .select('*')
-            .or(`email.eq.${session.user.email},username.eq.${session.user.email}`)
-            .single();
+            const { data: userGxp } = await supabase.from('usuarios_gxp')
+              .select('*')
+              .or(`email.eq.${session.user.email},username.eq.${session.user.email}`);
 
-          activeGxpUser = userGxp || { id: null, nombre_completo: session.user.email, cargo: 'QA Lead' };
-          document.getElementById('userBadge').innerText = `User: ${activeGxpUser.nombre_completo} (${activeGxpUser.cargo || 'QA Lead'})`;
+            if (userGxp && userGxp.length > 0) {
+              activeGxpUser = userGxp[0];
+            } else {
+              activeGxpUser = { id: null, nombre_completo: session.user.email, cargo: 'QA Lead' };
+            }
 
-          loadData();
-        } else {
-          document.getElementById('view-login').classList.remove('hidden');
-          document.getElementById('app-portal').classList.add('hidden');
+            document.getElementById('userBadge').innerText = `User: ${activeGxpUser.nombre_completo} (${activeGxpUser.cargo || 'QA Lead'})`;
+            loadData();
+          } else {
+            document.getElementById('view-login').classList.remove('hidden');
+            document.getElementById('app-portal').classList.add('hidden');
+          }
+        } catch (err) {
+          console.error('Error en checkSession:', err);
         }
       }
 
@@ -458,7 +465,7 @@
           };
         });
 
-        // Render Equipos con Control Metrológico (EMP)
+        // Render Equipos
         document.getElementById('list-eqps').innerHTML = (eqps || []).map(e => {
           const isVencido = e.proxima_calibracion && new Date(e.proxima_calibracion) < new Date();
           const estadoColor = isVencido ? 'bg-rose-100 text-rose-800' : 'bg-emerald-100 text-emerald-800';
@@ -518,7 +525,7 @@
         `).join('');
       }
 
-      // GUARDAR NUEVO EQUIPO
+      // ACCIONES
       document.getElementById('btn-save-eqp').onclick = async () => {
         const codigo = document.getElementById('eqpCode').value;
         const nombre = document.getElementById('eqpName').value;
@@ -534,7 +541,6 @@
         loadData();
       };
 
-      // GUARDAR REGISTRO DE CALIBRACIÓN Y EVALUAR EMP
       document.getElementById('btn-save-calib').onclick = async () => {
         const fecha_calibracion = document.getElementById('calibDate').value;
         const error_encontrado = parseFloat(document.getElementById('calibError').value);
@@ -547,14 +553,12 @@
           return;
         }
 
-        // Evaluación Metrológica contra el EMP
         const cumple_emp = (Math.abs(error_encontrado) + incertidumbre) <= selectedEqp.emp;
 
         if (!cumple_emp) {
           alert(`⚠️ ALERTA GxP: El error (${error_encontrado}) excede el EMP (±${selectedEqp.emp}). El equipo cambiará a FUERA DE SERVICIO.`);
         }
 
-        // 1. Insertar calibración
         await supabase.from('calibraciones_equipos').insert([{
           equipo_id: selectedEqp.id,
           fecha_calibracion,
@@ -565,7 +569,6 @@
           realizado_por: activeGxpUser ? activeGxpUser.id : null
         }]);
 
-        // 2. Actualizar estado del equipo
         const nuevoEstado = cumple_emp ? 'OPERATIVO' : 'FUERA DE SERVICIO';
         await supabase.from('equipos').update({
           ultima_calibracion: fecha_calibracion,
@@ -577,7 +580,6 @@
         loadData();
       };
 
-      // REGISTROS PREVIOS
       document.getElementById('btn-save-doc').onclick = async () => {
         const codigo = document.getElementById('docCode').value;
         const titulo = document.getElementById('docTitle').value;
@@ -613,4 +615,64 @@
           m_maquinaria: document.getElementById('mMachine').value,
           m_materiales: document.getElementById('mMaterial').value,
           m_metodo: document.getElementById('mMethod').value,
-          m_medio_ambiente: document.getElementById('
+          m_medio_ambiente: document.getElementById('mEnvironment').value,
+          porque_1: document.getElementById('why1').value,
+          porque_2: document.getElementById('why2').value,
+          porque_3: document.getElementById('why3').value,
+          porque_4: document.getElementById('why4').value,
+          porque_5: document.getElementById('why5').value,
+          causa_raiz_conclusiva: causaConclusiva,
+          registrado_por: activeGxpUser ? activeGxpUser.id : null
+        }]);
+
+        if (accionCapa) {
+          const capaCode = 'CAPA-' + Math.floor(1000 + Math.random() * 9000);
+          await supabase.from('capas').insert([{
+            codigo: capaCode,
+            desviacion_id: selectedDevId,
+            tipo: 'CORRECTIVA',
+            plan_accion: accionCapa,
+            estado: 'ABIERTA'
+          }]);
+        }
+
+        toggleModal('modalRca', false);
+        loadData();
+      };
+
+      document.getElementById('btn-execute-sign').onclick = async () => {
+        const pin = document.getElementById('signPin').value;
+        const reason = document.getElementById('signReason').value;
+        const meaning = document.getElementById('signMeaning').value;
+
+        if (pin !== '1234') {
+          alert('PIN de firma incorrecto (Prueba: 1234)');
+          return;
+        }
+
+        if (activeGxpUser && selectedDocId) {
+          await supabase.from('firmas_electronicas').insert([{
+            tabla_referencia: 'documentos',
+            registro_id: selectedDocId,
+            usuario_id: activeGxpUser.id,
+            significado_firma: meaning,
+            motivo_justificacion: reason || 'Aprobación formal'
+          }]);
+
+          let nuevoEstado = 'Borrador';
+          if (meaning === 'ELABORO') nuevoEstado = 'En Revisión';
+          else if (meaning === 'REVISO') nuevoEstado = 'En Aprobación';
+          else if (meaning === 'APROBO') nuevoEstado = 'Vigente';
+
+          await supabase.from('documentos').update({ estado: nuevoEstado }).eq('id', selectedDocId);
+
+          toggleModal('modalSign', false);
+          loadData();
+        }
+      };
+
+      checkSession();
+    });
+  </script>
+</body>
+</html>
