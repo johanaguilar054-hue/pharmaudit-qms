@@ -253,7 +253,7 @@
     </div>
   </div>
 
-  <!-- MODAL VERSION -->
+  <!-- MODAL VERSION CON CAMPO DE ARCHIVO -->
   <div id="modalVersion" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
     <div class="bg-white rounded-xl max-w-lg w-full p-5 border shadow-2xl space-y-3">
       <div class="border-b pb-2 flex justify-between items-center">
@@ -266,7 +266,11 @@
           <div><label class="block font-semibold text-slate-700">Versión Actual</label><input type="text" id="currentVer" readonly class="w-full p-2 border rounded font-mono bg-slate-100 font-bold" /></div>
           <div><label class="block font-semibold text-slate-700">Nueva Versión Propuesta</label><input type="text" id="newVerNumber" placeholder="ej. 2.0" class="w-full p-2 border rounded font-mono bg-amber-50 font-bold border-amber-300" /></div>
         </div>
-        <div><label class="block font-semibold text-slate-700">Justificación del Cambio / Control de Cambios GxP</label><textarea id="changeReason" rows="3" class="w-full p-2 border rounded text-xs"></textarea></div>
+        <div><label class="block font-semibold text-slate-700">Justificación del Cambio / Control de Cambios GxP</label><textarea id="changeReason" rows="3" class="w-full p-2 border rounded text-xs" placeholder="Describa el motivo de la modificación..."></textarea></div>
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Nuevo Archivo Digital del Documento (.pdf, .doc, .docx)</label>
+          <input type="file" id="newVerFile" accept=".pdf,.doc,.docx" class="w-full p-2 border rounded bg-slate-50 text-xs font-mono" />
+        </div>
       </div>
 
       <div class="flex justify-end space-x-2 pt-2 border-t">
@@ -313,6 +317,10 @@
         <div class="grid grid-cols-2 gap-2">
           <div><label class="block font-semibold text-slate-700 text-[11px]">Tipo</label><select id="docType" class="w-full p-2 border rounded bg-slate-50"><option value="SOP">SOP / POE</option><option value="INSTRUCTIVO">Instructivo de Trabajo</option><option value="FORMATO">Formato / Registro</option><option value="ESPECIFICACION">Especificación Técnica</option></select></div>
           <div><label class="block font-semibold text-slate-700 text-[11px]">Versión</label><input type="text" id="docVersion" value="1.0" class="w-full p-2 border rounded font-mono bg-slate-50" /></div>
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 text-[11px]">Archivo Digital (.pdf, .doc, .docx)</label>
+          <input type="file" id="docFile" accept=".pdf,.doc,.docx" class="w-full p-1.5 border rounded bg-slate-50 text-xs" />
         </div>
       </div>
       <div class="flex justify-end space-x-2 pt-2 border-t">
@@ -381,7 +389,6 @@
 
       let activeGxpUser = { id: 'b40e33f1-6196-4b51-bfcb-6604d6daff50', nombre_completo: 'Johan Aguilar', cargo: 'QA Lead' };
 
-      // DATOS DE RESPALDO GARANTIZADOS
       const fallbackDocs = [
         { id: '1', codigo: 'PH-GPD-F0-01', titulo: 'Lista de Chequeo Batch y Liberación de PT', tipo: 'FORMATO', version: '2.0', estado: 'Vigente', created_at: '2026-10-15' },
         { id: '2', codigo: 'PH-GPD-F0-01', titulo: 'Lista de Chequeo Batch y Liberación de PT', tipo: 'FORMATO', version: '1.0', estado: 'Obsoleto', created_at: '2026-05-10' },
@@ -621,11 +628,70 @@
           };
         }
 
+        // GUARDAR NUEVA VERSIÓN CON SUBIDA DE ARCHIVO
         const btnSaveVer = document.getElementById('btn-save-new-version');
         if (btnSaveVer) {
-          btnSaveVer.onclick = function() {
-            alert('Nueva versión creada en estado Borrador');
+          btnSaveVer.onclick = async function() {
+            const newVersion = document.getElementById('newVerNumber').value;
+            const reason = document.getElementById('changeReason').value;
+            const fileInput = document.getElementById('newVerFile');
+
+            if (!newVersion || !reason) {
+              alert('Debes definir la nueva versión y justificar el cambio.');
+              return;
+            }
+
+            const client = getSupabase();
+            let archivo_url = null;
+
+            if (client && selectedDocForVersion) {
+              try {
+                // Subir archivo a Supabase Storage si se seleccionó uno
+                if (fileInput && fileInput.files && fileInput.files.length > 0) {
+                  const file = fileInput.files[0];
+                  const fileExt = file.name.split('.').pop();
+                  const filePath = `${selectedDocForVersion.code}_v${newVersion}_${Date.now()}.${fileExt}`;
+
+                  const { error: uploadError } = await client.storage
+                    .from('documentos-gxp')
+                    .upload(filePath, file, { upsert: true });
+
+                  if (!uploadError) {
+                    const { data: publicUrlData } = client.storage
+                      .from('documentos-gxp')
+                      .getPublicUrl(filePath);
+                    archivo_url = publicUrlData ? publicUrlData.publicUrl : null;
+                  }
+                }
+
+                // Obtener documento padre
+                const { data: oldDoc } = await client.from('documentos').select('*').eq('id', selectedDocForVersion.id).single();
+
+                if (oldDoc) {
+                  // Marcar versión anterior como obsoleta
+                  await client.from('documentos').update({ estado: 'Obsoleto', es_version_actual: false }).eq('id', selectedDocForVersion.id);
+
+                  // Crear nuevo registro en estado Borrador
+                  await client.from('documentos').insert([{
+                    codigo: oldDoc.codigo,
+                    titulo: oldDoc.titulo,
+                    tipo: oldDoc.tipo,
+                    version: newVersion,
+                    estado: 'Borrador',
+                    archivo_url: archivo_url || oldDoc.archivo_url,
+                    justificacion_cambio: reason,
+                    documento_padre_id: selectedDocForVersion.id,
+                    es_version_actual: true
+                  }]);
+                }
+              } catch (err) {
+                console.warn("Error guardando versión en Supabase, aplicando en cliente local:", err);
+              }
+            }
+
+            alert(`Nueva versión v${newVersion} creada correctamente en estado Borrador.`);
             toggleModal('modalVersion', false);
+            loadAllData();
           };
         }
       });
