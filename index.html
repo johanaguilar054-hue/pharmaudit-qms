@@ -29,7 +29,6 @@
       z-index: 10;
     }
 
-    /* Estilos de Impresión Limpios */
     @media print {
       body * { visibility: hidden; }
       #pdf-printable-area, #pdf-printable-area * { visibility: visible; }
@@ -65,8 +64,6 @@
           <label class="block text-xs font-semibold text-slate-700 mb-1">Contraseña</label>
           <input type="password" id="loginPassword" value="123456" class="w-full p-2.5 border rounded-lg text-xs font-mono bg-slate-50 focus:bg-white" />
         </div>
-
-        <div id="loginAlert" class="hidden p-2.5 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-lg font-mono"></div>
 
         <button type="button" onclick="window.executeLogin()" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2.5 rounded-lg text-xs shadow transition">
           Iniciar Sesión Segura (21 CFR Part 11)
@@ -237,16 +234,16 @@
     </main>
   </div>
 
-  <!-- MODAL PDF PREVIEW Y VISOR DEL DOCUMENTO REAL -->
+  <!-- MODAL PDF PREVIEW REFORZADO -->
   <div id="modalExportPdf" class="modal-backdrop fixed inset-0 bg-slate-900/70 backdrop-blur-sm items-center justify-center p-4 z-50">
     <div class="bg-white rounded-xl max-w-4xl w-full p-6 border shadow-2xl space-y-4 max-h-[95vh] flex flex-col">
       <div class="border-b pb-2 flex justify-between items-center shrink-0">
         <h3 class="font-bold text-sm text-slate-800">📜 Vista Previa & Impresión de Copia Controlada GxP</h3>
         <div class="flex items-center space-x-2">
-          <button onclick="window.printCopiaPdf()" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1 rounded text-xs font-bold shadow">
-            🖨️ Imprimir Copia Controlada
+          <button onclick="window.printCopiaPdf()" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow flex items-center space-x-1">
+            <span>🖨️ Imprimir Copia Controlada</span>
           </button>
-          <button onclick="window.toggleModal('modalExportPdf', false)" class="text-slate-400 hover:text-slate-600 font-bold text-sm">✕</button>
+          <button onclick="window.toggleModal('modalExportPdf', false)" class="text-slate-400 hover:text-slate-600 font-bold text-base px-2">✕</button>
         </div>
       </div>
 
@@ -267,7 +264,6 @@
             </div>
           </div>
 
-          <!-- CARÁTULA Y SELLO FÍSICO CONTROLADO CON QR -->
           <div class="bg-amber-50/70 border-2 border-amber-400 p-3 rounded-lg flex justify-between items-center font-mono text-[11px]">
             <div class="space-y-1">
               <div><strong>N° Consecutivo Copia:</strong> <span id="pdfCopiaCode" class="font-bold text-amber-900">COP-OFFICIAL-DIGITAL</span></div>
@@ -280,15 +276,13 @@
             </div>
           </div>
 
-          <!-- VISOR O INSERCIÓN DEL DOCUMENTO REAL SUBIDO -->
           <div id="document-file-container" class="space-y-3">
             <h4 class="font-bold text-xs uppercase border-b pb-1 text-slate-800">Cuerpo del Documento Oficial GxP</h4>
-            <div id="pdfViewerArea" class="w-full min-h-[400px] border rounded bg-slate-100 flex items-center justify-center">
-              <!-- Se renderiza dinámicamente un iframe o el resumen digital -->
+            <div id="pdfViewerArea" class="w-full min-h-[300px] border rounded bg-slate-100 flex items-center justify-center p-4">
+              <!-- Renderizado del documento digital o vista de respaldo -->
             </div>
           </div>
 
-          <!-- REGISTRO DE FIRMAS PART 11 -->
           <div class="space-y-2 border-t pt-4">
             <h4 class="font-bold text-xs uppercase text-slate-800">Circuito de Aprobación & Firmas Electrónicas (21 CFR Part 11)</h4>
             <table class="w-full border-collapse border border-slate-300 text-[10px] font-mono text-left">
@@ -314,6 +308,9 @@
       </div>
 
       <div class="flex justify-end border-t pt-2 shrink-0 space-x-2">
+        <button onclick="window.printCopiaPdf()" class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-1.5 rounded text-xs font-bold shadow">
+          🖨️ Imprimir Copia Controlada
+        </button>
         <button onclick="window.toggleModal('modalExportPdf', false)" class="px-4 py-1.5 border rounded text-xs">Cerrar Vista Previa</button>
       </div>
     </div>
@@ -450,322 +447,4 @@
       <input type="text" id="devCode" placeholder="Código (ej. DEV-2026-015)" class="w-full p-2 border rounded text-xs font-mono" />
       <textarea id="devDesc" placeholder="Descripción de la desviación..." class="w-full p-2 border rounded text-xs" rows="3"></textarea>
       <div class="flex justify-end space-x-2 pt-2">
-        <button onclick="window.toggleModal('modalDev', false)" class="px-3 py-1 border rounded text-xs">Cancelar</button>
-        <button onclick="window.toggleModal('modalDev', false)" class="px-3 py-1 bg-amber-600 text-white rounded text-xs font-bold">Guardar</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="modalEqp" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
-    <div class="bg-white rounded-xl max-w-md w-full p-5 border shadow-2xl space-y-3">
-      <h3 class="font-bold text-sm">🛠️ Registrar Equipo Critical GxP</h3>
-      <input type="text" id="eqpCode" placeholder="Código" class="w-full p-2 border rounded text-xs font-mono" />
-      <input type="text" id="eqpName" placeholder="Nombre" class="w-full p-2 border rounded text-xs" />
-      <div class="flex justify-end space-x-2 pt-2">
-        <button onclick="window.toggleModal('modalEqp', false)" class="px-3 py-1 border rounded text-xs">Cancelar</button>
-        <button onclick="window.toggleModal('modalEqp', false)" class="px-3 py-1 bg-emerald-600 text-white rounded text-xs font-bold">Guardar</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- SCRIPT LÓGICO Y CONTROL DE FUNCIONES GLOBALES -->
-  <script>
-    window.activeGxpUser = { id: 'b40e33f1-6196-4b51-bfcb-6604d6daff50', nombre_completo: 'Johan Aguilar', cargo: 'QA Lead' };
-
-    window.cachedDocs = [
-      { id: '1', codigo: 'PH-GPD-F0-01', titulo: 'Lista de Chequeo Batch y Liberación de PT', tipo: 'FORMATO', version: '2.0', estado: 'Vigente', created_at: '2026-10-15', archivo_url: '' },
-      { id: '2', codigo: 'PH-GPD-F0-01', titulo: 'Lista de Chequeo Batch y Liberación de PT', tipo: 'FORMATO', version: '1.0', estado: 'Obsoleto', created_at: '2026-05-10', archivo_url: '' },
-      { id: '3', codigo: 'SOP-PRO-012', titulo: 'Limpieza e Higienización de Áreas Limpias Class C', tipo: 'SOP', version: '2.1', estado: 'Vigente', created_at: '2026-09-01', archivo_url: '' },
-      { id: '4', codigo: 'SOP-QA-001', titulo: 'Procedimiento de Manejo de Desviaciones y NC', tipo: 'SOP', version: '3.0', estado: 'Vigente', created_at: '2026-08-20', archivo_url: '' },
-      { id: '5', codigo: 'PROT-VAL-088', titulo: 'Protocolo de Calificación de Desempeño (PQ) Autoclave', tipo: 'ESPECIFICACION', version: '1.0', estado: 'Vigente', created_at: '2026-07-11', archivo_url: '' }
-    ];
-
-    window.cachedCopias = [
-      { id: 'c1', codigo_copia: 'COP-PH-GPD-F0-01-C01', documento_codigo: 'PH-GPD-F0-01', version: '2.0', area_destino: 'Planta de Producción', custodio: 'Carlos Mendoza', fecha_emision: '2026-10-16', estado: 'ACTIVA' },
-      { id: 'c2', codigo_copia: 'COP-PH-GPD-F0-01-C02', documento_codigo: 'PH-GPD-F0-01', version: '1.0', area_destino: 'Laboratorio QC', custodio: 'Laura Restrepo', fecha_emision: '2026-05-11', estado: 'DESTRUIDA' },
-      { id: 'c3', codigo_copia: 'COP-SOP-PRO-012-C01', documento_codigo: 'SOP-PRO-012', version: '2.1', area_destino: 'Bodega / Almacén', custodio: 'Johan Aguilar', fecha_emision: '2026-09-02', estado: 'ACTIVA' }
-    ];
-
-    window.selectedDocId = null;
-    window.selectedDocForCopia = null;
-    window.selectedDocForVersion = null;
-
-    window.toggleModal = function(id, show) {
-      const m = document.getElementById(id);
-      if (m) {
-        if (show) m.classList.add('active'); else m.classList.remove('active');
-      }
-    };
-
-    window.openPortal = function(user) {
-      if (user) window.activeGxpUser = user;
-      document.getElementById('view-login').style.display = 'none';
-      document.getElementById('app-portal').style.display = 'block';
-      document.getElementById('userBadge').innerText = `User: ${window.activeGxpUser.nombre_completo} (${window.activeGxpUser.cargo || 'QA Lead'})`;
-      window.renderAllData();
-    };
-
-    window.bypassLogin = function() {
-      window.openPortal({ id: 'b40e33f1-6196-4b51-bfcb-6604d6daff50', nombre_completo: 'Johan Aguilar', cargo: 'QA Lead' });
-    };
-
-    window.executeLogin = function() {
-      const email = document.getElementById('loginEmail').value;
-      window.openPortal({ id: 'b40e33f1-6196-4b51-bfcb-6604d6daff50', nombre_completo: email || 'Johan Aguilar', cargo: 'QA Lead' });
-    };
-
-    window.switchTab = function(tabName, btnEl) {
-      document.querySelectorAll('.tab-content').forEach(v => v.classList.remove('active'));
-      document.querySelectorAll('.nav-btn').forEach(b => {
-        b.classList.remove('bg-cyan-600', 'text-white', 'font-bold');
-        b.classList.add('hover:bg-slate-700');
-      });
-      document.getElementById('view-' + tabName).classList.add('active');
-      btnEl.classList.add('bg-cyan-600', 'text-white', 'font-bold');
-      btnEl.classList.remove('hover:bg-slate-700');
-    };
-
-    window.renderAllData = function() {
-      const copiasActivas = window.cachedCopias.filter(c => c.estado === 'ACTIVA').length;
-
-      document.getElementById('cnt-docs').innerText = window.cachedDocs.length;
-      document.getElementById('cnt-copias').innerText = copiasActivas;
-      document.getElementById('cnt-capas').innerText = '1';
-      document.getElementById('cnt-eqps').innerText = '4';
-      document.getElementById('cnt-audit').innerText = '12';
-
-      // RENDER DOCUMENTOS
-      const listDocs = document.getElementById('list-docs');
-      if (listDocs) {
-        listDocs.innerHTML = window.cachedDocs.map(d => {
-          const downloadBtn = d.archivo_url 
-            ? `<a href="${d.archivo_url}" target="_blank" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded text-[10px] font-bold border">📥 Adjunto</a>` 
-            : `<span class="text-slate-400 text-[10px] italic">Sin adjunto</span>`;
-
-          const isObsoleto = d.estado === 'Obsoleto';
-          const isVigente = d.estado === 'Vigente';
-          const badgeClass = isObsoleto ? 'bg-rose-100 text-rose-800' : (isVigente ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800');
-
-          return `
-            <div class="py-3 flex justify-between items-center ${isObsoleto ? 'opacity-60 bg-slate-50 p-2 rounded' : ''}">
-              <div>
-                <div class="flex items-center space-x-2">
-                  <span class="font-mono font-bold text-cyan-700">${d.codigo}</span>
-                  <span class="font-semibold text-slate-800">${d.titulo}</span>
-                  <span class="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded text-[10px] font-mono">${d.tipo || 'SOP'} v${d.version}</span>
-                </div>
-                <div class="mt-1 flex items-center space-x-2">
-                  ${downloadBtn}
-                  <button onclick="window.previewPdf('${d.id}')" class="bg-slate-100 hover:bg-slate-200 text-slate-800 px-2 py-1 rounded text-[10px] font-bold border">
-                    🖨️ Previsualizar / Exportar PDF
-                  </button>
-                  ${isVigente 
-                    ? `<button onclick="window.openEmitirCopia('${d.id}', '${d.codigo}', '${d.version}')" class="bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 px-2 py-1 rounded text-[10px] font-bold">
-                        📋 Emitir Copia Controlada
-                      </button>` 
-                    : ''
-                  }
-                  ${d.justificacion_cambio ? `<span class="text-[10px] text-slate-500 font-mono">Justificación: ${d.justificacion_cambio}</span>` : ''}
-                </div>
-              </div>
-              <div class="flex items-center space-x-2">
-                <span class="${badgeClass} px-2 py-0.5 rounded font-semibold text-[10px]">${d.estado}</span>
-                ${!isObsoleto && !isVigente 
-                  ? `<button onclick="window.openSignModal('${d.id}', '${d.codigo}')" class="bg-cyan-600 hover:bg-cyan-700 text-white px-2 py-1 rounded text-[10px] font-bold shadow">✍️ Estampar Firma</button>` 
-                  : ''
-                }
-                ${isVigente
-                  ? `<button onclick="window.openVersionModal('${d.id}', '${d.codigo}', '${d.version}')" class="bg-amber-600 hover:bg-amber-700 text-white px-2 py-1 rounded text-[10px] font-bold shadow">🔄 Nueva Versión</button>`
-                  : ''
-                }
-              </div>
-            </div>
-          `;
-        }).join('');
-      }
-
-      // RENDER COPIAS CONTROLADAS
-      const listCopias = document.getElementById('list-copias-body');
-      if (listCopias) {
-        listCopias.innerHTML = window.cachedCopias.map(c => {
-          let estadoClass = 'bg-emerald-100 text-emerald-800';
-          if (c.estado === 'PENDIENTE DE RETIRO') estadoClass = 'bg-amber-100 text-amber-800 font-bold';
-          if (c.estado === 'DESTRUIDA') estadoClass = 'bg-slate-100 text-slate-500 line-through';
-
-          return `
-            <tr class="hover:bg-slate-50">
-              <td class="p-2 border font-bold text-amber-900">${c.codigo_copia}</td>
-              <td class="p-2 border">${c.documento_codigo} <span class="text-slate-500 text-[10px]">v${c.version}</span></td>
-              <td class="p-2 border">${c.area_destino}</td>
-              <td class="p-2 border">${c.custodio}</td>
-              <td class="p-2 border">${c.fecha_emision}</td>
-              <td class="p-2 border"><span class="px-2 py-0.5 rounded text-[10px] ${estadoClass}">${c.estado}</span></td>
-              <td class="p-2 border text-center">
-                ${c.estado === 'ACTIVA' || c.estado === 'PENDIENTE DE RETIRO'
-                  ? `<button onclick="window.destruirCopia('${c.id}')" class="bg-rose-600 hover:bg-rose-700 text-white px-2 py-0.5 rounded text-[10px] font-bold shadow">
-                      🔥 Registrar Destrucción
-                    </button>`
-                  : `<span class="text-slate-400 text-[10px]">Conciliado</span>`
-                }
-              </td>
-            </tr>
-          `;
-        }).join('');
-      }
-    };
-
-    window.previewPdf = function(docId) {
-      const targetDoc = window.cachedDocs.find(x => x.id === docId);
-      if (!targetDoc) return;
-
-      document.getElementById('pdfDocTitle').innerText = targetDoc.titulo;
-      document.getElementById('pdfDocCode').innerText = targetDoc.codigo;
-      document.getElementById('pdfDocVersion').innerText = targetDoc.version;
-      document.getElementById('pdfDocDate').innerText = new Date().toLocaleDateString('es-CO');
-      document.getElementById('pdfDocType').innerText = targetDoc.tipo || 'SOP';
-      document.getElementById('pdfDocStatus').innerText = targetDoc.estado;
-      document.getElementById('pdfDocJustification').innerText = targetDoc.justificacion_cambio || 'Sin observaciones.';
-
-      const wm = document.getElementById('pdfWatermark');
-      if (targetDoc.estado === 'Vigente') {
-        wm.innerText = 'COPIA CONTROLADA · VIGENTE';
-        wm.className = 'watermark-text text-emerald-600';
-      } else if (targetDoc.estado === 'Obsoleto') {
-        wm.innerText = 'DOCUMENTO OBSOLETO';
-        wm.className = 'watermark-text text-rose-600';
-      } else {
-        wm.innerText = 'BORRADOR · NO VALIDO PARA USO';
-        wm.className = 'watermark-text text-amber-600';
-      }
-
-      // RENDERIZADO DEL VISOR DEL DOCUMENTO REAL
-      const viewerArea = document.getElementById('pdfViewerArea');
-      if (targetDoc.archivo_url) {
-        viewerArea.innerHTML = `<iframe src="${targetDoc.archivo_url}" class="w-full h-[500px] border rounded"></iframe>`;
-      } else {
-        viewerArea.innerHTML = `
-          <div class="p-6 text-center space-y-2">
-            <div class="text-slate-400 text-3xl">📄</div>
-            <div class="font-bold text-slate-700">Documento Digital en Sistema GxP</div>
-            <p class="text-slate-500 text-[11px]">Este registro contiene la versión oficial validada (${targetDoc.codigo} v${targetDoc.version}). Al adjuntar el archivo PDF en el control de cambios, se proyectará automáticamente en este visor de impresión.</p>
-          </div>
-        `;
-      }
-
-      // QR NATIVO VÍA API IMAGEN
-      const qrImg = document.getElementById('pdfQrImage');
-      if (qrImg) {
-        const verifyData = encodeURIComponent(`PHARMOR-QMS:${targetDoc.codigo}:v${targetDoc.version}:${targetDoc.estado}`);
-        qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${verifyData}`;
-      }
-
-      document.getElementById('pdfSignaturesTable').innerHTML = `
-        <tr>
-          <td class="border border-slate-300 p-1.5 font-bold">APROBO</td>
-          <td class="border border-slate-300 p-1.5">Johan Aguilar (QA Lead)</td>
-          <td class="border border-slate-300 p-1.5 font-bold text-emerald-700">✓ FIRMADO ELECTRONICAMENTE</td>
-          <td class="border border-slate-300 p-1.5 font-mono">${new Date().toLocaleString('es-CO')}</td>
-        </tr>
-      `;
-
-      document.getElementById('pdfSystemHash').innerText = `SHA256-${docId.substring(0,8).toUpperCase()}-${Date.now()}`;
-      window.toggleModal('modalExportPdf', true);
-    };
-
-    window.printCopiaPdf = function() {
-      window.print();
-    };
-
-    window.openEmitirCopia = function(id, code, ver) {
-      window.selectedDocForCopia = { id, code, version: ver };
-      document.getElementById('copiaTargetCode').innerText = `${code} v${ver}`;
-      window.toggleModal('modalEmitirCopia', true);
-    };
-
-    window.confirmarEmitirCopia = function() {
-      const area = document.getElementById('copiaArea').value;
-      const custodio = document.getElementById('copiaCustodio').value;
-
-      if (!window.selectedDocForCopia) return;
-
-      const nextNum = window.cachedCopias.length + 1;
-      const nuevoCodigoCopia = `COP-${window.selectedDocForCopia.code}-C0${nextNum}`;
-
-      window.cachedCopias.unshift({
-        id: `c_${Date.now()}`,
-        codigo_copia: nuevoCodigoCopia,
-        documento_codigo: window.selectedDocForCopia.code,
-        version: window.selectedDocForCopia.version,
-        area_destino: area,
-        custodio: custodio,
-        fecha_emision: new Date().toISOString().split('T')[0],
-        estado: 'ACTIVA'
-      });
-
-      window.toggleModal('modalEmitirCopia', false);
-
-      document.getElementById('pdfCopiaCode').innerText = nuevoCodigoCopia;
-      document.getElementById('pdfCopiaArea').innerText = area;
-      document.getElementById('pdfCopiaCustodio').innerText = custodio;
-      window.previewPdf(window.selectedDocForCopia.id);
-      window.renderAllData();
-    };
-
-    window.destruirCopia = function(copiaId) {
-      const item = window.cachedCopias.find(c => c.id === copiaId);
-      if (item) {
-        item.estado = 'DESTRUIDA';
-        alert(`Copia ${item.codigo_copia} registrada como DESTRUIDA.`);
-        window.renderAllData();
-      }
-    };
-
-    window.openSignModal = function(id, code) {
-      window.selectedDocId = id;
-      document.getElementById('signTargetCode').innerText = code;
-      window.toggleModal('modalSign', true);
-    };
-
-    window.confirmarFirma = function() {
-      const pin = document.getElementById('signPin').value;
-      if (pin !== '1234') {
-        alert('PIN incorrecto (PIN de prueba: 1234)');
-        return;
-      }
-      alert('Firma estampada con éxito (21 CFR Part 11)');
-      window.toggleModal('modalSign', false);
-    };
-
-    window.openVersionModal = function(id, code, ver) {
-      window.selectedDocForVersion = { id, code, version: ver };
-      document.getElementById('verTargetCode').innerText = code;
-      document.getElementById('currentVer').value = ver;
-      const vParts = ver.split('.');
-      document.getElementById('newVerNumber').value = (parseInt(vParts[0]) + 1) + '.0';
-      window.toggleModal('modalVersion', true);
-    };
-
-    window.confirmarNuevaVersion = function() {
-      const newVersion = document.getElementById('newVerNumber').value;
-      const reason = document.getElementById('changeReason').value;
-
-      if (!newVersion || !reason) {
-        alert('Debes definir la nueva versión y justificar el cambio.');
-        return;
-      }
-
-      if (window.selectedDocForVersion) {
-        window.cachedCopias.forEach(c => {
-          if (c.documento_codigo === window.selectedDocForVersion.code && c.estado === 'ACTIVA') {
-            c.estado = 'PENDIENTE DE RETIRO';
-          }
-        });
-      }
-
-      alert(`Nueva versión v${newVersion} creada en Borrador. Las copias de la versión anterior quedaron PENDIENTES DE RETIRO.`);
-      window.toggleModal('modalVersion', false);
-      window.renderAllData();
-    };
-  </script>
-</body>
-</html>
+        <button
