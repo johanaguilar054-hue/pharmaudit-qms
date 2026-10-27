@@ -497,8 +497,11 @@
 
         allUsers = users || [];
 
-        // Llenar dropdowns de workflow de usuarios
-        const userOptions = allUsers.map(u => `<option value="${u.id}">${u.nombre_completo} (${u.cargo || 'GxP'})</option>`).join('');
+        // Llenar dropdowns de workflow
+        const userOptions = allUsers.length > 0 
+          ? allUsers.map(u => `<option value="${u.id}">${u.nombre_completo} (${u.cargo || 'GxP'})</option>`).join('')
+          : `<option value="">Sin usuarios registrados</option>`;
+          
         document.getElementById('selectElaborador').innerHTML = userOptions;
         document.getElementById('selectRevisor').innerHTML = userOptions;
         document.getElementById('selectAprobador').innerHTML = userOptions;
@@ -546,7 +549,7 @@
           };
         });
 
-        // Render Lista de Usuarios en el Módulo Admin
+        // Render Lista de Usuarios en Admin
         document.getElementById('list-users').innerHTML = (allUsers || []).map(u => `
           <div class="py-2 flex justify-between items-center">
             <div>
@@ -648,62 +651,80 @@
         `).join('');
       }
 
-      // GUARDAR Y SUBIR DOCUMENTO (CON STORAGE DE SUPABASE)
+      // GUARDAR DOCUMENTO CON MANEJO DE EXCEPCIONES
       document.getElementById('btn-save-doc').onclick = async () => {
-        const codigo = document.getElementById('docCode').value;
-        const titulo = document.getElementById('docTitle').value;
-        const tipo = document.getElementById('docType').value;
-        const version = document.getElementById('docVersion').value;
-        const fileInput = document.getElementById('docFile');
+        try {
+          const codigo = document.getElementById('docCode').value;
+          const titulo = document.getElementById('docTitle').value;
+          const tipo = document.getElementById('docType').value;
+          const version = document.getElementById('docVersion').value;
+          const fileInput = document.getElementById('docFile');
 
-        const elaborador_id = document.getElementById('selectElaborador').value;
-        const revisor_id = document.getElementById('selectRevisor').value;
-        const aprobador_id = document.getElementById('selectAprobador').value;
+          const elVal = document.getElementById('selectElaborador').value;
+          const revVal = document.getElementById('selectRevisor').value;
+          const aprVal = document.getElementById('selectAprobador').value;
 
-        if (!codigo || !titulo) {
-          alert('Debes ingresar el código y el título del documento.');
-          return;
-        }
+          const elaborador_id = elVal || null;
+          const revisor_id = revVal || null;
+          const aprobador_id = aprVal || null;
 
-        let archivo_url = null;
-
-        // Carga física a Supabase Storage
-        if (fileInput.files.length > 0) {
-          const file = fileInput.files[0];
-          const fileExt = file.name.split('.').pop();
-          const filePath = `${codigo}_v${version}_${Date.now()}.${fileExt}`;
-
-          const { data: uploadData, error: uploadError } = await supabase.storage
-            .from('documentos-gxp')
-            .upload(filePath, file);
-
-          if (uploadError) {
-            alert('Error al subir el archivo digital: ' + uploadError.message);
+          if (!codigo || !titulo) {
+            alert('Debes ingresar el código y el título del documento.');
             return;
           }
 
-          const { data: publicUrlData } = supabase.storage
-            .from('documentos-gxp')
-            .getPublicUrl(filePath);
+          let archivo_url = null;
 
-          archivo_url = publicUrlData.publicUrl;
+          // Intento de subida a Supabase Storage
+          if (fileInput.files && fileInput.files.length > 0) {
+            const file = fileInput.files[0];
+            const fileExt = file.name.split('.').pop();
+            const filePath = `${codigo}_v${version}_${Date.now()}.${fileExt}`;
+
+            const { data: uploadData, error: uploadError } = await supabase.storage
+              .from('documentos-gxp')
+              .upload(filePath, file, { upsert: true });
+
+            if (!uploadError) {
+              const { data: publicUrlData } = supabase.storage
+                .from('documentos-gxp')
+                .getPublicUrl(filePath);
+
+              archivo_url = publicUrlData ? publicUrlData.publicUrl : null;
+            } else {
+              console.warn('Advertencia en subida de archivo (continuando sin adjunto):', uploadError.message);
+            }
+          }
+
+          // Inserción en la base de datos de documentos
+          const { error: insertError } = await supabase.from('documentos').insert([{
+            codigo,
+            titulo,
+            tipo,
+            version,
+            estado: 'Borrador',
+            archivo_url,
+            elaborador_id,
+            revisor_id,
+            aprobador_id
+          }]);
+
+          if (insertError) {
+            alert('Error al guardar documento en base de datos: ' + insertError.message);
+            return;
+          }
+
+          toggleModal('modalDoc', false);
+          
+          // Limpiar campos del formulario
+          document.getElementById('docCode').value = '';
+          document.getElementById('docTitle').value = '';
+          document.getElementById('docFile').value = '';
+
+          loadData();
+        } catch (err) {
+          alert('Error inesperado: ' + err.message);
         }
-
-        // Insertar documento con workflow
-        await supabase.from('documentos').insert([{
-          codigo,
-          titulo,
-          tipo,
-          version,
-          estado: 'Borrador',
-          archivo_url,
-          elaborador_id,
-          revisor_id,
-          aprobador_id
-        }]);
-
-        toggleModal('modalDoc', false);
-        loadData();
       };
 
       // REGISTRAR NUEVO USUARIO GXP
@@ -719,7 +740,7 @@
           return;
         }
 
-        await supabase.from('usuarios_gxp').insert([{
+        const { error } = await supabase.from('usuarios_gxp').insert([{
           username: email,
           email,
           nombre_completo,
@@ -729,11 +750,16 @@
           pin_firma_hash: pin_firma
         }]);
 
+        if (error) {
+          alert('Error al crear usuario: ' + error.message);
+          return;
+        }
+
         toggleModal('modalUser', false);
         loadData();
       };
 
-      // GUARDAR Y ACCIONES SECUNDARIAS
+      // GUARDAR REGISTROS SECUNDARIOS
       document.getElementById('btn-save-eqp').onclick = async () => {
         const codigo = document.getElementById('eqpCode').value;
         const nombre = document.getElementById('eqpName').value;
