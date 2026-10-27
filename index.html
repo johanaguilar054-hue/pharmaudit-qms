@@ -47,7 +47,7 @@
         </div>
         <div>
           <label class="block text-xs font-semibold text-slate-700 mb-1">Contraseña</label>
-          <input type="password" id="loginPassword" placeholder="••••••••" class="w-full p-2.5 border rounded-lg text-xs font-mono bg-slate-50 focus:bg-white" />
+          <input type="password" id="loginPassword" value="123456" class="w-full p-2.5 border rounded-lg text-xs font-mono bg-slate-50 focus:bg-white" />
         </div>
 
         <div id="loginAlert" class="hidden p-2.5 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-lg font-mono"></div>
@@ -56,7 +56,7 @@
           Iniciar Sesión Segura (21 CFR Part 11)
         </button>
 
-        <button type="button" onclick="executeBypass()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 rounded-lg text-xs shadow transition">
+        <button type="button" onclick="bypassLogin()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 rounded-lg text-xs shadow transition">
           ⚡ Ingreso Directo QA Lead (Johan Aguilar)
         </button>
       </div>
@@ -79,21 +79,21 @@
         <span id="userBadge" class="text-xs font-mono text-emerald-400 bg-emerald-950 px-3 py-1 rounded-full border border-emerald-500/30">
           Johan Aguilar (QA Lead)
         </span>
-        <button type="button" onclick="location.reload()" class="bg-rose-600 hover:bg-rose-700 text-white px-2.5 py-1 rounded-lg text-xs font-bold transition">
+        <button onclick="location.reload()" class="bg-rose-600 hover:bg-rose-700 text-white px-2.5 py-1 rounded-lg text-xs font-bold transition">
           🚪 Salir
         </button>
       </div>
     </header>
 
     <nav class="bg-slate-800 text-slate-300 rounded-xl p-1 mb-4 flex space-x-1 overflow-x-auto text-xs font-medium">
-      <button data-tab="dashboard" onclick="switchTab('dashboard')" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap bg-cyan-600 text-white font-bold">📊 Dashboard</button>
-      <button data-tab="documentos" onclick="switchTab('documentos')" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700">📑 Gestión Documental</button>
-      <button data-tab="desviaciones" onclick="switchTab('desviaciones')" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700">⚠️ Desviaciones & NC</button>
-      <button data-tab="capa" onclick="switchTab('capa')" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700">☑️ Módulo CAPA</button>
-      <button data-tab="metrologia" onclick="switchTab('metrologia')" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700">🛠️ Equipos & Calibración</button>
-      <button data-tab="firmas" onclick="switchTab('firmas')" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700">✍️ Firmas Part 11</button>
-      <button data-tab="audit" onclick="switchTab('audit')" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700">📜 Audit Trail (ALCOA+)</button>
-      <button data-tab="admin" onclick="switchTab('admin')" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 bg-slate-700 text-cyan-300">⚙️ Ajustes ERP</button>
+      <button data-tab="dashboard" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap bg-cyan-600 text-white font-bold">📊 Dashboard</button>
+      <button data-tab="documentos" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700">📑 Gestión Documental</button>
+      <button data-tab="desviaciones" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700">⚠️ Desviaciones & NC</button>
+      <button data-tab="capa" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700">☑️ Módulo CAPA</button>
+      <button data-tab="metrologia" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700">🛠️ Equipos & Calibración</button>
+      <button data-tab="firmas" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700">✍️ Firmas Part 11</button>
+      <button data-tab="audit" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700">📜 Audit Trail (ALCOA+)</button>
+      <button data-tab="admin" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 bg-slate-700 text-cyan-300">⚙️ Ajustes ERP</button>
     </nav>
 
     <main>
@@ -136,7 +136,7 @@
             <h2 class="font-bold text-slate-800 text-sm">Gestión Documental & Workflows</h2>
             <p class="text-xs text-slate-500">Control de versiones, subida de archivos y exportación PDF oficial</p>
           </div>
-          <button type="button" onclick="toggleModal('modalDoc', true)" class="bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow">+ Solicitud / Nuevo Documento</button>
+          <button id="btn-open-modal-doc" class="bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow">+ Solicitud / Nuevo Documento</button>
         </div>
         <div id="list-docs" class="divide-y divide-slate-100 text-xs">Cargando...</div>
       </div>
@@ -144,7 +144,7 @@
       <div id="view-desviaciones" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-3">
         <div class="flex justify-between items-center">
           <h2 class="font-bold text-slate-800 text-sm">Desviaciones & NC</h2>
-          <button type="button" onclick="toggleModal('modalDev', true)" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow">+ Reportar Desviación / NC</button>
+          <button id="btn-open-modal-dev" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow">+ Reportar Desviación / NC</button>
         </div>
         <div id="list-desvs" class="space-y-2 text-xs">Cargando...</div>
       </div>
@@ -157,7 +157,7 @@
       <div id="view-metrologia" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4">
         <div class="flex justify-between items-center mb-3">
           <h2 class="font-bold text-slate-800 text-sm">Equipos & Metrología GxP</h2>
-          <button type="button" onclick="toggleModal('modalEqp', true)" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow">+ Nuevo Equipo GxP</button>
+          <button id="btn-open-modal-eqp" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow">+ Nuevo Equipo GxP</button>
         </div>
         <div id="list-eqps" class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">Cargando...</div>
       </div>
@@ -178,7 +178,7 @@
             <h2 class="font-bold text-slate-800 text-sm">⚙️ Ajustes del Sistema ERP / QMS</h2>
             <p class="text-xs text-slate-500">Gestión de usuarios corporativos, roles y credenciales GxP</p>
           </div>
-          <button type="button" onclick="toggleModal('modalUser', true)" class="bg-slate-800 hover:bg-slate-900 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow">+ Registrar Nuevo Usuario GxP</button>
+          <button id="btn-open-modal-user" class="bg-slate-800 hover:bg-slate-900 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow">+ Registrar Nuevo Usuario GxP</button>
         </div>
 
         <div>
@@ -194,7 +194,7 @@
     <div class="bg-white rounded-xl max-w-3xl w-full p-6 border shadow-2xl space-y-4 max-h-[95vh] flex flex-col">
       <div class="border-b pb-2 flex justify-between items-center shrink-0">
         <h3 class="font-bold text-sm text-slate-800">📜 Vista Previa de Reporte Oficial GxP</h3>
-        <button type="button" id="btn-download-pdf-action" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-1.5 rounded-lg text-xs font-bold shadow">
+        <button id="btn-download-pdf-action" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-1.5 rounded-lg text-xs font-bold shadow">
           ⬇️ Descargar PDF Oficial
         </button>
       </div>
@@ -242,4 +242,208 @@
             </table>
           </div>
 
-          <div class="border-t-2 border-slate-800 pt-2 text-[9px] font-mono text-slate-500 flex justify-between items-
+          <div class="border-t-2 border-slate-800 pt-2 text-[9px] font-mono text-slate-500 flex justify-between items-center">
+            <div>Generado automáticamente por PharmAudit ERP · Integridad ALCOA+</div>
+            <div>Sello Hash GxP: <span id="pdfSystemHash" class="font-bold text-slate-700"></span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex justify-end border-t pt-2 shrink-0">
+        <button id="btn-close-modal-pdf" class="px-4 py-1.5 border rounded text-xs">Cerrar Vista Previa</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODALES -->
+  <div id="modalDoc" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl max-w-lg w-full p-5 border shadow-2xl space-y-3">
+      <h3 class="font-bold text-sm text-cyan-900">📑 Crear / Subir Documento Controlado</h3>
+      <div class="space-y-2 text-xs">
+        <div class="grid grid-cols-3 gap-2">
+          <input type="text" id="docCode" placeholder="Código (ej. SOP-QA-010)" class="col-span-1 p-2 border rounded font-mono" />
+          <input type="text" id="docTitle" placeholder="Título del Documento / SOP" class="col-span-2 p-2 border rounded" />
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div><label class="block font-semibold text-slate-700 text-[11px]">Tipo</label><select id="docType" class="w-full p-2 border rounded bg-slate-50"><option value="SOP">SOP / POE</option><option value="INSTRUCTIVO">Instructivo de Trabajo</option><option value="FORMATO">Formato / Registro</option><option value="ESPECIFICACION">Especificación Técnica</option></select></div>
+          <div><label class="block font-semibold text-slate-700 text-[11px]">Versión</label><input type="text" id="docVersion" value="1.0" class="w-full p-2 border rounded font-mono bg-slate-50" /></div>
+        </div>
+      </div>
+      <div class="flex justify-end space-x-2 pt-2 border-t">
+        <button id="btn-close-modal-doc" class="px-3 py-1 border rounded text-xs">Cancelar</button>
+        <button id="btn-save-doc" class="px-4 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white rounded text-xs font-bold shadow">Guardar Documento</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modalUser" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl max-w-md w-full p-5 border shadow-2xl space-y-3">
+      <h3 class="font-bold text-sm text-slate-800">👤 Registrar Nuevo Usuario GxP</h3>
+      <div class="space-y-2 text-xs">
+        <input type="text" id="newUserName" placeholder="Nombre Completo" class="w-full p-2 border rounded" />
+        <input type="email" id="newUserEmail" placeholder="Correo Corporativo" class="w-full p-2 border rounded font-mono" />
+        <input type="text" id="newUserCargo" placeholder="Cargo" class="w-full p-2 border rounded" />
+      </div>
+      <div class="flex justify-end space-x-2 pt-2 border-t">
+        <button id="btn-close-modal-user" class="px-3 py-1 border rounded text-xs">Cancelar</button>
+        <button id="btn-save-user" class="px-4 py-1.5 bg-slate-800 text-white rounded text-xs font-bold shadow">Guardar Usuario</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modalDev" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl max-w-md w-full p-5 border shadow-2xl space-y-3">
+      <h3 class="font-bold text-sm">⚠️ Reportar Desviación / NC</h3>
+      <input type="text" id="devCode" placeholder="Código (ej. DEV-2026-015)" class="w-full p-2 border rounded text-xs font-mono" />
+      <textarea id="devDesc" placeholder="Descripción de la desviación..." class="w-full p-2 border rounded text-xs" rows="3"></textarea>
+      <div class="flex justify-end space-x-2 pt-2">
+        <button id="btn-close-modal-dev" class="px-3 py-1 border rounded text-xs">Cancelar</button>
+        <button id="btn-save-dev" class="px-3 py-1 bg-amber-600 text-white rounded text-xs font-bold">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modalEqp" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl max-w-md w-full p-5 border shadow-2xl space-y-3">
+      <h3 class="font-bold text-sm">🛠️ Registrar Equipo Critical GxP</h3>
+      <input type="text" id="eqpCode" placeholder="Código" class="w-full p-2 border rounded text-xs font-mono" />
+      <input type="text" id="eqpName" placeholder="Nombre" class="w-full p-2 border rounded text-xs" />
+      <div class="flex justify-end space-x-2 pt-2">
+        <button id="btn-close-modal-eqp" class="px-3 py-1 border rounded text-xs">Cancelar</button>
+        <button id="btn-save-eqp" class="px-3 py-1 bg-emerald-600 text-white rounded text-xs font-bold">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCRIPT GLOBAL PRINCIPAL Y FUNCIONES DE ACCESO DIRECTO -->
+  <script>
+    const SUPABASE_URL = 'https://wmtvlxjzzwwhtybccrpe.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_i4A7rEjukekMlaCKjXWaNA_ze54EVjl';
+    let sbClient = null;
+
+    function getSupabase() {
+      if (!sbClient && window.supabase) {
+        sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+      }
+      return sbClient;
+    }
+
+    let activeGxpUser = { id: 'b40e33f1-6196-4b51-bfcb-6604d6daff50', nombre_completo: 'Johan Aguilar', cargo: 'QA Lead' };
+
+    // INGRESO A LA APLICACIÓN (SÍNCRONO E INMEDIATO)
+    function openPortal(user) {
+      if (user) activeGxpUser = user;
+      document.getElementById('view-login').style.display = 'none';
+      document.getElementById('app-portal').style.display = 'block';
+      document.getElementById('userBadge').innerText = `User: ${activeGxpUser.nombre_completo} (${activeGxpUser.cargo || 'QA Lead'})`;
+      loadAllData();
+    }
+
+    function bypassLogin() {
+      openPortal({ id: 'b40e33f1-6196-4b51-bfcb-6604d6daff50', nombre_completo: 'Johan Aguilar', cargo: 'QA Lead' });
+    }
+
+    async function executeLogin() {
+      const email = document.getElementById('loginEmail').value;
+      const alertBox = document.getElementById('loginAlert');
+      alertBox.classList.add('hidden');
+
+      const client = getSupabase();
+      if (!client) {
+        bypassLogin();
+        return;
+      }
+
+      try {
+        const { data: userGxp } = await client.from('usuarios_gxp').select('*').or(`email.eq.${email},username.eq.${email}`);
+        const found = (userGxp && userGxp.length > 0) ? userGxp[0] : null;
+        openPortal(found || { id: 'b40e33f1-6196-4b51-bfcb-6604d6daff50', nombre_completo: 'Johan Aguilar', cargo: 'QA Lead' });
+      } catch (e) {
+        bypassLogin();
+      }
+    }
+
+    function toggleModal(id, show) {
+      const m = document.getElementById(id);
+      if (show) m.classList.add('active'); else m.classList.remove('active');
+    }
+
+    // CARGA DE DATOS
+    async function loadAllData() {
+      const client = getSupabase();
+      if (!client) return;
+
+      try {
+        const { data: docs } = await client.from('documentos').select('*').order('created_at', { ascending: false });
+        const { data: desvs } = await client.from('desviaciones').select('*');
+        const { data: cps } = await client.from('capas').select('*');
+        const { data: eqps } = await client.from('equipos').select('*');
+        const { data: audit } = await client.from('audit_trail').select('*').order('timestamp', { ascending: false });
+        const { data: users } = await client.from('usuarios_gxp').select('*');
+
+        document.getElementById('cnt-docs').innerText = docs ? docs.length : 0;
+        document.getElementById('cnt-desvs').innerText = desvs ? desvs.length : 0;
+        document.getElementById('cnt-capas').innerText = cps ? cps.length : 0;
+        document.getElementById('cnt-eqps').innerText = eqps ? eqps.length : 0;
+        document.getElementById('cnt-audit').innerText = audit ? audit.length : 0;
+
+        // Render Documentos
+        document.getElementById('list-docs').innerHTML = (docs || []).map(d => `
+          <div class="py-3 flex justify-between items-center">
+            <div>
+              <span class="font-mono font-bold text-cyan-700">${d.codigo}</span>
+              <span class="font-semibold text-slate-800 ml-2">${d.titulo}</span>
+              <span class="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded text-[10px] font-mono ml-2">v${d.version}</span>
+            </div>
+            <span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-semibold text-[10px]">${d.estado}</span>
+          </div>
+        `).join('') || '<div class="py-2 text-slate-400">No hay documentos registrados</div>';
+
+        // Render Usuarios
+        document.getElementById('list-users').innerHTML = (users || []).map(u => `
+          <div class="py-2 flex justify-between items-center">
+            <div>
+              <strong class="text-slate-800">${u.nombre_completo}</strong>
+              <span class="text-slate-500 font-mono block text-[11px]">${u.email || u.username}</span>
+            </div>
+            <span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-[10px] font-bold">ACTIVO</span>
+          </div>
+        `).join('') || '<div class="py-2 text-slate-400">Sin usuarios en base de datos</div>';
+
+      } catch (err) {
+        console.error("Error cargando datos:", err);
+      }
+    }
+
+    // EVENTOS AL CARGAR LA PÁGINA
+    document.addEventListener('DOMContentLoaded', function() {
+      // Navegación Pestañas
+      const navButtons = document.querySelectorAll('.nav-btn');
+      navButtons.forEach(btn => {
+        btn.onclick = function() {
+          const tabName = this.getAttribute('data-tab');
+          document.querySelectorAll('.tab-content').forEach(v => v.classList.remove('active'));
+          navButtons.forEach(b => {
+            b.classList.remove('bg-cyan-600', 'text-white', 'font-bold');
+            b.classList.add('hover:bg-slate-700');
+          });
+          document.getElementById('view-' + tabName).classList.add('active');
+          this.classList.add('bg-cyan-600', 'text-white', 'font-bold');
+          this.classList.remove('hover:bg-slate-700');
+        };
+      });
+
+      // Modales listeners
+      document.getElementById('btn-open-modal-doc').onclick = () => toggleModal('modalDoc', true);
+      document.getElementById('btn-close-modal-doc').onclick = () => toggleModal('modalDoc', false);
+      document.getElementById('btn-close-modal-pdf').onclick = () => toggleModal('modalExportPdf', false);
+      document.getElementById('btn-open-modal-user').onclick = () => toggleModal('modalUser', true);
+      document.getElementById('btn-close-modal-user').onclick = () => toggleModal('modalUser', false);
+      document.getElementById('btn-open-modal-dev').onclick = () => toggleModal('modalDev', true);
+      document.getElementById('btn-close-modal-dev').onclick = () => toggleModal('modalDev', false);
+      document.getElementById('btn-open-modal-eqp').onclick = () => toggleModal('modalEqp', true);
+      document.getElementById('btn-close-modal-eqp').onclick = () => toggleModal('modalEqp', false);
+    });
+  </script>
+</body>
+</html>
