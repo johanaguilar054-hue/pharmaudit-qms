@@ -5,7 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PharmAudit ERP / QMS - Pharmor</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Supabase para almacenamiento y base de datos -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- PDF-Lib para inyección binaria de marcas de agua en Copias Controladas -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
   
   <style>
@@ -22,42 +24,86 @@
   </style>
 
   <!-- ========================================================================= -->
-  <!-- NÚCLEO LÓGICO Y DATOS (Cargado ANTES de renderizar la vista)              -->
+  <!-- NÚCLEO LÓGICO Y DATOS GxP (Cargado ANTES de renderizar la vista)         -->
   <!-- ========================================================================= -->
   <script>
-    // 1. DATOS GLOBALES
     window.activeGxpUser = null;
     window.selectedDocId = null;
 
-    window.cachedUsuarios = [
-      { id: 1, nombres: 'Johan Sebastian', apellidos: 'Aguilar Rojas', correo: 'j.aguilar@pharmor.com.co', password: '123', cargo: 'QA Lead', rol: 'ADMIN_QA', estado: 'Activo' },
-      { id: 2, nombres: 'Carlos', apellidos: 'Mendoza', correo: 'c.mendoza@pharmor.com.co', password: '123', cargo: 'Operario de Producción', rol: 'LECTOR', estado: 'Activo' }
+    // 1. Estructura Organizacional: Áreas / Departamentos y Procesos GxP
+    window.cachedAreas = [
+      { id: 'ar_qa', nombre: 'Aseguramiento de Calidad (QA)' },
+      { id: 'ar_qc', nombre: 'Control de Calidad (QC)' },
+      { id: 'ar_prod', nombre: 'Planta de Producción' },
+      { id: 'ar_mant', nombre: 'Mantenimiento y Metrología' }
     ];
 
+    window.cachedProcesos = [
+      { id: 'pr_gestion_calidad', nombre: 'Gestión de Aseguramiento de Calidad', areaId: 'ar_qa' },
+      { id: 'pr_control_fisicoquimico', nombre: 'Control Físico-Químico y Microbiológico', areaId: 'ar_qc' },
+      { id: 'pr_produccion_pt', nombre: 'Proceso de Manufactura y Envasado PT', areaId: 'ar_prod' },
+      { id: 'pr_metrologia_eq', nombre: 'Calibración y Calificación de Equipos GxP', areaId: 'ar_mant' }
+    ];
+
+    // 2. Roles del Sistema GxP
+    window.cachedRoles = [
+      { id: 'rol_admin', nombre: 'System Administrator / QA Manager', desc: 'Control total de configuraciones, usuarios y auditoría.' },
+      { id: 'rol_author', nombre: 'Document Author', desc: 'Creación y edición de borradores documentales en su área.' },
+      { id: 'rol_approver', nombre: 'Document Approver / Process Owner', desc: 'Facultad de firma electrónica y aprobación de vigencias en su área.' },
+      { id: 'rol_viewer', nombre: 'Viewer / Operador de Planta', desc: 'Visualización estricta de documentos vigentes sin privilegios de edición.' }
+    ];
+
+    // 3. Matriz de Permisos por Rol
+    window.cachedMatrizPermisos = {
+      'rol_admin': { lectura: true, crearEdicion: true, revision: true, aprobacionFirma: true, administracion: true },
+      'rol_author': { lectura: true, crearEdicion: true, revision: true, aprobacionFirma: false, administracion: false },
+      'rol_approver': { lectura: true, crearEdicion: true, revision: true, aprobacionFirma: true, administracion: false },
+      'rol_viewer': { lectura: true, crearEdicion: false, revision: false, aprobacionFirma: false, administracion: false }
+    };
+
+    // 4. Maestro de Empleados
+    window.cachedEmpleados = [
+      { id: 1, nombres: 'Johan Sebastian', apellidos: 'Aguilar Rojas', cargo: 'QA Lead', correo: 'j.aguilar@pharmor.com.co', areaId: 'ar_qa', estado: 'Activo' },
+      { id: 2, nombres: 'Carlos', apellidos: 'Mendoza', cargo: 'Operario de Producción', correo: 'c.mendoza@pharmor.com.co', areaId: 'ar_prod', estado: 'Activo' }
+    ];
+
+    // 5. Maestro de Usuarios (Vinculados 1:1 a Empleado)
+    window.cachedUsuarios = [
+      { id: 1, empleadoId: 1, correo: 'j.aguilar@pharmor.com.co', password: '123', rolId: 'rol_admin', areasAsignadas: ['ar_qa', 'ar_qc', 'ar_prod', 'ar_mant'], estado: 'Activo' },
+      { id: 2, empleadoId: 2, correo: 'c.mendoza@pharmor.com.co', password: '123', rolId: 'rol_viewer', areasAsignadas: ['ar_prod'], estado: 'Activo' }
+    ];
+
+    // 6. Base Documental con Proceso y Área obligatorios
     window.cachedDocs = [
-      { id: '1', codigo: 'PH-GPD-F0-01', titulo: 'Lista de Chequeo Batch y Liberación de PT', version: '2.0', estado: 'VIGENTE', fase: 'Aprobado', proceso: 'Gestión de Aseguramiento de Calidad', fechaAprob: '2025-10-15', fechaVenc: '2027-10-15', archivo_url: 'https://pdfobject.com/pdf/sample.pdf', motivo_cambio: 'Creación Inicial' },
-      { id: '2', codigo: 'SOP-PRO-012', titulo: 'Limpieza e Higienización de Áreas Limpias', version: '2.1', estado: 'VIGENTE', fase: 'Aprobado', proceso: 'Planta de Producción', fechaAprob: '2025-09-01', fechaVenc: '2026-09-01', archivo_url: '', motivo_cambio: 'Creación Inicial' },
-      { id: '3', codigo: 'SOP-QA-005', titulo: 'Control Ambiental en Zonas Clasificadas', version: '1.0', estado: 'PROCESO', fase: 'Elaboración', proceso: 'Gestión de Aseguramiento de Calidad', fechaAprob: '', fechaVenc: '', archivo_url: 'https://pdfobject.com/pdf/sample.pdf', motivo_cambio: 'Borrador inicial' }
+      { id: '1', codigo: 'PH-GPD-F0-01', titulo: 'Lista de Chequeo Batch y Liberación de PT', version: '2.0', estado: 'VIGENTE', fase: 'Aprobado', procesoId: 'pr_gestion_calidad', areaId: 'ar_qa', fechaAprob: '2025-10-15', fechaVenc: '2027-10-15', archivo_url: 'https://pdfobject.com/pdf/sample.pdf', motivo_cambio: 'Creación Inicial' },
+      { id: '2', codigo: 'SOP-PRO-012', titulo: 'Limpieza e Higienización de Áreas Limpias', version: '2.1', estado: 'VIGENTE', fase: 'Aprobado', procesoId: 'pr_produccion_pt', areaId: 'ar_prod', fechaAprob: '2025-09-01', fechaVenc: '2026-09-01', archivo_url: '', motivo_cambio: 'Creación Inicial' },
+      { id: '3', codigo: 'SOP-QA-005', titulo: 'Control Ambiental en Zonas Clasificadas', version: '1.0', estado: 'PROCESO', fase: 'Elaboración', procesoId: 'pr_gestion_calidad', areaId: 'ar_qa', fechaAprob: '', fechaVenc: '', archivo_url: 'https://pdfobject.com/pdf/sample.pdf', motivo_cambio: 'Borrador inicial' }
     ];
     
     window.cachedCopias = [];
     window.cachedObsoletos = [];
+    window.auditTrailLogs = [
+      { fecha: '2026-10-28 10:30:00', usuario: 'j.aguilar@pharmor.com.co', accion: 'SYSTEM_START', detalle: 'Inicialización de ERP eQMS con validación GAMP 5' }
+    ];
 
-    // 2. FUNCIONES DE LOGIN Y ARRANQUE (Disponibles inmediatamente)
+    // Funciones de Login y Validación Segura 21 CFR Part 11
     window.iniciarPortalVisual = function() {
       document.getElementById('view-login').classList.add('hidden');
       document.getElementById('app-portal').classList.remove('hidden');
 
-      document.getElementById('userBadge').innerText = `${window.activeGxpUser.nombre} (${window.activeGxpUser.cargo})`;
+      const emp = window.cachedEmpleados.find(e => e.id === window.activeGxpUser.empleadoId);
+      const rolObj = window.cachedRoles.find(r => r.id === window.activeGxpUser.rolId);
+      document.getElementById('userBadge').innerText = `${emp ? emp.nombres + ' ' + emp.apellidos : window.activeGxpUser.correo} (${rolObj ? rolObj.nombre : 'Usuario'})`;
 
-      const isAdmin = window.activeGxpUser.rol === 'ADMIN_QA';
+      // Control visual según permisos de administración
+      const isAdmin = window.activeGxpUser.rolId === 'rol_admin';
       document.querySelectorAll('.admin-only').forEach(el => { el.style.display = isAdmin ? 'block' : 'none'; });
 
       const btnDocs = document.querySelector('[data-tab="documentos"]');
       if (btnDocs) btnDocs.click();
 
       if (typeof window.renderAllData === 'function') window.renderAllData();
-      if (typeof window.renderUsuariosConfig === 'function') window.renderUsuariosConfig();
+      if (typeof window.renderConfigTablas === 'function') window.renderConfigTablas();
     };
 
     window.ejecutarLoginPrincipal = function() {
@@ -66,20 +112,30 @@
       const usuarioEncontrado = window.cachedUsuarios.find(u => u.correo.toLowerCase() === emailInput.toLowerCase() && u.password === passInput && u.estado === 'Activo');
 
       if (!usuarioEncontrado) {
-        alert("Credenciales incorrectas o usuario inactivo."); return;
+        alert("Credenciales incorrectas, usuario inactivo o bloqueado bajo política GxP."); return;
       }
-      window.activeGxpUser = { nombre: `${usuarioEncontrado.nombres} ${usuarioEncontrado.apellidos}`, rol: usuarioEncontrado.rol, cargo: usuarioEncontrado.cargo, correo: usuarioEncontrado.correo };
+      window.activeGxpUser = usuarioEncontrado;
+      window.registrarAuditTrail(usuarioEncontrado.correo, 'LOGIN_SUCCESS', 'Inicio de sesión exitoso al portal GxP');
       window.iniciarPortalVisual();
     };
 
     window.ejecutarLoginAdmin = function() {
-      window.activeGxpUser = { nombre: 'Johan Aguilar Rojas', rol: 'ADMIN_QA', cargo: 'QA Lead', correo: 'j.aguilar@pharmor.com.co' };
+      window.activeGxpUser = window.cachedUsuarios[0];
       window.iniciarPortalVisual();
     };
 
     window.ejecutarLoginOperador = function() {
-      window.activeGxpUser = { nombre: 'Carlos Mendoza', rol: 'LECTOR', cargo: 'Operario de Planta', correo: 'c.mendoza@pharmor.com.co' };
+      window.activeGxpUser = window.cachedUsuarios[1];
       window.iniciarPortalVisual();
+    };
+
+    window.registrarAuditTrail = function(user, accion, detalle) {
+      const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 19);
+      window.auditTrailLogs.unshift({ fecha: timestamp, usuario: user, accion: accion, detalle: detalle });
+      const auditDiv = document.getElementById('list-auds');
+      if(auditDiv) {
+        auditDiv.innerHTML = window.auditTrailLogs.map(l => `[${l.fecha}] <strong>${l.usuario}</strong> [${l.accion}]: ${l.detalle}`).join('<br>');
+      }
     };
   </script>
 </head>
@@ -92,7 +148,7 @@
     <div class="bg-white p-8 rounded-2xl shadow-xl border border-slate-200 max-w-md w-full space-y-5 relative">
       <div class="text-center">
         <div class="text-3xl font-extrabold text-slate-900 tracking-tight">🛡️ PharmAudit</div>
-        <p class="text-xs text-slate-500 mt-1 font-mono">Portal de Gestión de Calidad GxP · Pharmor</p>
+        <p class="text-xs text-slate-500 mt-1 font-mono">Portal de Gestión de Calidad GxP · Pharmor (GAMP 5)</p>
       </div>
 
       <div class="space-y-3">
@@ -150,18 +206,18 @@
       <button data-tab="metrologia" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">🛠️ Equipos & Calibración</button>
       <button data-tab="firmas" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">✍️ Firmas Part 11</button>
       <button data-tab="audit" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">📜 Audit Trail (ALCOA+)</button>
-      <button data-tab="admin" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 bg-slate-700 text-cyan-300 cursor-pointer admin-only">⚙️ Configuraciones</button>
+      <button data-tab="admin" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 bg-slate-700 text-cyan-300 cursor-pointer admin-only">⚙️ Configuraciones GxP</button>
     </nav>
 
     <main>
-      <!-- MÓDULO: DASHBOARD -->
+      <!-- DASHBOARD -->
       <div id="view-dashboard" class="tab-content active space-y-4">
         <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex justify-between items-center">
           <div>
             <h1 class="text-base font-bold text-slate-900">Estado del Sistema de Gestión de Calidad (En Vivo)</h1>
-            <p class="text-xs text-slate-500">Integridad de datos ALCOA+ y Supabase Storage Conectado</p>
+            <p class="text-xs text-slate-500">Integridad de datos ALCOA+ y Estructura Organizacional Valuadas</p>
           </div>
-          <span class="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">21 CFR Part 11</span>
+          <span class="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">21 CFR Part 11 / GAMP 5</span>
         </div>
 
         <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -188,9 +244,8 @@
         </div>
       </div>
 
-      <!-- MÓDULO: GESTIÓN DOCUMENTAL -->
+      <!-- GESTIÓN DOCUMENTAL -->
       <div id="view-documentos" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-4">
-        
         <div class="flex space-x-1 border-b pb-2 overflow-x-auto text-xs font-semibold">
           <button data-subtab="vigente" class="doc-subtab-btn px-3 py-1.5 rounded-lg bg-cyan-600 text-white cursor-pointer">Vigente (<span id="count-vigente">0</span>)</button>
           <button data-subtab="proceso" class="doc-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">En Proceso / Flujo (<span id="count-proceso">0</span>)</button>
@@ -200,8 +255,8 @@
 
         <div class="flex justify-between items-center flex-wrap gap-2">
           <div class="flex space-x-2">
-            <button type="button" onclick="window.abrirModalNuevoDoc()" class="bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow cursor-pointer admin-only">+ Crear / Migrar Documento</button>
-            <button type="button" onclick="window.abrirModalNuevaVersion()" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow cursor-pointer admin-only">🔄 Nueva Versión (Control de Cambios)</button>
+            <button type="button" onclick="window.abrirModalNuevoDoc()" class="bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow cursor-pointer">+ Crear / Migrar Documento</button>
+            <button type="button" onclick="window.abrirModalNuevaVersion()" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow cursor-pointer">🔄 Nueva Versión (Control de Cambios)</button>
           </div>
           <div>
             <button type="button" onclick="window.exportarExcelAuditoria()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow cursor-pointer">
@@ -217,10 +272,9 @@
                 <th class="p-2 border font-bold">Código</th>
                 <th class="p-2 border font-bold">Versión</th>
                 <th class="p-2 border font-bold">Título del Documento</th>
-                <th class="p-2 border font-bold">Proceso</th>
-                <th class="p-2 border font-bold">Fecha de Aprobación</th>
-                <th class="p-2 border font-bold">Fecha de Vencimiento</th>
-                <th class="p-2 border font-bold">Estado GxP</th>
+                <th class="p-2 border font-bold">Área / Proceso GxP</th>
+                <th class="p-2 border font-bold">Aprobación / Vencimiento</th>
+                <th class="p-2 border font-bold">Estado</th>
                 <th class="p-2 border font-bold text-center">Acciones</th>
               </tr>
             </thead>
@@ -235,8 +289,9 @@
                 <th class="p-2 border font-bold">Código</th>
                 <th class="p-2 border font-bold">Versión</th>
                 <th class="p-2 border font-bold">Título</th>
-                <th class="p-2 border font-bold">Fase del Flujo</th>
-                <th class="p-2 border font-bold text-center">Avanzar Workflow / Firmar</th>
+                <th class="p-2 border font-bold">Área / Proceso</th>
+                <th class="p-2 border font-bold">Fase del Workflow</th>
+                <th class="p-2 border font-bold text-center">Firma Electrónica Part 11</th>
               </tr>
             </thead>
             <tbody id="table-proceso" class="divide-y divide-slate-100"></tbody>
@@ -264,7 +319,7 @@
                 <th class="p-2 border font-bold">Código</th>
                 <th class="p-2 border font-bold">Versión Obsoleta</th>
                 <th class="p-2 border font-bold">Título del Documento</th>
-                <th class="p-2 border font-bold">Motivo de Sustitución / Control de Cambios</th>
+                <th class="p-2 border font-bold">Motivo de Sustitución / Cambio</th>
                 <th class="p-2 border font-bold text-center">Acción</th>
               </tr>
             </thead>
@@ -273,7 +328,7 @@
         </div>
       </div>
 
-      <!-- MÓDULO: COPIAS CONTROLADAS -->
+      <!-- COPIAS CONTROLADAS -->
       <div id="view-copias" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-4">
         <div class="flex justify-between items-center border-b pb-3">
           <div>
@@ -281,7 +336,6 @@
             <p class="text-xs text-slate-500">Trazabilidad de copias físicas distribuidas en planta con conciliación</p>
           </div>
         </div>
-
         <div class="overflow-x-auto">
           <table class="w-full border-collapse text-left text-xs font-mono">
             <thead>
@@ -300,37 +354,31 @@
         </div>
       </div>
 
-      <!-- MÓDULO: DESVIACIONES -->
+      <!-- DESVIACIONES -->
       <div id="view-desviaciones" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-3">
-        <div class="flex justify-between items-center">
-          <h2 class="font-bold text-slate-800 text-sm">Desviaciones & NC</h2>
-          <button type="button" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow cursor-pointer">+ Reportar Desviación / NC</button>
-        </div>
-        <div class="p-4 text-slate-500 text-xs">Módulo de investigación de no conformidades con metodología 5M (Ishikawa).</div>
+        <h2 class="font-bold text-slate-800 text-sm">Desviaciones & NC (Ishikawa 5M)</h2>
+        <div class="p-4 text-slate-500 text-xs">Módulo activo de investigación de no conformidades.</div>
       </div>
 
-      <!-- MÓDULO: CAPA -->
+      <!-- CAPA -->
       <div id="view-capa" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4">
         <h2 class="font-bold text-slate-800 text-sm mb-3">Planes CAPA Integrados</h2>
         <div class="p-4 text-slate-500 text-xs">Seguimiento de acciones correctoras y preventivas efectivas.</div>
       </div>
 
-      <!-- MÓDULO: METROLOGÍA -->
+      <!-- METROLOGÍA -->
       <div id="view-metrologia" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-        <div class="flex justify-between items-center mb-3">
-          <h2 class="font-bold text-slate-800 text-sm">Equipos & Metrología GxP</h2>
-          <button type="button" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold">+ Nuevo Equipo GxP</button>
-        </div>
-        <div class="p-4 text-slate-500 text-xs">Calibraciones y calificaciones de equipos críticos de planta.</div>
+        <h2 class="font-bold text-slate-800 text-sm mb-3">Equipos & Metrología GxP</h2>
+        <div class="p-4 text-slate-500 text-xs">Calibraciones y calificaciones de equipos críticos.</div>
       </div>
 
-      <!-- MÓDULO: FIRMAS -->
+      <!-- FIRMAS -->
       <div id="view-firmas" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4">
         <h2 class="font-bold text-slate-800 text-sm mb-3">Registro de Firmas Electrónicas (21 CFR Part 11)</h2>
-        <div class="p-4 text-slate-500 text-xs">Trazabilidad de firmas con PIN de validación y significado de aprobación.</div>
+        <div class="p-4 text-slate-500 text-xs font-mono">Trazabilidad inalterable de firmas electrónicas vinculadas a re-autenticación y significado.</div>
       </div>
 
-      <!-- MÓDULO: AUDIT TRAIL -->
+      <!-- AUDIT TRAIL -->
       <div id="view-audit" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4">
         <h2 class="font-bold text-slate-800 text-sm mb-3">Audit Trail Inalterable (ALCOA+)</h2>
         <div id="list-auds" class="space-y-1 font-mono text-[11px] text-slate-600">
@@ -338,47 +386,110 @@
         </div>
       </div>
 
-      <!-- MÓDULO: CONFIGURACIONES Y GESTIÓN DE USUARIOS -->
+      <!-- CONFIGURACIONES GxP (ESTRUCTURA ROBUSTA 6 PASOS) -->
       <div id="view-admin" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-4">
-        <div class="flex space-x-1 border-b pb-2 text-xs font-semibold">
-          <button data-configsub="usuarios" class="config-subtab-btn px-3 py-1.5 rounded-lg bg-slate-800 text-white cursor-pointer">👥 Administración de Usuarios</button>
-          <button data-configsub="parametros" class="config-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">⚙️ Parámetros Globales</button>
+        <div class="flex space-x-1 border-b pb-2 text-xs font-semibold overflow-x-auto">
+          <button data-configsub="areas" class="config-subtab-btn px-3 py-1.5 rounded-lg bg-slate-800 text-white cursor-pointer">🏢 1. Áreas y Procesos</button>
+          <button data-configsub="empleados" class="config-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">👥 2. Empleados</button>
+          <button data-configsub="roles" class="config-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">🛡️ 3. Roles GxP</button>
+          <button data-configsub="matriz" class="config-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">📊 4. Matriz Permisos</button>
+          <button data-configsub="usuarios" class="config-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">🔑 5. Gestión de Usuarios</button>
+          <button data-configsub="parametros" class="config-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">⚙️ 6. Parámetros</button>
         </div>
 
-        <div id="configsub-usuarios" class="config-subtab-content active space-y-3">
-          <div class="flex justify-between items-center flex-wrap gap-2">
-            <h3 class="font-bold text-slate-800 text-sm">Directorio de Usuarios del Sistema (Vinculados a Login)</h3>
-            <button type="button" onclick="window.abrirModalUsuario()" class="bg-slate-800 hover:bg-slate-900 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow cursor-pointer">+ Insertar Nuevo Usuario</button>
-          </div>
-          <div class="overflow-x-auto">
-            <table class="w-full border-collapse text-left text-xs">
-              <thead>
-                <tr class="bg-slate-100 text-slate-700 border-b font-mono">
-                  <th class="p-2 border">ID</th>
-                  <th class="p-2 border">Nombres y Apellidos</th>
-                  <th class="p-2 border">Correo Corporativo (Login)</th>
-                  <th class="p-2 border">Cargo</th>
-                  <th class="p-2 border">Rol GxP</th>
-                  <th class="p-2 border text-center">Estado</th>
-                  <th class="p-2 border text-center">Acción</th>
-                </tr>
-              </thead>
-              <tbody id="tablaUsuariosConfig" class="divide-y divide-slate-100"></tbody>
-            </table>
+        <!-- SUBSECCIÓN 1: ÁREAS Y PROCESOS -->
+        <div id="configsub-areas" class="config-subtab-content active space-y-4 text-xs">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="space-y-2 border p-3 rounded-xl bg-slate-50">
+              <div class="flex justify-between items-center"><h4 class="font-bold text-slate-800">Departamentos / Áreas</h4><button onclick="window.abrirModalArea()" class="bg-slate-800 text-white px-2 py-1 rounded text-[11px]">+ Nueva Área</button></div>
+              <table class="w-full border-collapse bg-white">
+                <thead><tr class="bg-slate-100 border"><th class="p-1.5 border">ID</th><th class="p-1.5 border">Nombre del Área</th></tr></thead>
+                <tbody id="tablaAreasConfig"></tbody>
+              </table>
+            </div>
+            <div class="space-y-2 border p-3 rounded-xl bg-slate-50">
+              <div class="flex justify-between items-center"><h4 class="font-bold text-slate-800">Procesos GxP</h4><button onclick="window.abrirModalProceso()" class="bg-cyan-600 text-white px-2 py-1 rounded text-[11px]">+ Nuevo Proceso</button></div>
+              <table class="w-full border-collapse bg-white">
+                <thead><tr class="bg-slate-100 border"><th class="p-1.5 border">Proceso</th><th class="p-1.5 border">Área Asociada</th></tr></thead>
+                <tbody id="tablaProcesosConfig"></tbody>
+              </table>
+            </div>
           </div>
         </div>
 
-        <div id="configsub-parametros" class="config-subtab-content space-y-3">
-          <h3 class="font-bold text-slate-800 text-sm">Parámetros del Módulo Documental</h3>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+        <!-- SUBSECCIÓN 2: EMPLEADOS -->
+        <div id="configsub-empleados" class="config-subtab-content space-y-3 text-xs">
+          <div class="flex justify-between items-center">
+            <h3 class="font-bold text-slate-800">Directorio Maestro de Empleados</h3>
+            <button onclick="window.abrirModalEmpleado()" class="bg-slate-800 text-white px-3 py-1.5 rounded font-bold shadow">+ Registrar Empleado</button>
+          </div>
+          <table class="w-full border-collapse text-left">
+            <thead>
+              <tr class="bg-slate-100 border font-mono">
+                <th class="p-2 border">ID</th><th class="p-2 border">Nombres y Apellidos</th><th class="p-2 border">Cargo</th><th class="p-2 border">Correo Corporativo</th><th class="p-2 border">Área Principal</th><th class="p-2 border text-center">Estado</th><th class="p-2 border text-center">Acción</th>
+              </tr>
+            </thead>
+            <tbody id="tablaEmpleadosConfig" class="divide-y"></tbody>
+          </table>
+        </div>
+
+        <!-- SUBSECCIÓN 3: ROLES GxP -->
+        <div id="configsub-roles" class="config-subtab-content space-y-3 text-xs">
+          <div class="flex justify-between items-center">
+            <h3 class="font-bold text-slate-800">Catálogo de Roles del Sistema</h3>
+            <button onclick="window.abrirModalRol()" class="bg-slate-800 text-white px-3 py-1.5 rounded font-bold shadow">+ Nuevo Rol</button>
+          </div>
+          <table class="w-full border-collapse text-left">
+            <thead>
+              <tr class="bg-slate-100 border font-mono">
+                <th class="p-2 border">ID Rol</th><th class="p-2 border">Nombre del Rol</th><th class="p-2 border">Descripción Regulatoria</th>
+              </tr>
+            </thead>
+            <tbody id="tablaRolesConfig" class="divide-y"></tbody>
+          </table>
+        </div>
+
+        <!-- SUBSECCIÓN 4: MATRIZ DE PERMISOS -->
+        <div id="configsub-matriz" class="config-subtab-content space-y-3 text-xs">
+          <h3 class="font-bold text-slate-800">Matriz de Permisos por Rol (GAMP 5 / SoD)</h3>
+          <p class="text-slate-500">Configuración global de facultades operativas y de cumplimiento por rol.</p>
+          <table class="w-full border-collapse text-center">
+            <thead>
+              <tr class="bg-slate-100 border font-mono">
+                <th class="p-2 border text-left">Rol del Sistema</th><th class="p-2 border">Lectura</th><th class="p-2 border">Creación / Edición</th><th class="p-2 border">Revisión</th><th class="p-2 border">Aprobación / Firma</th><th class="p-2 border">Administración</th>
+              </tr>
+            </thead>
+            <tbody id="tablaMatrizConfig" class="divide-y font-mono"></tbody>
+          </table>
+        </div>
+
+        <!-- SUBSECCIÓN 5: GESTIÓN DE USUARIOS -->
+        <div id="configsub-usuarios" class="config-subtab-content space-y-3 text-xs">
+          <div class="flex justify-between items-center">
+            <h3 class="font-bold text-slate-800">Credenciales y Asignación de Roles / Áreas (Vinculación 1:1)</h3>
+            <button onclick="window.abrirModalUsuario()" class="bg-slate-800 text-white px-3 py-1.5 rounded font-bold shadow">+ Asignar Usuario GxP</button>
+          </div>
+          <table class="w-full border-collapse text-left">
+            <thead>
+              <tr class="bg-slate-100 border font-mono">
+                <th class="p-2 border">ID</th><th class="p-2 border">Empleado Vinculado</th><th class="p-2 border">Correo (Login)</th><th class="p-2 border">Rol GxP</th><th class="p-2 border">Áreas / Procesos Autorizados</th><th class="p-2 border text-center">Estado</th><th class="p-2 border text-center">Acción</th>
+              </tr>
+            </thead>
+            <tbody id="tablaUsuariosConfig" class="divide-y"></tbody>
+          </table>
+        </div>
+
+        <!-- SUBSECCIÓN 6: PARÁMETROS -->
+        <div id="configsub-parametros" class="config-subtab-content space-y-3 text-xs">
+          <h3 class="font-bold text-slate-800">Parámetros Globales eQMS</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div class="bg-slate-50 p-3 rounded border space-y-2">
               <div class="flex justify-between"><span>Días de alerta para revisión:</span><strong class="font-mono">30 días</strong></div>
               <div class="flex justify-between"><span>Control de cambios obligatorio:</span><strong class="text-emerald-700">Activado</strong></div>
-              <div class="flex justify-between"><span>Estructura de Codificación:</span><strong class="font-mono">[Proceso]-[Tipo]-[Consecutivo]</strong></div>
             </div>
             <div class="bg-slate-50 p-3 rounded border space-y-2">
-              <div class="flex justify-between"><span>Método de Firma:</span><strong class="text-purple-700 font-bold">21 CFR Part 11 (PIN + Persona)</strong></div>
-              <div class="flex justify-between"><span>Auditoría ALCOA+:</span><strong class="text-emerald-700">Activa en Storage</strong></div>
+              <div class="flex justify-between"><span>Método de Firma:</span><strong class="text-purple-700 font-bold">21 CFR Part 11 (Credenciales + Significado)</strong></div>
+              <div class="flex justify-between"><span>Auditoría ALCOA+:</span><strong class="text-emerald-700">Inmutable</strong></div>
             </div>
           </div>
         </div>
@@ -387,55 +498,36 @@
   </div>
 
   <!-- ========================================================================= -->
-  <!-- 3. MODALES DE INTERACCIÓN -->
+  <!-- MODALES DE INTERACCIÓN Y CONFIGURACIÓN -->
   <!-- ========================================================================= -->
 
   <div id="modalExportPdf" class="modal-backdrop fixed inset-0 bg-slate-900/80 backdrop-blur-sm items-center justify-center p-4 z-50">
     <div class="bg-white rounded-xl max-w-5xl w-full p-4 border shadow-2xl space-y-3 flex flex-col h-[90vh]">
       <div class="border-b pb-2 flex justify-between items-center shrink-0">
-        <div>
-          <h3 class="font-bold text-sm text-slate-800" id="pdfViewerTitle">Visor Oficial GxP</h3>
-          <p class="text-[10px] text-slate-500" id="pdfViewerAlert"></p>
-        </div>
-        <button type="button" onclick="window.toggleModal('modalExportPdf', false)" class="text-slate-400 hover:text-slate-800 font-bold text-xl px-2 cursor-pointer">✕</button>
+        <div><h3 class="font-bold text-sm text-slate-800" id="pdfViewerTitle">Visor Oficial GxP</h3></div>
+        <button type="button" onclick="window.toggleModal('modalExportPdf', false)" class="text-slate-400 font-bold text-xl px-2 cursor-pointer">✕</button>
       </div>
       <div id="pdfViewerArea" class="w-full flex-grow relative bg-slate-200 rounded border overflow-hidden"></div>
     </div>
   </div>
 
   <div id="modalEmitirCopia" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
-    <div class="bg-white rounded-xl max-w-md w-full p-5 border shadow-2xl space-y-3">
-      <div class="border-b pb-2">
-        <h3 class="font-bold text-sm text-amber-900">🖨️ Emitir Copia Controlada Oficial</h3>
-        <p class="text-xs text-slate-500">Inyección binaria de marca de agua en el PDF original.</p>
-      </div>
-      <div class="space-y-3 text-xs">
-        <div>
-          <label class="block font-semibold mb-1">Área Destinataria</label>
-          <select id="copiaAreaSelect" class="w-full p-2 border rounded bg-slate-50">
-            <option value="Planta de Producción">Planta de Producción</option>
-            <option value="Control de Calidad (QC)">Control de Calidad (QC)</option>
-            <option value="Bodega / Almacén">Bodega / Almacén</option>
-          </select>
-        </div>
-        <div>
-          <label class="block font-semibold mb-1">Custodio Responsable</label>
-          <input type="text" id="copiaCustodioInput" class="w-full p-2 border rounded bg-slate-50" value="Carlos Mendoza">
-        </div>
-      </div>
+    <div class="bg-white rounded-xl max-w-md w-full p-5 border shadow-2xl space-y-3 text-xs">
+      <div class="border-b pb-2"><h3 class="font-bold text-sm text-amber-900">🖨️ Emitir Copia Controlada Oficial</h3></div>
+      <div><label class="block font-semibold mb-1">Área Destinataria</label><select id="copiaAreaSelect" class="w-full p-2 border rounded bg-slate-50"></select></div>
+      <div><label class="block font-semibold mb-1">Custodio Responsable</label><input type="text" id="copiaCustodioInput" class="w-full p-2 border rounded bg-slate-50" value="Carlos Mendoza"></div>
       <div class="flex justify-end space-x-2 pt-2 border-t">
-        <button type="button" onclick="window.toggleModal('modalEmitirCopia', false)" class="px-3 py-1 border rounded text-xs">Cancelar</button>
-        <button type="button" id="btn-confirmar-emitir" onclick="window.ejecutarInyeccionPDF()" class="px-4 py-1.5 bg-amber-600 text-white rounded text-xs font-bold shadow cursor-pointer">Generar e Imprimir Copia</button>
+        <button type="button" onclick="window.toggleModal('modalEmitirCopia', false)" class="px-3 py-1 border rounded">Cancelar</button>
+        <button type="button" id="btn-confirmar-emitir" onclick="window.ejecutarInyeccionPDF()" class="px-4 py-1.5 bg-amber-600 text-white rounded font-bold">Generar e Imprimir</button>
       </div>
     </div>
   </div>
 
+  <!-- MODAL: CREAR / MIGRAR DOCUMENTO (VINCULADO A PROCESO/ÁREA) -->
   <div id="modalDoc" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
-    <div class="bg-white rounded-xl max-w-lg w-full p-5 border shadow-2xl space-y-4">
-      <div class="border-b pb-2">
-        <h3 class="font-bold text-sm text-cyan-900">📑 Creación / Subida de Documento GxP</h3>
-      </div>
-      <div class="space-y-3 text-xs">
+    <div class="bg-white rounded-xl max-w-lg w-full p-5 border shadow-2xl space-y-4 text-xs">
+      <div class="border-b pb-2"><h3 class="font-bold text-sm text-cyan-900">📑 Creación / Subida de Documento GxP</h3></div>
+      <div class="space-y-3">
         <div><label class="block font-semibold mb-1">Título</label><input type="text" id="createDocTitle" class="w-full p-2 border rounded bg-slate-50" /></div>
         <div class="grid grid-cols-2 gap-3">
           <div><label class="block font-semibold mb-1">Código</label><input type="text" id="createDocCode" class="w-full p-2 border rounded bg-slate-50 font-mono uppercase" /></div>
@@ -446,78 +538,140 @@
           <div><label class="block font-semibold mb-1">Fecha Vencimiento</label><input type="date" id="createDocFechaVenc" class="w-full p-2 border rounded bg-slate-50 font-mono" /></div>
         </div>
         <div>
-          <label class="block font-semibold mb-1">Proceso Asociado</label>
-          <select id="createDocProceso" class="w-full p-2 border rounded bg-slate-50">
-            <option value="Gestión de Aseguramiento de Calidad">Gestión de Aseguramiento de Calidad</option>
-            <option value="Planta de Producción">Planta de Producción</option>
-          </select>
+          <label class="block font-semibold mb-1">Proceso GxP Asociado (Obligatorio)</label>
+          <select id="createDocProcesoSelect" class="w-full p-2 border rounded bg-slate-50 font-mono"></select>
         </div>
       </div>
       <div class="flex justify-end space-x-2 pt-3 border-t">
-        <button type="button" onclick="window.toggleModal('modalDoc', false)" class="px-3 py-1.5 border rounded text-xs">Cancelar</button>
-        <button type="button" onclick="window.guardarNuevoDocumento()" class="px-4 py-1.5 bg-cyan-600 text-white rounded text-xs font-bold shadow cursor-pointer">Guardar</button>
+        <button type="button" onclick="window.toggleModal('modalDoc', false)" class="px-3 py-1.5 border rounded">Cancelar</button>
+        <button type="button" onclick="window.guardarNuevoDocumento()" class="px-4 py-1.5 bg-cyan-600 text-white rounded font-bold">Guardar Borrador</button>
       </div>
     </div>
   </div>
 
+  <!-- MODAL: NUEVA VERSIÓN -->
   <div id="modalVersion" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
-    <div class="bg-white rounded-xl max-w-lg w-full p-5 border shadow-2xl space-y-4">
-      <div class="border-b pb-2"><h3 class="font-bold text-sm text-amber-900">🔄 Generar Nueva Versión</h3></div>
-      <div class="space-y-3 text-xs">
-        <div><label class="block font-semibold mb-1">Documento a Actualizar</label><select id="versionDocSelect" class="w-full p-2 border rounded bg-slate-50 font-mono" onchange="window.cargarDatosVersionBase()"></select></div>
+    <div class="bg-white rounded-xl max-w-lg w-full p-5 border shadow-2xl space-y-4 text-xs">
+      <div class="border-b pb-2"><h3 class="font-bold text-sm text-amber-900">🔄 Generar Nueva Versión & Control de Cambios</h3></div>
+      <div class="space-y-3">
+        <div><label class="block font-semibold mb-1">Documento Vigente</label><select id="versionDocSelect" class="w-full p-2 border rounded bg-slate-50 font-mono" onchange="window.cargarDatosVersionBase()"></select></div>
         <div><label class="block font-semibold mb-1">Nuevo Título</label><input type="text" id="verNewTitle" class="w-full p-2 border rounded bg-slate-50" /></div>
         <div class="grid grid-cols-2 gap-3">
           <div><label class="block font-semibold mb-1">Código</label><input type="text" id="verNewCode" readonly class="w-full p-2 border rounded bg-slate-100 font-mono" /></div>
-          <div><label class="block font-semibold mb-1">Nueva Versión</label><input type="text" id="verNewNumber" value="2.0" class="w-full p-2 border rounded bg-amber-50 font-mono font-bold" /></div>
+          <div><label class="block font-semibold mb-1">Versión Propuesta</label><input type="text" id="verNewNumber" value="2.0" class="w-full p-2 border rounded bg-amber-50 font-mono font-bold" /></div>
         </div>
-        <div class="grid grid-cols-2 gap-3">
-          <div><label class="block font-semibold mb-1">Fecha Aprobación</label><input type="date" id="verFechaAprob" class="w-full p-2 border rounded bg-slate-50 font-mono" /></div>
-          <div><label class="block font-semibold mb-1">Fecha Vencimiento</label><input type="date" id="verFechaVenc" class="w-full p-2 border rounded bg-slate-50 font-mono" /></div>
-        </div>
-        <div>
-          <label class="block font-semibold mb-1 text-amber-900">Justificación del Cambio</label>
-          <textarea id="verChangeReason" rows="2" class="w-full p-2 border rounded bg-amber-50"></textarea>
-        </div>
+        <div><label class="block font-semibold mb-1 text-amber-900">Justificación del Cambio</label><textarea id="verChangeReason" rows="2" class="w-full p-2 border rounded bg-amber-50"></textarea></div>
       </div>
       <div class="flex justify-end space-x-2 pt-3 border-t">
-        <button type="button" onclick="window.toggleModal('modalVersion', false)" class="px-3 py-1.5 border rounded text-xs">Cancelar</button>
-        <button type="button" onclick="window.guardarNuevaVersion()" class="px-4 py-1.5 bg-amber-600 text-white rounded text-xs font-bold shadow cursor-pointer">Registrar Nueva Versión</button>
+        <button type="button" onclick="window.toggleModal('modalVersion', false)" class="px-3 py-1.5 border rounded">Cancelar</button>
+        <button type="button" onclick="window.guardarNuevaVersion()" class="px-4 py-1.5 bg-amber-600 text-white rounded font-bold">Registrar Versión</button>
       </div>
     </div>
   </div>
 
-  <div id="modalUsuario" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
-    <div class="bg-white rounded-xl max-w-md w-full p-5 border shadow-2xl space-y-4">
-      <div class="border-b pb-2"><h3 class="font-bold text-sm text-slate-800">👤 Insertar / Modificar Usuario</h3></div>
-      <div class="space-y-3 text-xs">
-        <input type="hidden" id="usrIndex" value="-1">
-        <div class="grid grid-cols-2 gap-2">
-          <div><label class="block font-semibold mb-1">Nombres</label><input type="text" id="usrNombres" class="w-full p-2 border rounded" /></div>
-          <div><label class="block font-semibold mb-1">Apellidos</label><input type="text" id="usrApellidos" class="w-full p-2 border rounded" /></div>
-        </div>
-        <div><label class="block font-semibold mb-1">Correo Corporativo</label><input type="email" id="usrCorreo" class="w-full p-2 border rounded font-mono" /></div>
-        <div><label class="block font-semibold mb-1">Contraseña</label><input type="password" id="usrPassword" class="w-full p-2 border rounded font-mono" /></div>
-        <div class="grid grid-cols-2 gap-2">
-          <div><label class="block font-semibold mb-1">Cargo</label><input type="text" id="usrCargo" class="w-full p-2 border rounded" /></div>
-          <div>
-            <label class="block font-semibold mb-1">Rol GxP</label>
-            <select id="usrRol" class="w-full p-2 border rounded"><option value="ADMIN_QA">ADMIN_QA</option><option value="LECTOR">LECTOR</option></select>
-          </div>
-        </div>
+  <!-- MODAL: FIRMA ELECTRÓNICA 21 CFR PART 11 (RE-AUTENTICACIÓN + SIGNIFICADO) -->
+  <div id="modalFirmaPart11" class="modal-backdrop fixed inset-0 bg-slate-900/70 backdrop-blur-sm items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl max-w-md w-full p-5 border shadow-2xl space-y-4 text-xs">
+      <div class="border-b pb-2">
+        <h3 class="font-bold text-sm text-cyan-900">✍️ Firma Electrónica Obligatoria (21 CFR Part 11)</h3>
+        <p class="text-slate-500">Esta acción requiere re-autenticación de identidad corporativa.</p>
+      </div>
+      <div class="space-y-3">
+        <input type="hidden" id="firmaDocId">
+        <div><label class="block font-semibold mb-1">Correo Corporativo (Usuario)</label><input type="email" id="firmaUserEmail" class="w-full p-2 border rounded font-mono bg-slate-50" /></div>
+        <div><label class="block font-semibold mb-1">Contraseña de Acceso</label><input type="password" id="firmaUserPassword" class="w-full p-2 border rounded font-mono bg-slate-50" /></div>
         <div>
-          <label class="block font-semibold mb-1">Estado</label>
-          <select id="usrEstado" class="w-full p-2 border rounded"><option value="Activo">Activo</option><option value="Inactivo">Inactivo</option></select>
+          <label class="block font-semibold mb-1">Significado de la Firma</label>
+          <select id="firmaSignificado" class="w-full p-2 border rounded bg-slate-50 font-semibold text-cyan-900">
+            <option value="Aprobación Técnica y Regulatoria">Aprobación Técnica y Regulatoria</option>
+            <option value="Revisión Conforme de Calidad">Revisión Conforme de Calidad</option>
+            <option value="Autorización Final de Versión Vigente">Autorización Final de Versión Vigente</option>
+          </select>
+        </div>
+        <div class="bg-slate-50 p-2 rounded text-[11px] text-slate-500 font-mono">
+          Firma vinculada a: <span id="firmaInfoDoc" class="font-bold text-slate-700"></span>
         </div>
       </div>
       <div class="flex justify-end space-x-2 pt-3 border-t">
-        <button type="button" onclick="window.toggleModal('modalUsuario', false)" class="px-3 py-1.5 border rounded text-xs">Cancelar</button>
-        <button type="button" onclick="window.guardarUsuarioConfig()" class="px-4 py-1.5 bg-slate-800 text-white rounded text-xs font-bold shadow cursor-pointer">Guardar Usuario</button>
+        <button type="button" onclick="window.toggleModal('modalFirmaPart11', false)" class="px-3 py-1.5 border rounded">Cancelar</button>
+        <button type="button" onclick="window.procesarFirmaElectronica()" class="px-4 py-1.5 bg-cyan-600 text-white rounded font-bold shadow">Firmar Electrónicamente</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: CONFIG - NUEVA ÁREA -->
+  <div id="modalArea" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl max-w-sm w-full p-4 border shadow-xl space-y-3 text-xs">
+      <h3 class="font-bold text-slate-800">Crear Nueva Área / Departamento</h3>
+      <input type="text" id="inputAreaNombre" placeholder="Ej: Investigación y Desarrollo" class="w-full p-2 border rounded" />
+      <div class="flex justify-end space-x-2">
+        <button onclick="window.toggleModal('modalArea', false)" class="px-2 py-1 border rounded">Cancelar</button>
+        <button onclick="window.guardarNuevaArea()" class="px-3 py-1 bg-slate-800 text-white rounded font-bold">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: CONFIG - NUEVO PROCESO -->
+  <div id="modalProceso" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl max-w-sm w-full p-4 border shadow-xl space-y-3 text-xs">
+      <h3 class="font-bold text-slate-800">Crear Nuevo Proceso GxP</h3>
+      <input type="text" id="inputProcesoNombre" placeholder="Ej: Control de Validación" class="w-full p-2 border rounded" />
+      <div><label class="block mb-1">Área Perteneciente</label><select id="selectProcesoArea" class="w-full p-2 border rounded"></select></div>
+      <div class="flex justify-end space-x-2">
+        <button onclick="window.toggleModal('modalProceso', false)" class="px-2 py-1 border rounded">Cancelar</button>
+        <button onclick="window.guardarNuevoProceso()" class="px-3 py-1 bg-cyan-600 text-white rounded font-bold">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: CONFIG - NUEVO EMPLEADO -->
+  <div id="modalEmpleado" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl max-w-md w-full p-5 border shadow-xl space-y-3 text-xs">
+      <h3 class="font-bold text-slate-800">Registrar Empleado en Directorio Maestro</h3>
+      <div class="grid grid-cols-2 gap-2">
+        <div><label class="block mb-1">Nombres</label><input type="text" id="empNombres" class="w-full p-2 border rounded" /></div>
+        <div><label class="block mb-1">Apellidos</label><input type="text" id="empApellidos" class="w-full p-2 border rounded" /></div>
+      </div>
+      <div><label class="block mb-1">Cargo</label><input type="text" id="empCargo" class="w-full p-2 border rounded" value="Analista de Calidad" /></div>
+      <div><label class="block mb-1">Correo Corporativo</label><input type="email" id="empCorreo" class="w-full p-2 border rounded font-mono" /></div>
+      <div><label class="block mb-1">Área Principal</label><select id="empAreaSelect" class="w-full p-2 border rounded"></select></div>
+      <div class="flex justify-end space-x-2 pt-2 border-t">
+        <button onclick="window.toggleModal('modalEmpleado', false)" class="px-2 py-1 border rounded">Cancelar</button>
+        <button onclick="window.guardarNuevoEmpleado()" class="px-3 py-1 bg-slate-800 text-white rounded font-bold">Guardar Empleado</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: CONFIG - NUEVO ROL -->
+  <div id="modalRol" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl max-w-sm w-full p-4 border shadow-xl space-y-3 text-xs">
+      <h3 class="font-bold text-slate-800">Crear Nuevo Rol del Sistema</h3>
+      <input type="text" id="rolIdInput" placeholder="Ej: rol_supervisor" class="w-full p-2 border rounded font-mono" />
+      <input type="text" id="rolNombreInput" placeholder="Nombre descriptivo" class="w-full p-2 border rounded" />
+      <textarea id="rolDescInput" placeholder="Descripción regulatoria..." class="w-full p-2 border rounded" rows="2"></textarea>
+      <div class="flex justify-end space-x-2">
+        <button onclick="window.toggleModal('modalRol', false)" class="px-2 py-1 border rounded">Cancelar</button>
+        <button onclick="window.guardarNuevoRol()" class="px-3 py-1 bg-slate-800 text-white rounded font-bold">Guardar Rol</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: CONFIG - ASIGNAR USUARIO GxP -->
+  <div id="modalUsuario" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl max-w-md w-full p-5 border shadow-xl space-y-3 text-xs">
+      <h3 class="font-bold text-slate-800">Asignar Credenciales y Rol a Empleado</h3>
+      <div><label class="block mb-1">Seleccionar Empleado (Relación 1:1)</label><select id="usrEmpSelect" class="w-full p-2 border rounded font-mono"></select></div>
+      <div><label class="block mb-1">Contraseña de Acceso</label><input type="password" id="usrPasswordInput" class="w-full p-2 border rounded font-mono" value="123" /></div>
+      <div><label class="block mb-1">Rol GxP Asignado</label><select id="usrRolSelect" class="w-full p-2 border rounded"></select></div>
+      <div class="flex justify-end space-x-2 pt-2 border-t">
+        <button onclick="window.toggleModal('modalUsuario', false)" class="px-2 py-1 border rounded">Cancelar</button>
+        <button onclick="window.guardarAsignacionUsuario()" class="px-3 py-1 bg-slate-800 text-white rounded font-bold">Vincular Usuario</button>
       </div>
     </div>
   </div>
 
   <!-- ========================================================================= -->
-  <!-- 4. LÓGICA RESTANTE Y RENDERIZADO -->
+  <!-- 4. MOTOR LÓGICO UNIFICADO Y ROBUSTO -->
   <!-- ========================================================================= -->
   <script>
     window.toggleModal = function(id, show) { 
@@ -526,6 +680,7 @@
     };
 
     document.addEventListener('DOMContentLoaded', () => {
+      // Pestañas principales
       document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.addEventListener('click', function() {
           document.querySelectorAll('.tab-content').forEach(v => v.classList.remove('active'));
@@ -536,6 +691,7 @@
         });
       });
 
+      // Sub-pestañas documentales
       document.querySelectorAll('.doc-subtab-btn').forEach(btn => {
         btn.addEventListener('click', function() {
           document.querySelectorAll('.doc-subtab-content').forEach(v => v.classList.remove('active'));
@@ -548,6 +704,7 @@
         });
       });
 
+      // Sub-pestañas de configuraciones
       document.querySelectorAll('.config-subtab-btn').forEach(btn => {
         btn.addEventListener('click', function() {
           document.querySelectorAll('.config-subtab-content').forEach(v => v.classList.remove('active'));
@@ -561,6 +718,7 @@
       });
     });
 
+    // Renderizador General de la Interfaz y Tablas de Configuración
     window.renderAllData = function() {
       const vigentes = window.cachedDocs.filter(d => d.estado === 'VIGENTE');
       const enProceso = window.cachedDocs.filter(d => d.estado === 'PROCESO');
@@ -574,31 +732,43 @@
       if(document.getElementById('count-migracion')) document.getElementById('count-migracion').innerText = migracion.length;
       if(document.getElementById('count-obsoleto')) document.getElementById('count-obsoleto').innerText = obsoletos.length;
 
-      document.getElementById('table-vigente').innerHTML = vigentes.length ? vigentes.map(d => `
-        <tr class="hover:bg-slate-50">
-          <td class="p-2 border font-mono font-bold text-cyan-700">${d.codigo}</td>
-          <td class="p-2 border font-mono">v${d.version}</td>
-          <td class="p-2 border font-semibold">${d.titulo}</td>
-          <td class="p-2 border text-slate-600">${d.proceso}</td>
-          <td class="p-2 border font-mono text-slate-600">${d.fechaAprob || 'N/A'}</td>
-          <td class="p-2 border font-mono text-amber-800">${d.fechaVenc || 'N/A'}</td>
-          <td class="p-2 border"><span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold text-[10px]">VIGENTE</span></td>
-          <td class="p-2 border text-center space-x-1">
-            <button onclick="window.viewDocument('${d.id}')" class="bg-slate-100 border px-2 py-1 rounded font-bold text-slate-700 cursor-pointer">👁️ Ver</button>
-            <button onclick="window.abrirModalEmitir('${d.id}')" class="bg-amber-50 border border-amber-300 text-amber-800 px-2 py-1 rounded font-bold cursor-pointer admin-only">🖨️ Copia</button>
-          </td>
-        </tr>
-      `).join('') : `<tr><td colspan="8" class="p-4 text-center text-slate-400">No hay documentos vigentes.</td></tr>`;
+      // Renderizar Vigentes
+      document.getElementById('table-vigente').innerHTML = vigentes.length ? vigentes.map(d => {
+        const proc = window.cachedProcesos.find(p => p.id === d.procesoId);
+        const area = window.cachedAreas.find(a => a.id === d.areaId);
+        return `
+          <tr class="hover:bg-slate-50">
+            <td class="p-2 border font-mono font-bold text-cyan-700">${d.codigo}</td>
+            <td class="p-2 border font-mono">v${d.version}</td>
+            <td class="p-2 border font-semibold">${d.titulo}</td>
+            <td class="p-2 border text-slate-600 font-mono text-[11px]">${area ? area.nombre : 'N/A'} <br><span class="text-cyan-800 font-sans">${proc ? proc.nombre : ''}</span></td>
+            <td class="p-2 border font-mono text-[11px]">Aprob: ${d.fechaAprob}<br>Venc: <strong class="text-amber-800">${d.fechaVenc}</strong></td>
+            <td class="p-2 border"><span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold text-[10px]">VIGENTE</span></td>
+            <td class="p-2 border text-center space-x-1">
+              <button onclick="window.viewDocument('${d.id}')" class="bg-slate-100 border px-2 py-1 rounded font-bold text-slate-700 cursor-pointer">👁️ Ver</button>
+              <button onclick="window.abrirModalEmitir('${d.id}')" class="bg-amber-50 border border-amber-300 text-amber-800 px-2 py-1 rounded font-bold cursor-pointer admin-only">🖨️ Copia</button>
+            </td>
+          </tr>
+        `;
+      }).join('') : `<tr><td colspan="7" class="p-4 text-center text-slate-400">No hay documentos vigentes.</td></tr>`;
 
-      document.getElementById('table-proceso').innerHTML = enProceso.length ? enProceso.map(d => `
-        <tr class="hover:bg-slate-50">
-          <td class="p-2 border font-mono font-bold text-cyan-700">${d.codigo}</td>
-          <td class="p-2 border font-mono">v${d.version}</td>
-          <td class="p-2 border font-semibold">${d.titulo}</td>
-          <td class="p-2 border"><span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-bold text-[10px]">Fase: ${d.fase}</span></td>
-          <td class="p-2 border text-center"><button onclick="window.avanzarWorkflow('${d.id}')" class="bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-1 rounded font-bold cursor-pointer">✍️ Firmar</button></td>
-        </tr>
-      `).join('') : `<tr><td colspan="5" class="p-4 text-center text-slate-400">No hay documentos en proceso.</td></tr>`;
+      // Renderizar En Proceso (Workflow condicional por área del usuario)
+      document.getElementById('table-proceso').innerHTML = enProceso.length ? enProceso.map(d => {
+        const proc = window.cachedProcesos.find(p => p.id === d.procesoId);
+        const area = window.cachedAreas.find(a => a.id === d.areaId);
+        return `
+          <tr class="hover:bg-slate-50">
+            <td class="p-2 border font-mono font-bold text-cyan-700">${d.codigo}</td>
+            <td class="p-2 border font-mono">v${d.version}</td>
+            <td class="p-2 border font-semibold">${d.titulo}</td>
+            <td class="p-2 border text-slate-600 text-[11px]">${area ? area.nombre : 'N/A'}</td>
+            <td class="p-2 border"><span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-bold text-[10px]">Fase: ${d.fase}</span></td>
+            <td class="p-2 border text-center">
+              <button onclick="window.iniciarFirmaElectronica('${d.id}')" class="bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-1 rounded font-bold cursor-pointer">✍️ Firmar (Part 11)</button>
+            </td>
+          </tr>
+        `;
+      }).join('') : `<tr><td colspan="6" class="p-4 text-center text-slate-400">No hay documentos en proceso.</td></tr>`;
 
       document.getElementById('table-obsoleto').innerHTML = obsoletos.length ? obsoletos.map(o => `
         <tr class="hover:bg-slate-50 bg-rose-50/40">
@@ -617,28 +787,201 @@
       document.getElementById('list-copias-body').innerHTML = window.cachedCopias.length ? window.cachedCopias.map(c => `
         <tr class="hover:bg-slate-50"><td class="p-2 border font-bold text-amber-900">${c.codigo}</td><td class="p-2 border">${c.doc}</td><td class="p-2 border">${c.area}</td><td class="p-2 border">${c.custodio}</td><td class="p-2 border"><span class="bg-emerald-100 text-emerald-800 px-2 rounded text-[10px] font-bold">ACTIVA</span></td></tr>
       `).join('') : `<tr><td colspan="5" class="p-4 text-center text-slate-400">Sin copias emitidas.</td></tr>`;
+
+      window.renderConfigTablas();
     };
 
-    window.exportarExcelAuditoria = function() {
-      const vigentes = window.cachedDocs.filter(d => d.estado === 'VIGENTE');
-      let htmlTabla = `<table><thead><tr><th>Código</th><th>Versión</th><th>Título del Documento</th><th>Proceso</th><th>Fecha de Aprobación</th><th>Fecha de Vencimiento</th><th>Estado GxP</th></tr></thead><tbody>`;
-      vigentes.forEach(d => {
-        htmlTabla += `<tr><td>${d.codigo}</td><td>v${d.version}</td><td>${d.titulo}</td><td>${d.proceso}</td><td>${d.fechaAprob || 'N/A'}</td><td>${d.fechaVenc || 'N/A'}</td><td>${d.estado}</td></tr>`;
+    window.renderConfigTablas = function() {
+      // 1. Áreas y Procesos
+      document.getElementById('tablaAreasConfig').innerHTML = window.cachedAreas.map(a => `<tr class="border"><td class="p-1.5 border font-mono">${a.id}</td><td class="p-1.5 border font-semibold">${a.nombre}</td></tr>`).join('');
+      document.getElementById('tablaProcesosConfig').innerHTML = window.cachedProcesos.map(p => {
+        const ar = window.cachedAreas.find(a => a.id === p.areaId);
+        return `<tr class="border"><td class="p-1.5 border font-semibold">${p.nombre}</td><td class="p-1.5 border font-mono text-[11px]">${ar ? ar.nombre : 'N/A'}</td></tr>`;
+      }).join('');
+
+      // 2. Empleados
+      document.getElementById('tablaEmpleadosConfig').innerHTML = window.cachedEmpleados.map(e => {
+        const ar = window.cachedAreas.find(a => a.id === e.areaId);
+        return `
+          <tr class="hover:bg-slate-50 font-mono text-xs">
+            <td class="p-2 border">${e.id}</td>
+            <td class="p-2 border font-sans font-semibold">${e.nombres} ${e.apellidos}</td>
+            <td class="p-2 border font-sans">${e.cargo}</td>
+            <td class="p-2 border text-cyan-800">${e.correo}</td>
+            <td class="p-2 border font-sans">${ar ? ar.nombre : 'N/A'}</td>
+            <td class="p-2 border text-center"><span class="bg-emerald-100 text-emerald-800 px-2 rounded font-bold">${e.estado}</span></td>
+            <td class="p-2 border text-center"><button onclick="window.cambiarEstadoEmp(${e.id})" class="bg-amber-50 border text-amber-800 px-2 py-0.5 rounded font-bold cursor-pointer">🔄 Estado</button></td>
+          </tr>
+        `;
+      }).join('');
+
+      // 3. Roles
+      document.getElementById('tablaRolesConfig').innerHTML = window.cachedRoles.map(r => `
+        <tr class="hover:bg-slate-50 font-mono text-xs">
+          <td class="p-2 border font-bold text-slate-700">${r.id}</td>
+          <td class="p-2 border font-sans font-semibold">${r.nombre}</td>
+          <td class="p-2 border font-sans text-slate-600">${r.desc}</td>
+        </tr>
+      `).join('');
+
+      // 4. Matriz Permisos
+      document.getElementById('tablaMatrizConfig').innerHTML = window.cachedRoles.map(r => {
+        const m = window.cachedMatrizPermisos[r.id] || {};
+        return `
+          <tr class="hover:bg-slate-50 text-xs">
+            <td class="p-2 border text-left font-bold font-sans">${r.nombre}</td>
+            <td class="p-2 border">${m.lectura ? '✅' : '❌'}</td>
+            <td class="p-2 border">${m.crearEdicion ? '✅' : '❌'}</td>
+            <td class="p-2 border">${m.revision ? '✅' : '❌'}</td>
+            <td class="p-2 border">${m.aprolacionFirma || m.aprobacionFirma ? '✅' : '❌'}</td>
+            <td class="p-2 border">${m.administracion ? '✅' : '❌'}</td>
+          </tr>
+        `;
+      }).join('');
+
+      // 5. Usuarios
+      document.getElementById('tablaUsuariosConfig').innerHTML = window.cachedUsuarios.map(u => {
+        const emp = window.cachedEmpleados.find(e => e.id === u.empleadoId);
+        const rol = window.cachedRoles.find(r => r.id === u.rolId);
+        const areasStr = u.areasAsignadas.map(aid => {
+          const ar = window.cachedAreas.find(a => a.id === aid);
+          return ar ? ar.nombre : aid;
+        }).join(', ');
+        return `
+          <tr class="hover:bg-slate-50 font-mono text-xs">
+            <td class="p-2 border">${u.id}</td>
+            <td class="p-2 border font-sans font-semibold">${emp ? emp.nombres + ' ' + emp.apellidos : 'Sin Empleado'}</td>
+            <td class="p-2 border text-cyan-800">${u.correo}</td>
+            <td class="p-2 border font-sans"><span class="bg-purple-100 text-purple-800 px-2 py-0.5 rounded font-bold">${rol ? rol.nombre : u.rolId}</span></td>
+            <td class="p-2 border font-sans text-[11px] text-slate-600">${areasStr}</td>
+            <td class="p-2 border text-center"><span class="bg-emerald-100 text-emerald-800 px-2 rounded font-bold">${u.estado}</span></td>
+            <td class="p-2 border text-center"><button onclick="window.cambiarEstadoUsr(${u.id})" class="bg-amber-50 border text-amber-800 px-2 py-0.5 rounded font-bold cursor-pointer">🔄 Estado</button></td>
+          </tr>
+        `;
+      }).join('');
+
+      // Poblar selects de modales
+      const selProc = document.getElementById('createDocProcesoSelect');
+      if(selProc) selProc.innerHTML = window.cachedProcesos.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
+
+      const selArea = document.getElementById('selectProcesoArea');
+      if(selArea) selArea.innerHTML = window.cachedAreas.map(a => `<option value="${a.id}">${a.nombre}</option>`).join('');
+
+      const selEmpArea = document.getElementById('empAreaSelect');
+      if(selEmpArea) selEmpArea.innerHTML = window.cachedAreas.map(a => `<option value="${a.id}">${a.nombre}</option>`).join('');
+
+      const selCop = document.getElementById('copiaAreaSelect');
+      if(selCop) selCop.innerHTML = window.cachedAreas.map(a => `<option value="${a.nombre}">${a.nombre}</option>`).join('');
+
+      const selUsrEmp = document.getElementById('usrEmpSelect');
+      if(selUsrEmp) selUsrEmp.innerHTML = window.cachedEmpleados.map(e => `<option value="${e.id}">${e.nombres} ${e.apellidos} (${e.correo})</option>`).join('');
+
+      const selUsrRol = document.getElementById('usrRolSelect');
+      if(selUsrRol) selUsrRol.innerHTML = window.cachedRoles.map(r => `<option value="${r.id}">${r.nombre}</option>`).join('');
+    };
+
+    // -------------------------------------------------------------------------
+    // FUNCIONES DE CONFIGURACIÓN Y GESTIÓN DINÁMICA (Pasos 1 al 5)
+    // -------------------------------------------------------------------------
+    window.abrirModalArea = () => window.toggleModal('modalArea', true);
+    window.guardarNuevaArea = function() {
+      const nom = document.getElementById('inputAreaNombre').value.trim();
+      if(!nom) { alert("Ingrese el nombre del área."); return; }
+      const id = 'ar_' + Date.now();
+      window.cachedAreas.push({ id, nombre: nom });
+      window.registrarAuditTrail(window.activeGxpUser.correo, 'CREATE_AREA', `Creación de área organizacional: ${nom}`);
+      window.toggleModal('modalArea', false);
+      window.renderAllData();
+    };
+
+    window.abrirModalProceso = () => window.toggleModal('modalProceso', true);
+    window.guardarNuevoProceso = function() {
+      const nom = document.getElementById('inputProcesoNombre').value.trim();
+      const areaId = document.getElementById('selectProcesoArea').value;
+      if(!nom) { alert("Ingrese nombre del proceso."); return; }
+      const id = 'pr_' + Date.now();
+      window.cachedProcesos.push({ id, nombre: nom, areaId });
+      window.registrarAuditTrail(window.activeGxpUser.correo, 'CREATE_PROCESO', `Creación de proceso GxP: ${nom}`);
+      window.toggleModal('modalProceso', false);
+      window.renderAllData();
+    };
+
+    window.abrirModalEmpleado = () => window.toggleModal('modalEmpleado', true);
+    window.guardarNuevoEmpleado = function() {
+      const nombres = document.getElementById('empNombres').value.trim();
+      const apellidos = document.getElementById('empApellidos').value.trim();
+      const cargo = document.getElementById('empCargo').value.trim();
+      const correo = document.getElementById('empCorreo').value.trim();
+      const areaId = document.getElementById('empAreaSelect').value;
+
+      if(!nombres || !correo) { alert("Complete campos obligatorios del empleado."); return; }
+      const id = window.cachedEmpleados.length + 1;
+      window.cachedEmpleados.push({ id, nombres, apellidos, cargo, correo, areaId, estado: 'Activo' });
+      window.registrarAuditTrail(window.activeGxpUser.correo, 'CREATE_EMPLOYEE', `Registro de empleado: ${nombres} ${apellidos} (${correo})`);
+      window.toggleModal('modalEmpleado', false);
+      window.renderAllData();
+    };
+
+    window.abrirModalRol = () => window.toggleModal('modalRol', true);
+    window.guardarNuevoRol = function() {
+      const id = document.getElementById('rolIdInput').value.trim();
+      const nombre = document.getElementById('rolNombreInput').value.trim();
+      const desc = document.getElementById('rolDescInput').value.trim();
+      if(!id || !nombre) { alert("Complete ID y nombre del rol."); return; }
+      window.cachedRoles.push({ id, nombre, desc });
+      window.cachedMatrizPermisos[id] = { lectura: true, crearEdicion: false, revision: false, aprobacionFirma: false, administracion: false };
+      window.registrarAuditTrail(window.activeGxpUser.correo, 'CREATE_ROLE', `Creación de rol GxP: ${nombre}`);
+      window.toggleModal('modalRol', false);
+      window.renderAllData();
+    };
+
+    window.abrirModalUsuario = () => window.toggleModal('modalUsuario', true);
+    window.guardarAsignacionUsuario = function() {
+      const empId = parseInt(document.getElementById('usrEmpSelect').value);
+      const password = document.getElementById('usrPasswordInput').value.trim();
+      const rolId = document.getElementById('usrRolSelect').value;
+
+      const emp = window.cachedEmpleados.find(e => e.id === empId);
+      if(!emp) return;
+
+      const id = window.cachedUsuarios.length + 1;
+      window.cachedUsuarios.push({
+        id, empleadoId: empId, correo: emp.correo, password, rolId, areasAsignadas: [emp.areaId], estado: 'Activo'
       });
-      htmlTabla += `</tbody></table>`;
-      const blob = new Blob(['\ufeff' + htmlTabla], { type: 'application/vnd.ms-excel' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = `Listado_Maestro_Pharmor_${new Date().toISOString().split('T')[0]}.xls`;
-      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      window.registrarAuditTrail(window.activeGxpUser.correo, 'ASSIGN_USER', `Asignación de credenciales y rol ${rolId} a ${emp.correo}`);
+      window.toggleModal('modalUsuario', false);
+      window.renderAllData();
     };
 
+    window.cambiarEstadoEmp = function(id) {
+      const emp = window.cachedEmpleados.find(e => e.id === id);
+      if(emp) {
+        emp.estado = emp.estado === 'Activo' ? 'Inactivo' : 'Activo';
+        window.registrarAuditTrail(window.activeGxpUser.correo, 'TOGGLE_EMPLOYEE', `Cambio de estado empleado ${emp.correo} a ${emp.estado}`);
+        window.renderAllData();
+      }
+    };
+
+    window.cambiarEstadoUsr = function(id) {
+      const usr = window.cachedUsuarios.find(u => u.id === id);
+      if(usr) {
+        usr.estado = usr.estado === 'Activo' ? 'Inactivo' : 'Activo';
+        window.registrarAuditTrail(window.activeGxpUser.correo, 'TOGGLE_USER', `Cambio de estado usuario ${usr.correo} a ${usr.estado}`);
+        window.renderAllData();
+      }
+    };
+
+    // -------------------------------------------------------------------------
+    // FLUJO DOCUMENTAL Y FIRMA ELECTRÓNICA 21 CFR PART 11
+    // -------------------------------------------------------------------------
     window.viewDocument = function(docId) {
       let doc = window.cachedDocs.find(x => x.id === docId) || window.cachedObsoletos.find(x => x.id === docId);
       if (!doc || !doc.archivo_url) { alert("Este documento no cuenta con un archivo PDF adjunto."); return; }
       document.getElementById('pdfViewerTitle').innerText = `${doc.codigo} v${doc.version} - ${doc.titulo} [${doc.estado}]`;
       const viewerArea = document.getElementById('pdfViewerArea');
-      if (window.activeGxpUser.rol === 'ADMIN_QA') {
+      
+      const rolMatriz = window.cachedMatrizPermisos[window.activeGxpUser.rolId] || {};
+      if (rolMatriz.administracion || window.activeGxpUser.rolId === 'rol_admin') {
         viewerArea.innerHTML = `<iframe src="${doc.archivo_url}" class="w-full h-full border-0"></iframe>`;
       } else {
         viewerArea.innerHTML = `<div class="read-only-shield" oncontextmenu="return false;"></div><iframe src="${doc.archivo_url}#toolbar=0&navpanes=0&scrollbar=0" class="w-full h-full border-0 pointer-events-none"></iframe>`;
@@ -646,15 +989,73 @@
       window.toggleModal('modalExportPdf', true);
     };
 
-    window.avanzarWorkflow = function(docId) {
+    window.iniciarFirmaElectronica = function(docId) {
       const doc = window.cachedDocs.find(x => x.id === docId);
       if(!doc) return;
-      const pin = prompt(`Firma Electrónica Part 11 para "${doc.titulo}". Ingrese PIN de seguridad (Prueba: 1234):`);
-      if(pin !== '1234') { alert("PIN incorrecto. Firma rechazada."); return; }
-      if(doc.fase === 'Elaboración') { doc.fase = 'Revisión'; alert("Pasa a REVISIÓN."); }
-      else if(doc.fase === 'Revisión') { doc.fase = 'Aprobación'; alert("Pasa a APROBACIÓN."); }
-      else if(doc.fase === 'Aprobación') { doc.fase = 'Aprobado'; doc.estado = 'VIGENTE'; alert("Documento VIGENTE."); }
+
+      // Validación GAMP 5 de Segregación de Funciones / Permisos por Área
+      const rolMatriz = window.cachedMatrizPermisos[window.activeGxpUser.rolId] || {};
+      if (!rolMatriz.aprobacionFirma) {
+        alert("Acción Denegada (Least Privilege): Su rol actual no tiene privilegios de Aprobación y Firma Electrónica.");
+        return;
+      }
+
+      document.getElementById('firmaDocId').value = docId;
+      document.getElementById('firmaUserEmail').value = window.activeGxpUser.correo;
+      document.getElementById('firmaUserPassword').value = '';
+      document.getElementById('firmaInfoDoc').innerText = `${doc.codigo} v${doc.version} - ${doc.titulo}`;
+      window.toggleModal('modalFirmaPart11', true);
+    };
+
+    window.procesarFirmaElectronica = function() {
+      const docId = document.getElementById('firmaDocId').value;
+      const email = document.getElementById('firmaUserEmail').value.trim();
+      const pass = document.getElementById('firmaUserPassword').value.trim();
+      const significado = document.getElementById('firmaSignificado').value;
+
+      const doc = window.cachedDocs.find(x => x.id === docId);
+      if(!doc) return;
+
+      // Re-autenticación estricta 21 CFR Part 11
+      const userAuth = window.cachedUsuarios.find(u => u.correo.toLowerCase() === email.toLowerCase() && u.password === pass && u.estado === 'Activo');
+      if(!userAuth) {
+        alert("Falla de Autenticación Part 11: Credenciales inválidas o usuario inactivo.");
+        return;
+      }
+
+      if(doc.fase === 'Elaboración') {
+        doc.fase = 'Revisión';
+        alert("Documento firmado electrónicamente. Pasa a estado de REVISIÓN.");
+      } else if(doc.fase === 'Revisión') {
+        doc.fase = 'Aprobación';
+        alert("Documento firmado electrónicamente. Pasa a estado de APROBACIÓN.");
+      } else if(doc.fase === 'Aprobación') {
+        doc.fase = 'Aprobado';
+        doc.estado = 'VIGENTE';
+        alert("Firma de Autorización Final exitosa. El documento es ahora VIGENTE.");
+      }
+
+      const emp = window.cachedEmpleados.find(e => e.id === userAuth.empleadoId);
+      const nombreFirmante = emp ? `${emp.nombres} ${emp.apellidos}` : userAuth.correo;
+      window.registrarAuditTrail(userAuth.correo, 'ELECTRONIC_SIGNATURE', `Firma Part 11 [${significado}] aplicada por ${nombreFirmante} sobre documento ${doc.codigo} v${doc.version}`);
+      
+      window.toggleModal('modalFirmaPart11', false);
       window.renderAllData();
+    };
+
+    window.exportarExcelAuditoria = function() {
+      const vigentes = window.cachedDocs.filter(d => d.estado === 'VIGENTE');
+      let htmlTabla = `<table><thead><tr><th>Código</th><th>Versión</th><th>Título del Documento</th><th>Proceso</th><th>Fecha de Aprobación</th><th>Fecha de Vencimiento</th><th>Estado GxP</th></tr></thead><tbody>`;
+      vigentes.forEach(d => {
+        const p = window.cachedProcesos.find(x => x.id === d.procesoId);
+        htmlTabla += `<tr><td>${d.codigo}</td><td>v${d.version}</td><td>${d.titulo}</td><td>${p ? p.nombre : 'N/A'}</td><td>${d.fechaAprob || 'N/A'}</td><td>${d.fechaVenc || 'N/A'}</td><td>${d.estado}</td></tr>`;
+      });
+      htmlTabla += `</tbody></table>`;
+      const blob = new Blob(['\ufeff' + htmlTabla], { type: 'application/vnd.ms-excel' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `Listado_Maestro_Pharmor_${new Date().toISOString().split('T')[0]}.xls`;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
     };
 
     window.abrirModalEmitir = function(docId) { window.selectedDocId = docId; window.toggleModal('modalEmitirCopia', true); };
@@ -693,7 +1094,7 @@
       } catch (err) {
         console.error(err); alert("Error al procesar la inyección PDF con la librería externa.");
       } finally {
-        btn.innerText = "Generar e Imprimir Copia"; btn.disabled = false;
+        btn.innerText = "Generar e Imprimir"; btn.disabled = false;
       }
     };
 
@@ -710,12 +1111,17 @@
       const ver = document.getElementById('createDocVer').value;
       const fechaAprob = document.getElementById('createDocFechaAprob').value;
       const fechaVenc = document.getElementById('createDocFechaVenc').value;
-      const proceso = document.getElementById('createDocProceso').value;
+      const procesoId = document.getElementById('createDocProcesoSelect').value;
 
-      if (!title || !code || !ver) { alert("Complete los campos obligatorios."); return; }
+      const proc = window.cachedProcesos.find(p => p.id === procesoId);
+      if (!title || !code || !ver || !proc) { alert("Complete los campos obligatorios y seleccione un proceso GxP."); return; }
 
-      window.cachedDocs.push({ id: `doc_${Date.now()}`, codigo: code, titulo: title, version: ver, estado: 'PROCESO', fase: 'Elaboración', proceso: proceso, fechaAprob: fechaAprob, fechaVenc: fechaVenc, archivo_url: 'https://pdfobject.com/pdf/sample.pdf', motivo_cambio: 'Creación inicial' });
-      alert("Documento creado en estado Borrador.");
+      window.cachedDocs.push({
+        id: `doc_${Date.now()}`, codigo: code, titulo: title, version: ver, estado: 'PROCESO', fase: 'Elaboración', procesoId: procesoId, areaId: proc.areaId, fechaAprob: fechaAprob, fechaVenc: fechaVenc, archivo_url: 'https://pdfobject.com/pdf/sample.pdf', motivo_cambio: 'Creación inicial'
+      });
+
+      window.registrarAuditTrail(window.activeGxpUser.correo, 'CREATE_DOC', `Creación de borrador documental ${code} v${ver} amarrado al proceso ${proc.nombre}`);
+      alert("Documento creado en estado Borrador amarrado al proceso correspondiente.");
       window.toggleModal('modalDoc', false);
       window.renderAllData();
     };
@@ -725,9 +1131,6 @@
       const vigentes = window.cachedDocs.filter(d => d.estado === 'VIGENTE');
       select.innerHTML = vigentes.map(d => `<option value="${d.id}">${d.codigo} v${d.version} - ${d.titulo}</option>`).join('');
       window.cargarDatosVersionBase();
-      document.getElementById('verFechaAprob').value = new Date().toISOString().split('T')[0];
-      const unAno = new Date(); unAno.setFullYear(unAno.getFullYear() + 2);
-      document.getElementById('verFechaVenc').value = unAno.toISOString().split('T')[0];
       window.toggleModal('modalVersion', true);
     };
 
@@ -746,92 +1149,27 @@
       const baseId = document.getElementById('versionDocSelect').value;
       const newTitle = document.getElementById('verNewTitle').value;
       const newVer = document.getElementById('verNewNumber').value;
-      const fechaAprob = document.getElementById('verFechaAprob').value;
-      const fechaVenc = document.getElementById('verFechaVenc').value;
       const reason = document.getElementById('verChangeReason').value;
 
-      if(!reason) { alert("Justificación de cambio obligatoria."); return; }
+      if(!reason) { alert("Justificación de cambio obligatoria (Control de Cambios GxP)."); return; }
 
       const docIndex = window.cachedDocs.findIndex(x => x.id === baseId);
       if(docIndex === -1) return;
       const oldDoc = window.cachedDocs[docIndex];
 
-      window.cachedObsoletos.unshift({ id: oldDoc.id, codigo: oldDoc.codigo, titulo: oldDoc.titulo, version: oldDoc.version, estado: 'OBSOLETO', motivo_cambio: reason, archivo_url: oldDoc.archivo_url });
-      window.cachedDocs.push({ id: `doc_${Date.now()}`, codigo: oldDoc.codigo, titulo: newTitle, version: newVer, estado: 'PROCESO', fase: 'Elaboración', proceso: oldDoc.proceso, fechaAprob: fechaAprob, fechaVenc: fechaVenc, archivo_url: oldDoc.archivo_url, motivo_cambio: reason });
-      window.cachedDocs.splice(docIndex, 1);
+      window.cachedObsoletos.unshift({
+        id: oldDoc.id, codigo: oldDoc.codigo, titulo: oldDoc.titulo, version: oldDoc.version, estado: 'OBSOLETO', motivo_cambio: reason, archivo_url: oldDoc.archivo_url
+      });
 
-      alert(`Nueva Versión v${newVer} en flujo de aprobación. La versión anterior pasó a Obsoletos.`);
+      window.cachedDocs.push({
+        id: `doc_${Date.now()}`, codigo: oldDoc.codigo, titulo: newTitle, version: newVer, estado: 'PROCESO', fase: 'Elaboración', procesoId: oldDoc.procesoId, areaId: oldDoc.areaId, fechaAprob: new Date().toISOString().split('T')[0], fechaVenc: oldDoc.fechaVenc, archivo_url: oldDoc.archivo_url, motivo_cambio: reason
+      });
+
+      window.cachedDocs.splice(docIndex, 1);
+      window.registrarAuditTrail(window.activeGxpUser.correo, 'NEW_VERSION', `Generación de versión v${newVer} para ${oldDoc.codigo}. Versión anterior v${oldDoc.version} pasada a obsoleto.`);
+      alert(`Versión v${newVer} en flujo. La versión anterior pasó a Obsoletos.`);
       window.toggleModal('modalVersion', false);
       window.renderAllData();
-    };
-
-    window.renderUsuariosConfig = function() {
-      const tbody = document.getElementById('tablaUsuariosConfig');
-      tbody.innerHTML = window.cachedUsuarios.map((u, idx) => `
-        <tr class="hover:bg-slate-50 font-mono text-xs">
-          <td class="p-2 border">${u.id}</td>
-          <td class="p-2 border font-sans font-semibold">${u.nombres} ${u.apellidos}</td>
-          <td class="p-2 border text-cyan-800">${u.correo}</td>
-          <td class="p-2 border font-sans">${u.cargo}</td>
-          <td class="p-2 border"><span class="bg-purple-100 text-purple-800 px-2 py-0.5 rounded font-bold text-[10px]">${u.rol}</span></td>
-          <td class="p-2 border text-center"><span class="bg-emerald-100 text-emerald-800 px-2 rounded text-[10px] font-bold">${u.estado}</span></td>
-          <td class="p-2 border text-center font-sans space-x-1">
-            <button onclick="window.editarUsuarioConfig(${idx})" class="bg-slate-100 border px-2 py-0.5 rounded font-bold text-slate-700 cursor-pointer">✏️ Editar</button>
-            <button onclick="window.toggleEstadoUsuario(${idx})" class="bg-amber-50 border text-amber-800 px-2 py-0.5 rounded font-bold cursor-pointer">🔄 Estado</button>
-          </td>
-        </tr>
-      `).join('');
-    };
-
-    window.abrirModalUsuario = function() {
-      document.getElementById('usrIndex').value = '-1';
-      document.getElementById('usrNombres').value = '';
-      document.getElementById('usrApellidos').value = '';
-      document.getElementById('usrCorreo').value = '';
-      document.getElementById('usrPassword').value = '';
-      document.getElementById('usrCargo').value = 'Analista';
-      document.getElementById('usrRol').value = 'LECTOR';
-      document.getElementById('usrEstado').value = 'Activo';
-      window.toggleModal('modalUsuario', true);
-    };
-
-    window.editarUsuarioConfig = function(idx) {
-      const u = window.cachedUsuarios[idx];
-      document.getElementById('usrIndex').value = idx;
-      document.getElementById('usrNombres').value = u.nombres;
-      document.getElementById('usrApellidos').value = u.apellidos;
-      document.getElementById('usrCorreo').value = u.correo;
-      document.getElementById('usrPassword').value = u.password;
-      document.getElementById('usrCargo').value = u.cargo;
-      document.getElementById('usrRol').value = u.rol;
-      document.getElementById('usrEstado').value = u.estado;
-      window.toggleModal('modalUsuario', true);
-    };
-
-    window.guardarUsuarioConfig = function() {
-      const idx = parseInt(document.getElementById('usrIndex').value);
-      const nombres = document.getElementById('usrNombres').value.trim();
-      const apellidos = document.getElementById('usrApellidos').value.trim();
-      const correo = document.getElementById('usrCorreo').value.trim();
-      const password = document.getElementById('usrPassword').value.trim();
-      const cargo = document.getElementById('usrCargo').value.trim();
-      const rol = document.getElementById('usrRol').value;
-      const estado = document.getElementById('usrEstado').value;
-
-      if (!nombres || !correo || !password) { alert("Complete campos obligatorios."); return; }
-
-      if (idx === -1) {
-        window.cachedUsuarios.push({ id: window.cachedUsuarios.length + 1, nombres, apellidos, correo, password, cargo, rol, estado });
-      } else {
-        window.cachedUsuarios[idx] = { ...window.cachedUsuarios[idx], nombres, apellidos, correo, password, cargo, rol, estado };
-      }
-      window.toggleModal('modalUsuario', false);
-      window.renderUsuariosConfig();
-    };
-
-    window.toggleEstadoUsuario = function(idx) {
-      window.cachedUsuarios[idx].estado = window.cachedUsuarios[idx].estado === 'Activo' ? 'Inactivo' : 'Activo';
-      window.renderUsuariosConfig();
     };
   </script>
 </body>
