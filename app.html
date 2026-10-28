@@ -115,7 +115,7 @@
         <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex justify-between items-center">
           <div>
             <h1 class="text-base font-bold text-slate-900">Estado del Sistema de Gestión de Calidad (En Vivo)</h1>
-            <p class="text-xs text-slate-500">Integridad de datos ALCOA+ y Supabase Auth Activo</p>
+            <p class="text-xs text-slate-500">Integridad de datos ALCOA+ y Supabase Storage Conectado</p>
           </div>
           <span class="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">21 CFR Part 11 / EU Annex 11</span>
         </div>
@@ -148,7 +148,7 @@
         <div class="flex justify-between items-center mb-3">
           <div>
             <h2 class="font-bold text-slate-800 text-sm">Gestión Documental & Workflows</h2>
-            <p class="text-xs text-slate-500">Control de versiones, subida de archivos y exportación PDF oficial</p>
+            <p class="text-xs text-slate-500">Control de versiones, almacenamiento en Supabase y exportación PDF oficial</p>
           </div>
           <button type="button" id="btn-open-modal-doc" class="bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow cursor-pointer">+ Solicitud / Nuevo Documento</button>
         </div>
@@ -351,7 +351,7 @@
     </div>
   </div>
 
-  <!-- MODAL NUEVA VERSIÓN -->
+  <!-- MODAL NUEVA VERSIÓN (CON SUPABASE STORAGE INTEGRADO) -->
   <div id="modalVersion" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
     <div class="bg-white rounded-xl max-w-lg w-full p-5 border shadow-2xl space-y-3">
       <div class="border-b pb-2 flex justify-between items-center">
@@ -373,7 +373,7 @@
 
       <div class="flex justify-end space-x-2 pt-2 border-t">
         <button type="button" id="btn-close-version" class="px-3 py-1 border rounded text-xs cursor-pointer">Cancelar</button>
-        <button type="button" id="btn-confirmar-version" class="px-4 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white rounded text-xs font-bold shadow cursor-pointer">Generar Versión & Pasar a Borrador</button>
+        <button type="button" id="btn-confirmar-version" class="px-4 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white rounded text-xs font-bold shadow cursor-pointer">Subir a Storage & Generar Versión</button>
       </div>
     </div>
   </div>
@@ -429,8 +429,13 @@
     </div>
   </div>
 
-  <!-- SCRIPT CON LISTENERS SEGUROS (SIN DEPENDER DE ONCLICK GLOBAL) -->
+  <!-- SCRIPT CON SUPABASE STORAGE CONECTADO -->
   <script>
+    // Configuración del cliente Supabase (Reemplaza con tus credenciales institucionales)
+    const SUPABASE_URL = 'https://tu-proyecto.supabase.co'; 
+    const SUPABASE_ANON_KEY = 'tu-clave-anon-aqui';          
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
     window.activeGxpUser = { id: 'b40e33f1-6196-4b51-bfcb-6604d6daff50', nombre_completo: 'Johan Aguilar', cargo: 'QA Lead' };
 
     window.cachedDocs = [
@@ -456,6 +461,35 @@
       if (m) {
         if (show) m.classList.add('active'); else m.classList.remove('active');
       }
+    }
+
+    // Función para subir archivos reales al Bucket 'documentos-gxp' de Supabase Storage
+    async function subirArchivoSupabase(fileInputId, codigoDoc, versionDoc) {
+      const fileInput = document.getElementById(fileInputId);
+      if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+        return ''; 
+      }
+
+      const file = fileInput.files[0];
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${codigoDoc}_v${versionDoc}_${Date.now()}.${fileExt}`;
+      const filePath = `qms-files/${fileName}`;
+
+      const { data, error } = await supabaseClient.storage
+        .from('documentos-gxp')
+        .upload(filePath, file);
+
+      if (error) {
+        console.error('Error al subir a Supabase Storage:', error);
+        alert('Error al adjuntar el archivo digital en la nube.');
+        return '';
+      }
+
+      const { data: publicURLData } = supabaseClient.storage
+        .from('documentos-gxp')
+        .getPublicUrl(filePath);
+
+      return publicURLData.publicUrl;
     }
 
     function abrirPortal(user) {
@@ -725,14 +759,33 @@
         renderAllData();
       });
 
-      // CONFIRMAR NUEVA VERSIÓN
-      document.getElementById('btn-confirmar-version').addEventListener('click', function() {
+      // CONFIRMAR NUEVA VERSIÓN Y SUBIDA A SUPABASE STORAGE
+      document.getElementById('btn-confirmar-version').addEventListener('click', async function() {
         const newVersion = document.getElementById('newVerNumber').value;
         const reason = document.getElementById('changeReason').value;
 
         if (!newVersion || !reason) {
           alert('Debes definir la nueva versión y justificar el cambio.');
           return;
+        }
+
+        // 1. Sube el archivo adjunto al bucket 'documentos-gxp' de Supabase Storage
+        const fileUrl = await subirArchivoSupabase('newVerFile', window.selectedDocForVersion.code, newVersion);
+
+        // 2. Actualiza la lista local o base de datos con el archivo vinculado
+        const targetDoc = window.cachedDocs.find(d => d.id === window.selectedDocForVersion.id);
+        if (targetDoc) {
+          window.cachedDocs.unshift({
+            id: `doc_${Date.now()}`,
+            codigo: targetDoc.codigo,
+            titulo: targetDoc.titulo,
+            tipo: targetDoc.tipo,
+            version: newVersion,
+            estado: 'En Revisión',
+            created_at: new Date().toISOString().split('T')[0],
+            archivo_url: fileUrl,
+            justificacion_cambio: reason
+          });
         }
 
         if (window.selectedDocForVersion) {
@@ -743,7 +796,7 @@
           });
         }
 
-        alert(`Nueva versión v${newVersion} creada en Borrador.`);
+        alert(`Nueva versión v${newVersion} creada y archivo vinculado con éxito desde Supabase Storage.`);
         toggleModal('modalVersion', false);
         renderAllData();
       });
