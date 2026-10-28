@@ -29,30 +29,11 @@
       background: transparent;
     }
   </style>
-
-  <!-- BASE DE DATOS LOCAL GLOBAL (Se carga antes que todo) -->
-  <script>
-    window.activeGxpUser = null;
-    window.selectedDocId = null;
-
-    window.cachedUsuarios = [
-      { id: 1, nombres: 'Johan Sebastian', apellidos: 'Aguilar Rojas', correo: 'j.aguilar@pharmor.com.co', password: '123', cargo: 'QA Lead', rol: 'ADMIN_QA', estado: 'Activo' },
-      { id: 2, nombres: 'Carlos', apellidos: 'Mendoza', correo: 'c.mendoza@pharmor.com.co', password: '123', cargo: 'Operario de Producción', rol: 'LECTOR', estado: 'Activo' }
-    ];
-
-    window.cachedDocs = [
-      { id: '1', codigo: 'PH-GPD-F0-01', titulo: 'Lista de Chequeo Batch y Liberación de PT', version: '2.0', estado: 'VIGENTE', fase: 'Aprobado', proceso: 'Gestión de Aseguramiento de Calidad', fechaAprob: '2025-10-15', fechaVenc: '2027-10-15', archivo_url: 'https://pdfobject.com/pdf/sample.pdf', motivo_cambio: 'Creación Inicial' },
-      { id: '2', codigo: 'SOP-PRO-012', titulo: 'Limpieza e Higienización de Áreas Limpias', version: '2.1', estado: 'VIGENTE', fase: 'Aprobado', proceso: 'Planta de Producción', fechaAprob: '2025-09-01', fechaVenc: '2026-09-01', archivo_url: '', motivo_cambio: 'Creación Inicial' },
-      { id: '3', codigo: 'SOP-QA-005', titulo: 'Control Ambiental en Zonas Clasificadas', version: '1.0', estado: 'PROCESO', fase: 'Elaboración', proceso: 'Gestión de Aseguramiento de Calidad', fechaAprob: '', fechaVenc: '', archivo_url: 'https://pdfobject.com/pdf/sample.pdf', motivo_cambio: 'Borrador inicial' }
-    ];
-    window.cachedCopias = [];
-    window.cachedObsoletos = [];
-  </script>
 </head>
 <body class="bg-slate-50 text-slate-800 p-4">
 
   <!-- ========================================================================= -->
-  <!-- MÓDULO DE LOGIN (ESTRUCTURA BLINDADA)                                     -->
+  <!-- 1. PANTALLA DE LOGIN INSTITUCIONAL -->
   <!-- ========================================================================= -->
   <div id="view-login" class="min-h-[80vh] flex items-center justify-center">
     <div class="bg-white p-8 rounded-2xl shadow-xl border border-slate-200 max-w-md w-full space-y-5 relative">
@@ -71,7 +52,6 @@
           <input type="password" id="loginPassword" value="123" class="w-full p-2.5 border rounded-lg text-xs font-mono bg-slate-50 focus:bg-white outline-none focus:ring-2 focus:ring-cyan-500 transition-all" />
         </div>
 
-        <!-- Botones enlazados directamente a window para máxima estabilidad -->
         <button type="button" onclick="window.ejecutarLoginPrincipal()" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2.5 rounded-lg text-xs shadow transition-colors cursor-pointer">
           Iniciar Sesión Segura (21 CFR Part 11)
         </button>
@@ -89,71 +69,9 @@
     </div>
   </div>
 
-  <!-- SCRIPT AISLADO ÚNICAMENTE PARA EL LOGIN (Evita que otros errores lo rompan) -->
-  <script>
-    window.iniciarPortalVisual = function() {
-      try {
-        document.getElementById('view-login').style.display = 'none';
-        document.getElementById('app-portal').style.display = 'block';
-        document.getElementById('userBadge').innerText = `${window.activeGxpUser.nombre} (${window.activeGxpUser.cargo})`;
-
-        const isAdmin = window.activeGxpUser.rol === 'ADMIN_QA';
-        document.querySelectorAll('.admin-only').forEach(el => { el.style.display = isAdmin ? 'block' : 'none'; });
-
-        document.querySelector('[data-tab="documentos"]').click();
-        
-        // Llamado seguro a las funciones de renderizado
-        if(typeof window.renderAllData === 'function') window.renderAllData();
-        if(typeof window.renderUsuariosConfig === 'function') window.renderUsuariosConfig();
-        
-      } catch (error) {
-        console.error("Error al arrancar el ERP:", error);
-        alert("El Login funcionó, pero hubo un error al cargar el Dashboard. Revisa la consola (F12).");
-      }
-    };
-
-    window.ejecutarLoginPrincipal = function() {
-      try {
-        const emailInput = document.getElementById('loginEmail').value.trim();
-        const passInput = document.getElementById('loginPassword').value.trim();
-
-        const usuarioEncontrado = window.cachedUsuarios.find(u => 
-          u.correo.toLowerCase() === emailInput.toLowerCase() && 
-          u.password === passInput && 
-          u.estado === 'Activo'
-        );
-
-        if (!usuarioEncontrado) {
-          alert("Credenciales incorrectas o usuario inactivo. Verifique su correo corporativo y contraseña.");
-          return;
-        }
-
-        window.activeGxpUser = {
-          nombre: `${usuarioEncontrado.nombres} ${usuarioEncontrado.apellidos}`,
-          rol: usuarioEncontrado.rol,
-          cargo: usuarioEncontrado.cargo,
-          correo: usuarioEncontrado.correo
-        };
-        window.iniciarPortalVisual();
-      } catch (e) {
-        console.error("Error en Login:", e);
-        alert("Error crítico ejecutando el login.");
-      }
-    };
-
-    window.ejecutarLoginAdmin = function() {
-      window.activeGxpUser = { nombre: 'Johan Aguilar Rojas', rol: 'ADMIN_QA', cargo: 'QA Lead', correo: 'j.aguilar@pharmor.com.co' };
-      window.iniciarPortalVisual();
-    };
-
-    window.ejecutarLoginOperador = function() {
-      window.activeGxpUser = { nombre: 'Carlos Mendoza', rol: 'LECTOR', cargo: 'Operario de Planta', correo: 'c.mendoza@pharmor.com.co' };
-      window.iniciarPortalVisual();
-    };
-  </script>
   <!-- ========================================================================= -->
-
-  <!-- APLICACIÓN PRINCIPAL -->
+  <!-- 2. APLICACIÓN PRINCIPAL (ERP) -->
+  <!-- ========================================================================= -->
   <div id="app-portal" class="hidden">
     <header class="bg-slate-900 text-white p-4 rounded-xl shadow-lg border-b-2 border-cyan-500 mb-4 flex justify-between items-center">
       <div>
@@ -183,14 +101,14 @@
     </nav>
 
     <main>
-      <!-- DASHBOARD -->
+      <!-- MÓDULO: DASHBOARD -->
       <div id="view-dashboard" class="tab-content active space-y-4">
         <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex justify-between items-center">
           <div>
             <h1 class="text-base font-bold text-slate-900">Estado del Sistema de Gestión de Calidad (En Vivo)</h1>
             <p class="text-xs text-slate-500">Integridad de datos ALCOA+ y Supabase Storage Conectado</p>
           </div>
-          <span class="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">21 CFR Part 11 / Anexo 11 EU</span>
+          <span class="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">21 CFR Part 11</span>
         </div>
 
         <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -217,7 +135,7 @@
         </div>
       </div>
 
-      <!-- GESTIÓN DOCUMENTAL (LISTADO ÚNICO Y SOPORTE DE AUDITORÍA EXCEL) -->
+      <!-- MÓDULO: GESTIÓN DOCUMENTAL -->
       <div id="view-documentos" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-4">
         
         <div class="flex space-x-1 border-b pb-2 overflow-x-auto text-xs font-semibold">
@@ -302,7 +220,7 @@
         </div>
       </div>
 
-      <!-- COPIAS CONTROLADAS (ADMIN ONLY) -->
+      <!-- MÓDULO: COPIAS CONTROLADAS -->
       <div id="view-copias" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-4">
         <div class="flex justify-between items-center border-b pb-3">
           <div>
@@ -329,7 +247,7 @@
         </div>
       </div>
 
-      <!-- DESVIACIONES -->
+      <!-- MÓDULO: DESVIACIONES -->
       <div id="view-desviaciones" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-3">
         <div class="flex justify-between items-center">
           <h2 class="font-bold text-slate-800 text-sm">Desviaciones & NC</h2>
@@ -338,13 +256,13 @@
         <div class="p-4 text-slate-500 text-xs">Módulo de investigación de no conformidades con metodología 5M (Ishikawa).</div>
       </div>
 
-      <!-- CAPA -->
+      <!-- MÓDULO: CAPA -->
       <div id="view-capa" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4">
         <h2 class="font-bold text-slate-800 text-sm mb-3">Planes CAPA Integrados</h2>
         <div class="p-4 text-slate-500 text-xs">Seguimiento de acciones correctoras y preventivas efectivas.</div>
       </div>
 
-      <!-- METROLOGÍA -->
+      <!-- MÓDULO: METROLOGÍA -->
       <div id="view-metrologia" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4">
         <div class="flex justify-between items-center mb-3">
           <h2 class="font-bold text-slate-800 text-sm">Equipos & Metrología GxP</h2>
@@ -353,13 +271,13 @@
         <div class="p-4 text-slate-500 text-xs">Calibraciones y calificaciones de equipos críticos de planta.</div>
       </div>
 
-      <!-- FIRMAS -->
+      <!-- MÓDULO: FIRMAS -->
       <div id="view-firmas" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4">
         <h2 class="font-bold text-slate-800 text-sm mb-3">Registro de Firmas Electrónicas (21 CFR Part 11)</h2>
         <div class="p-4 text-slate-500 text-xs">Trazabilidad de firmas con PIN de validación y significado de aprobación.</div>
       </div>
 
-      <!-- AUDIT TRAIL -->
+      <!-- MÓDULO: AUDIT TRAIL -->
       <div id="view-audit" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4">
         <h2 class="font-bold text-slate-800 text-sm mb-3">Audit Trail Inalterable (ALCOA+)</h2>
         <div id="list-auds" class="space-y-1 font-mono text-[11px] text-slate-600">
@@ -367,7 +285,7 @@
         </div>
       </div>
 
-      <!-- CONFIGURACIONES Y GESTIÓN DE USUARIOS -->
+      <!-- MÓDULO: CONFIGURACIONES Y GESTIÓN DE USUARIOS -->
       <div id="view-admin" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-4">
         <div class="flex space-x-1 border-b pb-2 text-xs font-semibold">
           <button data-configsub="usuarios" class="config-subtab-btn px-3 py-1.5 rounded-lg bg-slate-800 text-white cursor-pointer">👥 Administración de Usuarios</button>
@@ -407,4 +325,67 @@
             </div>
             <div class="bg-slate-50 p-3 rounded border space-y-2">
               <div class="flex justify-between"><span>Método de Firma:</span><strong class="text-purple-700 font-bold">21 CFR Part 11 (PIN + Persona)</strong></div>
-              <div class="flex justify-between"><span>Auditoría ALCOA+:</span>
+              <div class="flex justify-between"><span>Auditoría ALCOA+:</span><strong class="text-emerald-700">Activa en Storage</strong></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- 3. MODALES DE INTERACCIÓN -->
+  <!-- ========================================================================= -->
+
+  <!-- MODAL: VISOR DE PDF -->
+  <div id="modalExportPdf" class="modal-backdrop fixed inset-0 bg-slate-900/80 backdrop-blur-sm items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl max-w-5xl w-full p-4 border shadow-2xl space-y-3 flex flex-col h-[90vh]">
+      <div class="border-b pb-2 flex justify-between items-center shrink-0">
+        <div>
+          <h3 class="font-bold text-sm text-slate-800" id="pdfViewerTitle">Visor Oficial GxP</h3>
+          <p class="text-[10px] text-slate-500" id="pdfViewerAlert"></p>
+        </div>
+        <button type="button" onclick="window.toggleModal('modalExportPdf', false)" class="text-slate-400 hover:text-slate-800 font-bold text-xl px-2 cursor-pointer">✕</button>
+      </div>
+      <div id="pdfViewerArea" class="w-full flex-grow relative bg-slate-200 rounded border overflow-hidden"></div>
+    </div>
+  </div>
+
+  <!-- MODAL: EMITIR COPIA FÍSICA CONTROLADA (CON INYECCIÓN DE MARCA DE AGUA) -->
+  <div id="modalEmitirCopia" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl max-w-md w-full p-5 border shadow-2xl space-y-3">
+      <div class="border-b pb-2">
+        <h3 class="font-bold text-sm text-amber-900">🖨️ Emitir Copia Controlada Oficial</h3>
+        <p class="text-xs text-slate-500">Inyección binaria de marca de agua en el PDF original.</p>
+      </div>
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block font-semibold mb-1">Área Destinataria</label>
+          <select id="copiaAreaSelect" class="w-full p-2 border rounded bg-slate-50">
+            <option value="Planta de Producción">Planta de Producción</option>
+            <option value="Control de Calidad (QC)">Control de Calidad (QC)</option>
+            <option value="Bodega / Almacén">Bodega / Almacén</option>
+          </select>
+        </div>
+        <div>
+          <label class="block font-semibold mb-1">Custodio Responsable</label>
+          <input type="text" id="copiaCustodioInput" class="w-full p-2 border rounded bg-slate-50" value="Carlos Mendoza">
+        </div>
+      </div>
+      <div class="flex justify-end space-x-2 pt-2 border-t">
+        <button type="button" onclick="window.toggleModal('modalEmitirCopia', false)" class="px-3 py-1 border rounded text-xs">Cancelar</button>
+        <button type="button" id="btn-confirmar-emitir" onclick="window.ejecutarInyeccionPDF()" class="px-4 py-1.5 bg-amber-600 text-white rounded text-xs font-bold shadow cursor-pointer">Generar e Imprimir Copia</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: CREAR NUEVO DOCUMENTO -->
+  <div id="modalDoc" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl max-w-lg w-full p-5 border shadow-2xl space-y-4">
+      <div class="border-b pb-2">
+        <h3 class="font-bold text-sm text-cyan-900">📑 Creación / Subida de Documento GxP</h3>
+      </div>
+      <div class="space-y-3 text-xs">
+        <div><label class="block font-semibold mb-1">Título</label><input type="text" id="createDocTitle" class="w-full p-2 border rounded bg-slate-50" /></div>
+        <div class="grid grid-cols-2 gap-3">
+          <div><label class="block font-semibold mb-1">Código</label><input type="text" id="createDocCode" class="w-full p-2 border rounded bg-slate-50 font-mono uppercase"
