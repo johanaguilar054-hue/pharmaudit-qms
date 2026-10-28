@@ -403,13 +403,56 @@
     </div>
   </div>
 
-  <!-- MODALES SIMPLES -->
+  <!-- MODAL PARA CREAR NUEVO DOCUMENTO (RESTAURADO AL 100%) -->
   <div id="modalDoc" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
-    <div class="bg-white rounded-xl max-w-lg w-full p-5 border shadow-2xl space-y-3">
-      <h3 class="font-bold text-sm text-cyan-900">📑 Crear / Subir Documento Controlado</h3>
-      <div class="flex justify-end pt-2 border-t"><button type="button" id="btn-close-doc" class="px-3 py-1 border rounded text-xs cursor-pointer">Cerrar</button></div>
+    <div class="bg-white rounded-xl max-w-lg w-full p-5 border shadow-2xl space-y-4">
+      <div class="border-b pb-2">
+        <h3 class="font-bold text-sm text-cyan-900">📑 Crear / Subir Nuevo Documento Controlado</h3>
+        <p class="text-xs text-slate-500">Ingresa los datos para registrar un nuevo documento en el sistema de calidad.</p>
+      </div>
+      
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Título del Documento</label>
+          <input type="text" id="createDocTitle" placeholder="Ej: Procedimiento de Limpieza" class="w-full p-2 border rounded bg-slate-50" />
+        </div>
+        
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Código Corporativo</label>
+            <input type="text" id="createDocCode" placeholder="Ej: SOP-PRO-020" class="w-full p-2 border rounded bg-slate-50 font-mono uppercase" />
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Versión Inicial</label>
+            <input type="text" id="createDocVer" value="1.0" class="w-full p-2 border rounded bg-slate-50 font-mono" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Tipo de Documento GxP</label>
+          <select id="createDocType" class="w-full p-2 border rounded bg-slate-50">
+            <option value="SOP">SOP (Procedimiento Operativo Estándar)</option>
+            <option value="FORMATO">Formato / Registro</option>
+            <option value="ESPECIFICACION">Especificación Técnica</option>
+            <option value="MANUAL">Manual de Calidad</option>
+            <option value="PROTOCOLO">Protocolo de Validación</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Archivo Digital Oficial (.pdf, .docx)</label>
+          <input type="file" id="createDocFile" accept=".pdf,.doc,.docx" class="w-full p-2 border rounded bg-slate-50 font-mono" />
+        </div>
+      </div>
+
+      <div class="flex justify-end space-x-2 pt-3 border-t">
+        <button type="button" id="btn-close-doc" class="px-3 py-1.5 border rounded text-xs cursor-pointer hover:bg-slate-50">Cancelar</button>
+        <button type="button" id="btn-save-new-doc" class="px-4 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white rounded text-xs font-bold shadow cursor-pointer">Subir a Storage & Crear Registro</button>
+      </div>
     </div>
   </div>
+
+  <!-- MODALES DE USUARIOS, DESVIACIONES Y EQUIPOS -->
   <div id="modalUser" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
     <div class="bg-white rounded-xl max-w-md w-full p-5 border shadow-2xl space-y-3">
       <h3 class="font-bold text-sm text-slate-800">👤 Registrar Usuario GxP</h3>
@@ -429,7 +472,7 @@
     </div>
   </div>
 
-  <!-- SCRIPT DEFINITIVO -->
+  <!-- SCRIPT DEFINITIVO Y CONFIGURADO -->
   <script>
     const SUPABASE_URL = 'https://wmtvlxjzzwwhtybccrpe.supabase.co'; 
     const SUPABASE_ANON_KEY = 'sb_publishable_i4A7rEjukekMlaCKjXWaNA_ze54EVjl';          
@@ -437,8 +480,9 @@
 
     window.activeGxpUser = { id: 'b40e33f1-6196-4b51-bfcb-6604d6daff50', nombre_completo: 'Johan Aguilar', cargo: 'QA Lead' };
 
+    // NOTA: He agregado un enlace PDF de muestra a la Lista de Chequeo Batch para que puedas visualizar que el panel de impresión GxP sí lo carga correctamente.
     window.cachedDocs = [
-      { id: '1', codigo: 'PH-GPD-F0-01', titulo: 'Lista de Chequeo Batch y Liberación de PT', tipo: 'FORMATO', version: '2.0', estado: 'Vigente', created_at: '2026-10-15', archivo_url: '' },
+      { id: '1', codigo: 'PH-GPD-F0-01', titulo: 'Lista de Chequeo Batch y Liberación de PT', tipo: 'FORMATO', version: '2.0', estado: 'Vigente', created_at: '2026-10-15', archivo_url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf' },
       { id: '2', codigo: 'PH-GPD-F0-01', titulo: 'Lista de Chequeo Batch y Liberación de PT', tipo: 'FORMATO', version: '1.0', estado: 'Obsoleto', created_at: '2026-05-10', archivo_url: '' },
       { id: '3', codigo: 'SOP-PRO-012', titulo: 'Limpieza e Higienización de Áreas Limpias Class C', tipo: 'SOP', version: '2.1', estado: 'Vigente', created_at: '2026-09-01', archivo_url: '' },
       { id: '4', codigo: 'SOP-QA-001', titulo: 'Procedimiento de Manejo de Desviaciones y NC', tipo: 'SOP', version: '3.0', estado: 'Vigente', created_at: '2026-08-20', archivo_url: '' },
@@ -448,7 +492,7 @@
     window.cachedCopias = [
       { id: 'c1', codigo_copia: 'COP-PH-GPD-F0-01-C01', documento_codigo: 'PH-GPD-F0-01', version: '2.0', area_destino: 'Planta de Producción', custodio: 'Carlos Mendoza', fecha_emision: '2026-10-16', estado: 'ACTIVA' },
       { id: 'c2', codigo_copia: 'COP-PH-GPD-F0-01-C02', documento_codigo: 'PH-GPD-F0-01', version: '1.0', area_destino: 'Laboratorio QC', custodio: 'Laura Restrepo', fecha_emision: '2026-05-11', estado: 'DESTRUIDA' },
-      { id: 'c3', codigo_copia: 'COP-SOP-PRO-012-C01', documento_codigo: 'SOP-SOP-PRO-012', version: '2.1', area_destino: 'Bodega / Almacén', custodio: 'Johan Aguilar', fecha_emision: '2026-09-02', estado: 'ACTIVA' }
+      { id: 'c3', codigo_copia: 'COP-SOP-PRO-012-C01', documento_codigo: 'SOP-PRO-012', version: '2.1', area_destino: 'Bodega / Almacén', custodio: 'Johan Aguilar', fecha_emision: '2026-09-02', estado: 'ACTIVA' }
     ];
 
     window.selectedDocId = null;
@@ -484,6 +528,7 @@
 
     function abrirPortal(user) {
       if (user) window.activeGxpUser = user;
+      
       const loginView = document.getElementById('view-login');
       const portalView = document.getElementById('app-portal');
       
@@ -604,7 +649,7 @@
 
       const viewerArea = document.getElementById('pdfViewerArea');
       if (targetDoc.archivo_url) {
-        viewerArea.innerHTML = `<iframe src="${targetDoc.archivo_url}" class="w-full h-[500px] border rounded"></iframe>`;
+        viewerArea.innerHTML = `<iframe src="${targetDoc.archivo_url}" class="w-full h-[500px] border rounded shadow-inner bg-white"></iframe>`;
       } else {
         viewerArea.innerHTML = `
           <div class="p-6 text-center space-y-2">
@@ -635,29 +680,48 @@
     }
 
     document.addEventListener('DOMContentLoaded', function() {
+      
+      // PERSISTENCIA DE SESIÓN LOCAL
       const btnSecure = document.getElementById('btn-login-secure');
       const btnDev = document.getElementById('btn-login-dev');
       const btnLogout = document.getElementById('btn-logout');
 
+      function loguearUsuario(email, cargo) {
+        localStorage.setItem('pharm_logged', 'true');
+        localStorage.setItem('pharm_user', email);
+        abrirPortal({ id: 'b40e33f1-6196-4b51-bfcb-6604d6daff50', nombre_completo: email, cargo: cargo });
+      }
+
       if (btnSecure) {
         btnSecure.addEventListener('click', function() {
-          const email = document.getElementById('loginEmail').value;
-          abrirPortal({ id: 'b40e33f1-6196-4b51-bfcb-6604d6daff50', nombre_completo: email || 'Johan Aguilar', cargo: 'QA Lead' });
+          const email = document.getElementById('loginEmail').value || 'Johan Aguilar';
+          loguearUsuario(email, 'QA Lead');
         });
       }
 
       if (btnDev) {
         btnDev.addEventListener('click', function() {
-          abrirPortal({ id: 'b40e33f1-6196-4b51-bfcb-6604d6daff50', nombre_completo: 'Johan Aguilar', cargo: 'QA Lead' });
+          loguearUsuario('Johan Aguilar', 'QA Lead');
         });
       }
 
       if (btnLogout) {
         btnLogout.addEventListener('click', function() {
+          localStorage.removeItem('pharm_logged');
           location.reload();
         });
       }
 
+      // Verificación automática al recargar
+      if (localStorage.getItem('pharm_logged') === 'true') {
+        abrirPortal({ 
+          id: 'b40e33f1-6196-4b51-bfcb-6604d6daff50', 
+          nombre_completo: localStorage.getItem('pharm_user') || 'Johan Aguilar', 
+          cargo: 'QA Lead' 
+        });
+      }
+
+      // NAVEGACIÓN PESTAÑAS
       document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.addEventListener('click', function() {
           const tabName = this.getAttribute('data-tab');
@@ -673,6 +737,7 @@
         });
       });
 
+      // ACCIONES DINÁMICAS (PREVIEW, EMITIR, FIRMAR, VERSIÓN)
       document.addEventListener('click', function(e) {
         const target = e.target.closest('.btn-action');
         if (!target) return;
@@ -716,6 +781,7 @@
         }
       });
 
+      // MANEJO DE MODALES
       const modalsToClose = [
         ['btn-close-pdf', 'modalExportPdf'], ['btn-close-pdf-bottom', 'modalExportPdf'],
         ['btn-close-emitir', 'modalEmitirCopia'], ['btn-close-version', 'modalVersion'],
@@ -742,6 +808,48 @@
         if (el) el.addEventListener('click', printAction);
       });
 
+      // LÓGICA: CREAR NUEVO DOCUMENTO (CON SUPABASE)
+      const btnSaveNewDoc = document.getElementById('btn-save-new-doc');
+      if (btnSaveNewDoc) {
+        btnSaveNewDoc.addEventListener('click', async function() {
+          const title = document.getElementById('createDocTitle').value;
+          const code = document.getElementById('createDocCode').value.toUpperCase();
+          const ver = document.getElementById('createDocVer').value;
+          const type = document.getElementById('createDocType').value;
+
+          if (!title || !code || !ver) {
+            alert('Por favor completa el Título, Código y Versión del documento.');
+            return;
+          }
+
+          // Subida a Supabase
+          const fileUrl = await subirArchivoSupabase('createDocFile', code, ver);
+
+          window.cachedDocs.unshift({
+            id: `doc_${Date.now()}`,
+            codigo: code,
+            titulo: title,
+            tipo: type,
+            version: ver,
+            estado: 'En Revisión',
+            created_at: new Date().toISOString().split('T')[0],
+            archivo_url: fileUrl,
+            justificacion_cambio: 'Creación Inicial'
+          });
+
+          alert(`Documento GxP (${code}) creado y subido con éxito.`);
+          toggleModal('modalDoc', false);
+          
+          // Limpiar formulario
+          document.getElementById('createDocTitle').value = '';
+          document.getElementById('createDocCode').value = '';
+          document.getElementById('createDocFile').value = '';
+          
+          renderAllData();
+        });
+      }
+
+      // LÓGICA: EMITIR COPIA FÍSICA
       const btnConfirmEmitir = document.getElementById('btn-confirmar-emitir');
       if (btnConfirmEmitir) {
         btnConfirmEmitir.addEventListener('click', function() {
@@ -776,6 +884,7 @@
         });
       }
 
+      // LÓGICA: NUEVA VERSIÓN (CON SUPABASE)
       const btnConfirmVersion = document.getElementById('btn-confirmar-version');
       if (btnConfirmVersion) {
         btnConfirmVersion.addEventListener('click', async function() {
@@ -812,12 +921,13 @@
             });
           }
 
-          alert(`Nueva versión v${newVersion} creada y archivo vinculado con éxito desde Supabase Storage.`);
+          alert(`Nueva versión v${newVersion} creada y archivo vinculado con éxito.`);
           toggleModal('modalVersion', false);
           renderAllData();
         });
       }
 
+      // LÓGICA: FIRMA ELECTRÓNICA
       const btnConfirmSign = document.getElementById('btn-confirmar-sign');
       if (btnConfirmSign) {
         btnConfirmSign.addEventListener('click', function() {
@@ -826,8 +936,16 @@
             alert('PIN incorrecto (PIN de prueba: 1234)');
             return;
           }
+          
+          const targetDoc = window.cachedDocs.find(d => d.id === window.selectedDocId);
+          if (targetDoc) {
+             if (targetDoc.estado === 'Borrador') targetDoc.estado = 'En Revisión';
+             else if (targetDoc.estado === 'En Revisión') targetDoc.estado = 'Vigente';
+          }
+          
           alert('Firma estampada con éxito (21 CFR Part 11)');
           toggleModal('modalSign', false);
+          renderAllData();
         });
       }
     });
