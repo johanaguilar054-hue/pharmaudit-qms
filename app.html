@@ -29,19 +29,43 @@
       z-index: 10;
     }
 
+    /* ESTILOS DE IMPRESIÓN GxP DE ALTA FIDELIDAD */
     @media print {
-      body * { visibility: hidden; }
-      #pdf-printable-area, #pdf-printable-area * { visibility: visible; }
-      #pdf-printable-area {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-        margin: 0;
-        padding: 0;
-        border: none !important;
+      * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
       }
-      .no-print { display: none !important; }
+      body * {
+        visibility: hidden !important;
+      }
+      #modalExportPdf, #modalExportPdf * {
+        visibility: visible !important;
+      }
+      #modalExportPdf {
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        height: auto !important;
+        background: white !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        box-shadow: none !important;
+        display: block !important;
+      }
+      .no-print, button, nav, header {
+        display: none !important;
+      }
+      .print-watermark-overlay {
+        display: flex !important;
+        position: absolute !important;
+        inset: 0 !important;
+        z-index: 99999 !important;
+        pointer-events: none !important;
+        align-items: center !important;
+        justify-content: center !important;
+        opacity: 0.35 !important;
+      }
     }
   </style>
 </head>
@@ -237,7 +261,7 @@
   <!-- MODAL PDF PREVIEW -->
   <div id="modalExportPdf" class="modal-backdrop fixed inset-0 bg-slate-900/70 backdrop-blur-sm items-center justify-center p-4 z-50">
     <div class="bg-white rounded-xl max-w-4xl w-full p-6 border shadow-2xl space-y-4 max-h-[95vh] flex flex-col">
-      <div class="border-b pb-2 flex justify-between items-center shrink-0">
+      <div class="border-b pb-2 flex justify-between items-center shrink-0 no-print">
         <h3 class="font-bold text-sm text-slate-800">📜 Vista Previa & Impresión de Copia Controlada GxP</h3>
         <div class="flex items-center space-x-2">
           <button type="button" id="btn-print-top" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow cursor-pointer">
@@ -305,7 +329,7 @@
         </div>
       </div>
 
-      <div class="flex justify-end border-t pt-2 shrink-0 space-x-2">
+      <div class="flex justify-end border-t pt-2 shrink-0 space-x-2 no-print">
         <button type="button" id="btn-print-bottom" class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-1.5 rounded text-xs font-bold shadow cursor-pointer">
           🖨️ Imprimir Copia Controlada
         </button>
@@ -472,12 +496,11 @@
     </div>
   </div>
 
-  <!-- SCRIPT CON DISPARADORES DIRECTOS E INICIALIZACIÓN SEGURA -->
+  <!-- SCRIPT LÓGICO Y DE EVENTOS -->
   <script>
     const SUPABASE_URL = 'https://wmtvlxjzzwwhtybccrpe.supabase.co'; 
     const SUPABASE_ANON_KEY = 'sb_publishable_i4A7rEjukekMlaCKjXWaNA_ze54EVjl';          
     
-    // Inicialización tolerante a fallos
     let _supabaseClient = null;
     function getSupabase() {
       if (!_supabaseClient && typeof supabase !== 'undefined' && supabase.createClient) {
@@ -492,7 +515,6 @@
 
     window.activeGxpUser = { id: 'b40e33f1-6196-4b51-bfcb-6604d6daff50', nombre_completo: 'Johan Aguilar', cargo: 'QA Lead' };
 
-    // Muestra de documentos con PDF compatible para el visor iframe
     window.cachedDocs = [
       { id: '1', codigo: 'PH-GPD-F0-01', titulo: 'Lista de Chequeo Batch y Liberación de PT', tipo: 'FORMATO', version: '2.0', estado: 'Vigente', created_at: '2026-10-15', archivo_url: 'https://pdfobject.com/pdf/sample.pdf' },
       { id: '2', codigo: 'PH-GPD-F0-01', titulo: 'Lista de Chequeo Batch y Liberación de PT', tipo: 'FORMATO', version: '1.0', estado: 'Obsoleto', created_at: '2026-05-10', archivo_url: '' },
@@ -511,7 +533,6 @@
     window.selectedDocForCopia = null;
     window.selectedDocForVersion = null;
 
-    // FUNCIONES GLOBALES DE NAVEGACIÓN Y LOGIN (DISPARO DIRECTO)
     window.loginDirecto = function() {
       localStorage.setItem('pharm_logged', 'true');
       localStorage.setItem('pharm_user', 'Johan Aguilar');
@@ -673,16 +694,15 @@
       document.getElementById('pdfDocVersion').innerText = targetDoc.version;
       document.getElementById('pdfDocDate').innerText = new Date().toLocaleDateString('es-CO');
 
-      // Configuración dinámica de la marca de agua flotante GxP
       let watermarkText = 'COPIA CONTROLADA<br>VIGENTE';
-      let watermarkColor = 'text-emerald-600/40 border-emerald-600/30';
+      let watermarkColor = 'text-emerald-600 border-emerald-600';
       
       if (targetDoc.estado === 'Obsoleto') {
         watermarkText = 'DOCUMENTO<br>OBSOLETO';
-        watermarkColor = 'text-rose-600/40 border-rose-600/30';
+        watermarkColor = 'text-rose-600 border-rose-600';
       } else if (targetDoc.estado !== 'Vigente') {
         watermarkText = 'BORRADOR<br>NO VALIDO PARA USO';
-        watermarkColor = 'text-amber-600/40 border-amber-600/30';
+        watermarkColor = 'text-amber-600 border-amber-600';
       }
 
       const wm = document.getElementById('pdfWatermark');
@@ -690,11 +710,11 @@
 
       const viewerArea = document.getElementById('pdfViewerArea');
       if (targetDoc.archivo_url) {
-        // Overlay con z-20 y pointer-events-none para permitir scroll sobre el PDF
+        // La capa superpuesta incluye clases para ser imprimible en la vista previa
         viewerArea.innerHTML = `
-          <div class="relative w-full h-[550px] border rounded overflow-hidden bg-slate-900">
-            <div class="pointer-events-none absolute inset-0 z-20 flex items-center justify-center select-none p-4">
-              <div class="transform -rotate-[30deg] ${watermarkColor} text-2xl sm:text-4xl font-black tracking-widest uppercase font-mono text-center leading-tight border-4 border-dashed p-6 rounded-2xl backdrop-blur-[1px]">
+          <div class="relative w-full h-[550px] border rounded overflow-hidden bg-white">
+            <div class="print-watermark-overlay pointer-events-none absolute inset-0 z-30 flex items-center justify-center select-none p-4 opacity-30">
+              <div class="transform -rotate-[30deg] ${watermarkColor} text-2xl sm:text-4xl font-black tracking-widest uppercase font-mono text-center leading-tight border-4 border-dashed p-6 rounded-2xl">
                 ${watermarkText}
               </div>
             </div>
@@ -730,9 +750,7 @@
       toggleModal('modalExportPdf', true);
     }
 
-    // REGISTRO DE EVENTOS SECUNDARIOS TRAS LA CARGA DEL DOM
     document.addEventListener('DOMContentLoaded', function() {
-      // Verificación automática de sesión guardada
       if (localStorage.getItem('pharm_logged') === 'true') {
         window.abrirPortal({ 
           id: 'b40e33f1-6196-4b51-bfcb-6604d6daff50', 
@@ -741,7 +759,6 @@
         });
       }
 
-      // NAVEGACIÓN PESTAÑAS
       document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.addEventListener('click', function() {
           const tabName = this.getAttribute('data-tab');
@@ -757,7 +774,6 @@
         });
       });
 
-      // MANEJO DE ACCIONES DINÁMICAS (TABLAS)
       document.addEventListener('click', function(e) {
         const target = e.target.closest('.btn-action');
         if (!target) return;
@@ -801,7 +817,6 @@
         }
       });
 
-      // MODALES
       const modalsToClose = [
         ['btn-close-pdf', 'modalExportPdf'], ['btn-close-pdf-bottom', 'modalExportPdf'],
         ['btn-close-emitir', 'modalEmitirCopia'], ['btn-close-version', 'modalVersion'],
@@ -822,13 +837,16 @@
         if (el) el.addEventListener('click', () => toggleModal(modalId, true));
       });
 
-      const printAction = () => window.print();
+      // Disparador de impresión seguro desde el contexto de la ventana principal
+      const printAction = () => {
+        window.focus();
+        window.print();
+      };
       ['btn-print-top', 'btn-print-bottom'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.addEventListener('click', printAction);
       });
 
-      // CREAR DOCUMENTO
       const btnSaveNewDoc = document.getElementById('btn-save-new-doc');
       if (btnSaveNewDoc) {
         btnSaveNewDoc.addEventListener('click', async function() {
@@ -867,7 +885,6 @@
         });
       }
 
-      // EMITIR COPIA
       const btnConfirmEmitir = document.getElementById('btn-confirmar-emitir');
       if (btnConfirmEmitir) {
         btnConfirmEmitir.addEventListener('click', function() {
@@ -902,7 +919,6 @@
         });
       }
 
-      // CREAR NUEVA VERSIÓN
       const btnConfirmVersion = document.getElementById('btn-confirmar-version');
       if (btnConfirmVersion) {
         btnConfirmVersion.addEventListener('click', async function() {
@@ -945,7 +961,6 @@
         });
       }
 
-      // FIRMA ELECTRÓNICA
       const btnConfirmSign = document.getElementById('btn-confirmar-sign');
       if (btnConfirmSign) {
         btnConfirmSign.addEventListener('click', function() {
