@@ -673,27 +673,40 @@
       document.getElementById('pdfDocVersion').innerText = targetDoc.version;
       document.getElementById('pdfDocDate').innerText = new Date().toLocaleDateString('es-CO');
 
-      const wm = document.getElementById('pdfWatermark');
-      if (targetDoc.estado === 'Vigente') {
-        wm.innerText = 'COPIA CONTROLADA · VIGENTE';
-        wm.className = 'watermark-text text-emerald-600';
-      } else if (targetDoc.estado === 'Obsoleto') {
-        wm.innerText = 'DOCUMENTO OBSOLETO';
-        wm.className = 'watermark-text text-rose-600';
-      } else {
-        wm.innerText = 'BORRADOR · NO VALIDO PARA USO';
-        wm.className = 'watermark-text text-amber-600';
+      // Configuración dinámica de la marca de agua flotante GxP
+      let watermarkText = 'COPIA CONTROLADA<br>VIGENTE';
+      let watermarkColor = 'text-emerald-600/40 border-emerald-600/30';
+      
+      if (targetDoc.estado === 'Obsoleto') {
+        watermarkText = 'DOCUMENTO<br>OBSOLETO';
+        watermarkColor = 'text-rose-600/40 border-rose-600/30';
+      } else if (targetDoc.estado !== 'Vigente') {
+        watermarkText = 'BORRADOR<br>NO VALIDO PARA USO';
+        watermarkColor = 'text-amber-600/40 border-amber-600/30';
       }
+
+      const wm = document.getElementById('pdfWatermark');
+      if (wm) wm.innerHTML = watermarkText.replace('<br>', ' · ');
 
       const viewerArea = document.getElementById('pdfViewerArea');
       if (targetDoc.archivo_url) {
-        viewerArea.innerHTML = `<iframe src="${targetDoc.archivo_url}" class="w-full h-[500px] border rounded shadow-inner bg-white"></iframe>`;
+        // Overlay con z-20 y pointer-events-none para permitir scroll sobre el PDF
+        viewerArea.innerHTML = `
+          <div class="relative w-full h-[550px] border rounded overflow-hidden bg-slate-900">
+            <div class="pointer-events-none absolute inset-0 z-20 flex items-center justify-center select-none p-4">
+              <div class="transform -rotate-[30deg] ${watermarkColor} text-2xl sm:text-4xl font-black tracking-widest uppercase font-mono text-center leading-tight border-4 border-dashed p-6 rounded-2xl backdrop-blur-[1px]">
+                ${watermarkText}
+              </div>
+            </div>
+            <iframe src="${targetDoc.archivo_url}" class="w-full h-full border-0"></iframe>
+          </div>
+        `;
       } else {
         viewerArea.innerHTML = `
-          <div class="p-6 text-center space-y-2">
-            <div class="text-slate-400 text-3xl">📄</div>
-            <div class="font-bold text-slate-700">Documento Digital en Sistema GxP</div>
-            <p class="text-slate-500 text-[11px]">Versión oficial validada (${targetDoc.codigo} v${targetDoc.version}). Al adjuntar el archivo, se proyectará en este visor.</p>
+          <div class="p-8 text-center space-y-2">
+            <div class="text-slate-400 text-4xl">📄</div>
+            <div class="font-bold text-slate-700 text-sm">Documento Digital en Sistema GxP</div>
+            <p class="text-slate-500 text-xs">Versión oficial validada (${targetDoc.codigo} v${targetDoc.version}). Al adjuntar el archivo en el control de cambios, se proyectará en este visor.</p>
           </div>
         `;
       }
