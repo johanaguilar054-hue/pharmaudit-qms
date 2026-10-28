@@ -32,9 +32,11 @@
 </head>
 <body class="bg-slate-50 text-slate-800 p-4">
 
-  <!-- PANTALLA DE LOGIN INSTITUCIONAL (CONECTADA A GESTIÓN DE USUARIOS) -->
+  <!-- ========================================================================= -->
+  <!-- MÓDULO DE LOGIN (ESTABILIZADO Y BLINDADO)                                 -->
+  <!-- ========================================================================= -->
   <div id="view-login" class="min-h-[80vh] flex items-center justify-center">
-    <div class="bg-white p-8 rounded-2xl shadow-xl border border-slate-200 max-w-md w-full space-y-5">
+    <div class="bg-white p-8 rounded-2xl shadow-xl border border-slate-200 max-w-md w-full space-y-5 relative">
       <div class="text-center">
         <div class="text-3xl font-extrabold text-slate-900 tracking-tight">🛡️ PharmAudit</div>
         <p class="text-xs text-slate-500 mt-1 font-mono">Portal de Gestión de Calidad GxP · Pharmor</p>
@@ -43,32 +45,34 @@
       <div class="space-y-3">
         <div>
           <label class="block text-xs font-semibold text-slate-700 mb-1">Correo Corporativo / Usuario</label>
-          <input type="text" id="loginEmail" value="j.aguilar@pharmor.com.co" class="w-full p-2.5 border rounded-lg text-xs font-mono bg-slate-50 focus:bg-white" />
+          <input type="text" id="loginEmail" value="j.aguilar@pharmor.com.co" class="w-full p-2.5 border rounded-lg text-xs font-mono bg-slate-50 focus:bg-white outline-none focus:ring-2 focus:ring-cyan-500 transition-all" />
         </div>
         <div>
           <label class="block text-xs font-semibold text-slate-700 mb-1">Contraseña</label>
-          <input type="password" id="loginPassword" value="123456" class="w-full p-2.5 border rounded-lg text-xs font-mono bg-slate-50 focus:bg-white" />
+          <input type="password" id="loginPassword" value="123" class="w-full p-2.5 border rounded-lg text-xs font-mono bg-slate-50 focus:bg-white outline-none focus:ring-2 focus:ring-cyan-500 transition-all" />
         </div>
 
-        <button type="button" onclick="realizarLogin()" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2.5 rounded-lg text-xs shadow transition cursor-pointer">
+        <!-- Botones Estabilizados mediante IDs y EventListeners (Evitando onclick inline) -->
+        <button type="button" id="btn-login-main" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2.5 rounded-lg text-xs shadow transition-colors cursor-pointer">
           Iniciar Sesión Segura (21 CFR Part 11)
         </button>
 
         <div class="grid grid-cols-2 gap-2 pt-2">
-          <button type="button" onclick="loginDirectoAdmin()" class="bg-slate-800 hover:bg-slate-900 text-white font-bold py-2 rounded text-[11px] shadow transition cursor-pointer">
+          <button type="button" id="btn-login-admin" class="bg-slate-800 hover:bg-slate-900 text-white font-bold py-2 rounded text-[11px] shadow transition-colors cursor-pointer">
             ⚡ Admin QA
           </button>
-          <button type="button" onclick="loginDirectoOperador()" class="bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 rounded text-[11px] shadow transition cursor-pointer">
+          <button type="button" id="btn-login-operador" class="bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 rounded text-[11px] shadow transition-colors cursor-pointer">
             👁️ Operador
           </button>
         </div>
       </div>
 
-      <div class="text-[11px] text-center text-slate-400 border-t pt-3 font-mono">
+      <div class="text-[11px] text-center text-slate-400 border-t pt-3 font-mono mt-4">
         Cumplimiento EU Annex 11 / FDA 21 CFR Part 11 (RBAC Dinámico)
       </div>
     </div>
   </div>
+  <!-- ========================================================================= -->
 
   <!-- APLICACIÓN PRINCIPAL -->
   <div id="app-portal" class="hidden">
@@ -219,7 +223,6 @@
             <tbody id="table-obsoleto" class="divide-y divide-slate-100"></tbody>
           </table>
         </div>
-
       </div>
 
       <!-- COPIAS CONTROLADAS (ADMIN ONLY) -->
@@ -287,7 +290,7 @@
         </div>
       </div>
 
-      <!-- CONFIGURACIONES Y GESTIÓN DE USUARIOS (ESTILO SUITE KAWAK) -->
+      <!-- CONFIGURACIONES Y GESTIÓN DE USUARIOS -->
       <div id="view-admin" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-4">
         <div class="flex space-x-1 border-b pb-2 text-xs font-semibold">
           <button data-configsub="usuarios" class="config-subtab-btn px-3 py-1.5 rounded-lg bg-slate-800 text-white cursor-pointer">👥 Administración de Usuarios</button>
@@ -383,7 +386,7 @@
     </div>
   </div>
 
-  <!-- MODAL NUEVO DOCUMENTO (INCLUYE FECHAS DE APROBACIÓN Y VENCIMIENTO) -->
+  <!-- MODAL NUEVO DOCUMENTO -->
   <div id="modalDoc" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
     <div class="bg-white rounded-xl max-w-lg w-full p-5 border shadow-2xl space-y-4">
       <div class="border-b pb-2">
@@ -548,33 +551,69 @@
     </div>
   </div>
 
-  <!-- SCRIPT GENERAL (LÓGICA DEL ERP + EXCEL + USUARIOS DINÁMICOS) -->
+  <!-- SCRIPT GENERAL -->
   <script>
-    const SUPABASE_URL = 'https://wmtvlxjzzwwhtybccrpe.supabase.co'; 
-    const SUPABASE_ANON_KEY = 'sb_publishable_i4A7rEjukekMlaCKjXWaNA_ze54EVjl';          
-    
-    let _supabaseClient = null;
-    function getSupabase() {
-      if (!_supabaseClient && typeof supabase !== 'undefined' && supabase.createClient) {
-        try {
-          _supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        } catch (e) {
-          console.warn("Error Supabase:", e);
-        }
-      }
-      return _supabaseClient;
-    }
+    // =========================================================================
+    // 1. MÓDULO DE AUTENTICACIÓN ESTABILIZADO (NO ROMPIBLE)
+    // =========================================================================
+    document.addEventListener('DOMContentLoaded', () => {
+      const btnLoginMain = document.getElementById('btn-login-main');
+      const btnLoginAdmin = document.getElementById('btn-login-admin');
+      const btnLoginOperador = document.getElementById('btn-login-operador');
 
+      // Bindings directos que aíslan la funcionalidad del HTML
+      if (btnLoginMain) {
+        btnLoginMain.addEventListener('click', () => {
+          const emailInput = document.getElementById('loginEmail').value.trim();
+          const passInput = document.getElementById('loginPassword').value.trim();
+
+          const usuarioEncontrado = window.cachedUsuarios.find(u => 
+            u.correo.toLowerCase() === emailInput.toLowerCase() && 
+            u.password === passInput && 
+            u.estado === 'Activo'
+          );
+
+          if (!usuarioEncontrado) {
+            alert("Credenciales incorrectas o usuario inactivo. Verifique su correo corporativo y contraseña.");
+            return;
+          }
+
+          window.activeGxpUser = {
+            nombre: `${usuarioEncontrado.nombres} ${usuarioEncontrado.apellidos}`,
+            rol: usuarioEncontrado.rol,
+            cargo: usuarioEncontrado.cargo,
+            correo: usuarioEncontrado.correo
+          };
+          iniciarPortalVisual();
+        });
+      }
+
+      if (btnLoginAdmin) {
+        btnLoginAdmin.addEventListener('click', () => {
+          window.activeGxpUser = { nombre: 'Johan Aguilar Rojas', rol: 'ADMIN_QA', cargo: 'QA Lead', correo: 'j.aguilar@pharmor.com.co' };
+          iniciarPortalVisual();
+        });
+      }
+
+      if (btnLoginOperador) {
+        btnLoginOperador.addEventListener('click', () => {
+          window.activeGxpUser = { nombre: 'Carlos Mendoza', rol: 'LECTOR', cargo: 'Operario de Planta', correo: 'c.mendoza@pharmor.com.co' };
+          iniciarPortalVisual();
+        });
+      }
+    });
+
+    // =========================================================================
+    // 2. VARIABLES DE DATOS (Módulo Usuarios, Documentos, Copias)
+    // =========================================================================
     window.activeGxpUser = null;
     window.selectedDocId = null;
 
-    // DIRECTORIO DE USUARIOS INICIAL (CONFIGURABLES DESDE LA PESTAÑA DE CONFIGURACIONES)
     window.cachedUsuarios = [
-      { id: 1, nombres: 'Johan', apellidos: 'Aguilar Rojas', correo: 'j.aguilar@pharmor.com.co', password: '123', cargo: 'QA Lead', rol: 'ADMIN_QA', estado: 'Activo' },
+      { id: 1, nombres: 'Johan Sebastian', apellidos: 'Aguilar Rojas', correo: 'j.aguilar@pharmor.com.co', password: '123', cargo: 'QA Lead', rol: 'ADMIN_QA', estado: 'Activo' },
       { id: 2, nombres: 'Carlos', apellidos: 'Mendoza', correo: 'c.mendoza@pharmor.com.co', password: '123', cargo: 'Operario de Producción', rol: 'LECTOR', estado: 'Activo' }
     ];
 
-    // BASE DE DATOS LOCAL INICIAL CON FECHAS DE APROBACIÓN Y VENCIMIENTO
     window.cachedDocs = [
       { id: '1', codigo: 'PH-GPD-F0-01', titulo: 'Lista de Chequeo Batch y Liberación de PT', version: '2.0', estado: 'VIGENTE', fase: 'Aprobado', proceso: 'Gestión de Aseguramiento de Calidad', fechaAprob: '2025-10-15', fechaVenc: '2027-10-15', archivo_url: 'https://pdfobject.com/pdf/sample.pdf', motivo_cambio: 'Creación Inicial' },
       { id: '2', codigo: 'SOP-PRO-012', titulo: 'Limpieza e Higienización de Áreas Limpias', version: '2.1', estado: 'VIGENTE', fase: 'Aprobado', proceso: 'Planta de Producción', fechaAprob: '2025-09-01', fechaVenc: '2026-09-01', archivo_url: '', motivo_cambio: 'Creación Inicial' },
@@ -583,51 +622,21 @@
     window.cachedCopias = [];
     window.cachedObsoletos = [];
 
-    // LOGIN REAL CONECTADO A CONFIGURACIÓN DE USUARIOS
-    window.realizarLogin = function() {
-      const emailInput = document.getElementById('loginEmail').value.trim();
-      const passInput = document.getElementById('loginPassword').value.trim();
-
-      const usuarioEncontrado = window.cachedUsuarios.find(u => u.correo.toLowerCase() === emailInput.toLowerCase() && u.password === passInput && u.estado === 'Activo');
-
-      if (!usuarioEncontrado) {
-        alert("Credenciales incorrectas o usuario inactivo. Verifique su correo corporativo y contraseña.");
-        return;
-      }
-
-      window.activeGxpUser = {
-        nombre: `${usuarioEncontrado.nombres} ${usuarioEncontrado.apellidos}`,
-        rol: usuarioEncontrado.rol,
-        cargo: usuarioEncontrado.cargo,
-        correo: usuarioEncontrado.correo
-      };
-      iniciarPortalVisual();
-    };
-
-    window.loginDirectoAdmin = function() {
-      window.activeGxpUser = { nombre: 'Johan Aguilar', rol: 'ADMIN_QA', cargo: 'QA Lead', correo: 'j.aguilar@pharmor.com.co' };
-      iniciarPortalVisual();
-    };
-
-    window.loginDirectoOperador = function() {
-      window.activeGxpUser = { nombre: 'Carlos Mendoza', rol: 'LECTOR', cargo: 'Operario de Planta', correo: 'c.mendoza@pharmor.com.co' };
-      iniciarPortalVisual();
-    };
-
-    function iniciarPortalVisual() {
+    // =========================================================================
+    // 3. FUNCIONES DEL PORTAL Y NAVEGACIÓN
+    // =========================================================================
+    window.iniciarPortalVisual = function() {
       document.getElementById('view-login').style.display = 'none';
       document.getElementById('app-portal').style.display = 'block';
       document.getElementById('userBadge').innerText = `${window.activeGxpUser.nombre} (${window.activeGxpUser.cargo})`;
 
       const isAdmin = window.activeGxpUser.rol === 'ADMIN_QA';
-      document.querySelectorAll('.admin-only').forEach(el => {
-        el.style.display = isAdmin ? 'block' : 'none';
-      });
+      document.querySelectorAll('.admin-only').forEach(el => { el.style.display = isAdmin ? 'block' : 'none'; });
 
       document.querySelector('[data-tab="documentos"]').click();
       renderAllData();
       renderUsuariosConfig();
-    }
+    };
 
     window.cerrarSesion = () => location.reload();
 
@@ -642,348 +651,4 @@
       document.getElementById('createDocFechaAprob').value = new Date().toISOString().split('T')[0];
       const unAno = new Date(); unAno.setFullYear(unAno.getFullYear() + 2);
       document.getElementById('createDocFechaVenc').value = unAno.toISOString().split('T')[0];
-      toggleModal('modalDoc', true);
-    });
-    
-    document.getElementById('btn-open-modal-version').addEventListener('click', () => {
-      const select = document.getElementById('versionDocSelect');
-      const vigentes = window.cachedDocs.filter(d => d.estado === 'VIGENTE');
-      select.innerHTML = vigentes.map(d => `<option value="${d.id}">${d.codigo} v${d.version} - ${d.titulo}</option>`).join('');
-      cargarDatosVersionBase();
-      document.getElementById('verFechaAprob').value = new Date().toISOString().split('T')[0];
-      const unAno = new Date(); unAno.setFullYear(unAno.getFullYear() + 2);
-      document.getElementById('verFechaVenc').value = unAno.toISOString().split('T')[0];
-      toggleModal('modalVersion', true);
-    });
-
-    function cargarDatosVersionBase() {
-      const baseId = document.getElementById('versionDocSelect').value;
-      const doc = window.cachedDocs.find(x => x.id === baseId);
-      if (doc) {
-        document.getElementById('verNewTitle').value = doc.titulo;
-        document.getElementById('verNewCode').value = doc.codigo;
-        const vParts = doc.version.split('.');
-        const nextVer = (parseInt(vParts[0]) || 1) + '.0';
-        document.getElementById('verNewNumber').value = nextVer;
-      }
-    }
-
-    // NAVEGACIÓN PRINCIPAL DE PESTAÑAS
-    document.querySelectorAll('.nav-btn').forEach(btn => {
-      btn.addEventListener('click', function() {
-        document.querySelectorAll('.tab-content').forEach(v => v.classList.remove('active'));
-        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('bg-cyan-600', 'text-white'));
-        document.getElementById('view-' + this.getAttribute('data-tab')).classList.add('active');
-        this.classList.add('bg-cyan-600', 'text-white');
-      });
-    });
-
-    // NAVEGACIÓN SUB-PESTAÑAS DE GESTIÓN DOCUMENTAL
-    document.querySelectorAll('.doc-subtab-btn').forEach(btn => {
-      btn.addEventListener('click', function() {
-        document.querySelectorAll('.doc-subtab-content').forEach(v => v.classList.remove('active'));
-        document.querySelectorAll('.doc-subtab-btn').forEach(b => {
-          b.classList.remove('bg-cyan-600', 'text-white');
-          b.classList.add('bg-slate-100', 'text-slate-700');
-        });
-        document.getElementById('subtab-' + this.getAttribute('data-subtab')).classList.add('active');
-        this.classList.add('bg-cyan-600', 'text-white');
-        this.classList.remove('bg-slate-100', 'text-slate-700');
-      });
-    });
-
-    // NAVEGACIÓN SUB-PESTAÑAS DE CONFIGURACIÓN
-    document.querySelectorAll('.config-subtab-btn').forEach(btn => {
-      btn.addEventListener('click', function() {
-        document.querySelectorAll('.config-subtab-content').forEach(v => v.classList.remove('active'));
-        document.querySelectorAll('.config-subtab-btn').forEach(b => {
-          b.classList.remove('bg-slate-800', 'text-white');
-          b.classList.add('bg-slate-100', 'text-slate-700');
-        });
-        document.getElementById('configsub-' + this.getAttribute('data-configsub')).classList.add('active');
-        this.classList.add('bg-slate-800', 'text-white');
-        this.classList.remove('bg-slate-100', 'text-slate-700');
-      });
-    });
-
-    function renderAllData() {
-      const vigentes = window.cachedDocs.filter(d => d.estado === 'VIGENTE');
-      const enProceso = window.cachedDocs.filter(d => d.estado === 'PROCESO');
-      const migracion = window.cachedDocs.filter(d => d.estado === 'MIGRACION');
-      const obsoletos = window.cachedObsoletos;
-
-      document.getElementById('cnt-docs').innerText = vigentes.length;
-      document.getElementById('cnt-copias').innerText = window.cachedCopias.length;
-
-      document.getElementById('count-vigente').innerText = vigentes.length;
-      document.getElementById('count-proceso').innerText = enProceso.length;
-      document.getElementById('count-migracion').innerText = migracion.length;
-      document.getElementById('count-obsoleto').innerText = obsoletos.length;
-
-      // 1. RENDER VIGENTE (CON NUEVAS COLUMNAS: FECHA DE APROBACIÓN Y FECHA DE VENCIMIENTO)
-      document.getElementById('table-vigente').innerHTML = vigentes.length ? vigentes.map(d => `
-        <tr class="hover:bg-slate-50">
-          <td class="p-2 border font-mono font-bold text-cyan-700">${d.codigo}</td>
-          <td class="p-2 border font-mono">v${d.version}</td>
-          <td class="p-2 border font-semibold">${d.titulo}</td>
-          <td class="p-2 border text-slate-600">${d.proceso}</td>
-          <td class="p-2 border font-mono text-slate-600">${d.fechaAprob || 'N/A'}</td>
-          <td class="p-2 border font-mono text-amber-800">${d.fechaVenc || 'N/A'}</td>
-          <td class="p-2 border"><span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold text-[10px]">VIGENTE</span></td>
-          <td class="p-2 border text-center space-x-1">
-            <button onclick="viewDocument('${d.id}')" class="bg-slate-100 border px-2 py-1 rounded font-bold text-slate-700 cursor-pointer">👁️ Ver</button>
-            <button onclick="abrirModalEmitir('${d.id}')" class="bg-amber-50 border border-amber-300 text-amber-800 px-2 py-1 rounded font-bold cursor-pointer admin-only">🖨️ Copia</button>
-          </td>
-        </tr>
-      `).join('') : `<tr><td colspan="8" class="p-4 text-center text-slate-400">No hay documentos vigentes.</td></tr>`;
-
-      // 2. RENDER EN PROCESO
-      document.getElementById('table-proceso').innerHTML = enProceso.length ? enProceso.map(d => `
-        <tr class="hover:bg-slate-50">
-          <td class="p-2 border font-mono font-bold text-cyan-700">${d.codigo}</td>
-          <td class="p-2 border font-mono">v${d.version}</td>
-          <td class="p-2 border font-semibold">${d.titulo}</td>
-          <td class="p-2 border"><span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-bold text-[10px]">Fase: ${d.fase}</span></td>
-          <td class="p-2 border text-center">
-            <button onclick="avanzarWorkflow('${d.id}')" class="bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-1 rounded font-bold cursor-pointer">
-              ✍️ Firmar & Avanzar Fase
-            </button>
-          </td>
-        </tr>
-      `).join('') : `<tr><td colspan="5" class="p-4 text-center text-slate-400">No hay documentos en proceso de aprobación.</td></tr>`;
-
-      // 3. RENDER OBSOLETOS
-      document.getElementById('table-obsoleto').innerHTML = obsoletos.length ? obsoletos.map(o => `
-        <tr class="hover:bg-slate-50 bg-rose-50/40">
-          <td class="p-2 border font-mono font-bold text-rose-800">${o.codigo}</td>
-          <td class="p-2 border font-mono text-rose-600">v${o.version}</td>
-          <td class="p-2 border font-semibold">${o.titulo}</td>
-          <td class="p-2 border text-slate-700 italic">${o.motivo_cambio}</td>
-          <td class="p-2 border text-center">
-            <button onclick="viewDocument('${o.id}')" class="bg-slate-100 border px-2 py-1 rounded font-bold text-slate-700 cursor-pointer">👁️ Ver Archivo</button>
-          </td>
-        </tr>
-      `).join('') : `<tr><td colspan="5" class="p-4 text-center text-slate-400">Papelera de documentos obsoletos vacía.</td></tr>`;
-
-      // 4. RENDER MIGRACIÓN
-      document.getElementById('table-migracion').innerHTML = migracion.length ? migracion.map(m => `
-        <tr class="hover:bg-slate-50">
-          <td class="p-2 border font-mono font-bold text-slate-700">${m.codigo}</td>
-          <td class="p-2 border font-mono">v${m.version}</td>
-          <td class="p-2 border font-semibold">${m.titulo}</td>
-          <td class="p-2 border text-center"><span class="bg-purple-100 text-purple-800 px-2 py-0.5 rounded font-bold text-[10px]">MIGRADO HISTÓRICO</span></td>
-        </tr>
-      `).join('') : `<tr><td colspan="4" class="p-4 text-center text-slate-400">Sin documentos migrados registrados.</td></tr>`;
-
-      // RENDER COPIAS
-      const listCopias = document.getElementById('list-copias-body');
-      listCopias.innerHTML = window.cachedCopias.length ? window.cachedCopias.map(c => `
-        <tr class="hover:bg-slate-50">
-          <td class="p-2 border font-bold text-amber-900">${c.codigo}</td>
-          <td class="p-2 border">${c.doc}</td>
-          <td class="p-2 border">${c.area}</td>
-          <td class="p-2 border">${c.custodio}</td>
-          <td class="p-2 border"><span class="bg-emerald-100 text-emerald-800 px-2 rounded text-[10px] font-bold">ACTIVA</span></td>
-        </tr>
-      `).join('') : `<tr><td colspan="5" class="p-4 text-center text-slate-400">Sin copias emitidas.</td></tr>`;
-    }
-
-    // RENDERIZAR TABLA DE USUARIOS EN CONFIGURACIÓN (ESTILO SUITE KAWAK)
-    function renderUsuariosConfig() {
-      const tbody = document.getElementById('tablaUsuariosConfig');
-      tbody.innerHTML = window.cachedUsuarios.map((u, idx) => `
-        <tr class="hover:bg-slate-50 font-mono text-xs">
-          <td class="p-2 border">${u.id}</td>
-          <td class="p-2 border font-sans font-semibold">${u.nombres} ${u.apellidos}</td>
-          <td class="p-2 border text-cyan-800">${u.correo}</td>
-          <td class="p-2 border font-sans">${u.cargo}</td>
-          <td class="p-2 border"><span class="bg-purple-100 text-purple-800 px-2 py-0.5 rounded font-bold text-[10px]">${u.rol}</span></td>
-          <td class="p-2 border text-center"><span class="bg-emerald-100 text-emerald-800 px-2 rounded text-[10px] font-bold">${u.estado}</span></td>
-          <td class="p-2 border text-center font-sans space-x-1">
-            <button onclick="editarUsuarioConfig(${idx})" class="bg-slate-100 border px-2 py-0.5 rounded font-bold text-slate-700 cursor-pointer">✏️ Editar</button>
-            <button onclick="toggleEstadoUsuario(${idx})" class="bg-amber-50 border text-amber-800 px-2 py-0.5 rounded font-bold cursor-pointer">🔄 Estado</button>
-          </td>
-        </tr>
-      `).join('');
-    }
-
-    window.abrirModalUsuario = function() {
-      document.getElementById('usrIndex').value = '-1';
-      document.getElementById('usrNombres').value = '';
-      document.getElementById('usrApellidos').value = '';
-      document.getElementById('usrCorreo').value = '';
-      document.getElementById('usrPassword').value = '';
-      document.getElementById('usrCargo').value = 'Analista';
-      document.getElementById('usrRol').value = 'LECTOR';
-      document.getElementById('usrEstado').value = 'Activo';
-      toggleModal('modalUsuario', true);
-    };
-
-    window.editarUsuarioConfig = function(idx) {
-      const u = window.cachedUsuarios[idx];
-      document.getElementById('usrIndex').value = idx;
-      document.getElementById('usrNombres').value = u.nombres;
-      document.getElementById('usrApellidos').value = u.apellidos;
-      document.getElementById('usrCorreo').value = u.correo;
-      document.getElementById('usrPassword').value = u.password;
-      document.getElementById('usrCargo').value = u.cargo;
-      document.getElementById('usrRol').value = u.rol;
-      document.getElementById('usrEstado').value = u.estado;
-      toggleModal('modalUsuario', true);
-    };
-
-    window.guardarUsuarioConfig = function() {
-      const idx = parseInt(document.getElementById('usrIndex').value);
-      const nombres = document.getElementById('usrNombres').value.trim();
-      const apellidos = document.getElementById('usrApellidos').value.trim();
-      const correo = document.getElementById('usrCorreo').value.trim();
-      const password = document.getElementById('usrPassword').value.trim();
-      const cargo = document.getElementById('usrCargo').value.trim();
-      const rol = document.getElementById('usrRol').value;
-      const estado = document.getElementById('usrEstado').value;
-
-      if (!nombres || !correo || !password) {
-        alert("Por favor complete los campos obligatorios (Nombres, Correo corporativo y Contraseña).");
-        return;
-      }
-
-      if (idx === -1) {
-        // Nuevo usuario
-        window.cachedUsuarios.push({
-          id: window.cachedUsuarios.length + 1,
-          nombres, apellidos, correo, password, cargo, rol, estado
-        });
-        alert("Usuario registrado con éxito en el sistema.");
-      } else {
-        // Editar existente
-        window.cachedUsuarios[idx] = {
-          ...window.cachedUsuarios[idx],
-          nombres, apellidos, correo, password, cargo, rol, estado
-        };
-        alert("Usuario actualizado con éxito.");
-      }
-
-      toggleModal('modalUsuario', false);
-      renderUsuariosConfig();
-    };
-
-    window.toggleEstadoUsuario = function(idx) {
-      window.cachedUsuarios[idx].estado = window.cachedUsuarios[idx].estado === 'Activo' ? 'Inactivo' : 'Activo';
-      renderUsuariosConfig();
-    };
-
-    // FUNCIÓN DE EXPORTACIÓN A EXCEL PARA AUDITORÍAS (SOPORTE GxP)
-    window.exportarExcelAuditoria = function() {
-      const vigentes = window.cachedDocs.filter(d => d.estado === 'VIGENTE');
-      
-      let htmlTabla = `
-        <table>
-          <thead>
-            <tr>
-              <th>Código</th>
-              <th>Versión</th>
-              <th>Título del Documento</th>
-              <th>Proceso</th>
-              <th>Fecha de Aprobación</th>
-              <th>Fecha de Vencimiento</th>
-              <th>Estado GxP</th>
-            </tr>
-          </thead>
-          <tbody>
-      `;
-
-      vigentes.forEach(d => {
-        htmlTabla += `
-          <tr>
-            <td>${d.codigo}</td>
-            <td>v${d.version}</td>
-            <td>${d.titulo}</td>
-            <td>${d.proceso}</td>
-            <td>${d.fechaAprob || 'N/A'}</td>
-            <td>${d.fechaVenc || 'N/A'}</td>
-            <td>${d.estado}</td>
-          </tr>
-        `;
-      });
-
-      htmlTabla += `</tbody></table>`;
-
-      const blob = new Blob(['\ufeff' + htmlTabla], { type: 'application/vnd.ms-excel' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Listado_Maestro_Documentos_Pharmor_${new Date().toISOString().split('T')[0]}.xls`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    };
-
-    // FLUJO DOCUMENTAL (AVANZAR FASE)
-    window.avanzarWorkflow = function(docId) {
-      const doc = window.cachedDocs.find(x => x.id === docId);
-      if(!doc) return;
-
-      const pin = prompt(`Firma Electrónica Part 11 para "${doc.titulo}". Ingrese PIN de seguridad (Prueba: 1234):`);
-      if(pin !== '1234') {
-        alert("PIN incorrecto. Firma rechazada.");
-        return;
-      }
-
-      if(doc.fase === 'Elaboración') {
-        doc.fase = 'Revisión';
-        alert("Documento firmado en fase de Elaboración. Pasa a REVISIÓN.");
-      } else if(doc.fase === 'Revisión') {
-        doc.fase = 'Aprobación';
-        alert("Documento firmado en fase de Revisión. Pasa a APROBACIÓN.");
-      } else if(doc.fase === 'Aprobación') {
-        doc.fase = 'Aprobado';
-        doc.estado = 'VIGENTE';
-        alert("Documento Aprobado y firmado electrónicamente. Ahora es VIGENTE en el Listado Maestro.");
-      }
-      renderAllData();
-    };
-
-    // VISOR DE DOCUMENTOS CON RBAC
-    window.viewDocument = function(docId) {
-      let doc = window.cachedDocs.find(x => x.id === docId) || window.cachedObsoletos.find(x => x.id === docId);
-      if (!doc || !doc.archivo_url) {
-        alert("Este documento no cuenta con un archivo PDF adjunto.");
-        return;
-      }
-
-      document.getElementById('pdfViewerTitle').innerText = `${doc.codigo} v${doc.version} - ${doc.titulo} [${doc.estado}]`;
-      const viewerArea = document.getElementById('pdfViewerArea');
-      const isAdmin = window.activeGxpUser.rol === 'ADMIN_QA';
-
-      if (isAdmin) {
-        document.getElementById('pdfViewerAlert').innerText = "Modo QA Lead: Acceso completo con privilegios de gestión.";
-        viewerArea.innerHTML = `<iframe src="${doc.archivo_url}" class="w-full h-full border-0"></iframe>`;
-      } else {
-        document.getElementById('pdfViewerAlert').innerText = "Modo Operador de Planta: Visualización protegida contra descargas e impresión.";
-        viewerArea.innerHTML = `
-          <div class="read-only-shield" oncontextmenu="return false;"></div>
-          <iframe src="${doc.archivo_url}#toolbar=0&navpanes=0&scrollbar=0" class="w-full h-full border-0 pointer-events-none"></iframe>
-        `;
-      }
-
-      toggleModal('modalExportPdf', true);
-    };
-
-    // EMITIR COPIA CON PDF-LIB (PRESERVA LA MARCA DE AGUA EN DIAGONAL)
-    window.abrirModalEmitir = function(docId) {
-      window.selectedDocId = docId;
-      toggleModal('modalEmitirCopia', true);
-    };
-
-    document.getElementById('btn-confirmar-emitir').addEventListener('click', async function() {
-      const doc = window.cachedDocs.find(x => x.id === window.selectedDocId);
-      const area = document.getElementById('copiaAreaSelect').value;
-      const custodio = document.getElementById('copiaCustodioInput').value;
-
-      if (!doc.archivo_url) { alert("El documento no tiene un PDF para estampar."); return; }
-
-      this.innerText = "Inyectando Marca de Agua...";
-      this.disabled = true;
-
-      try {
-        const existingPdfBytes = await fetch(doc.archivo_url).then(res => res.arrayBuffer());
+      toggleModal('modalDoc', true
