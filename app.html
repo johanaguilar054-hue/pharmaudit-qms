@@ -7,7 +7,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Supabase para Storage y Base de Datos -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <!-- PDF-Lib para inyectar marcas de agua binarias al vuelo (Estándar QMS) -->
+  <!-- PDF-Lib para inyectar marcas de agua binarias al vuelo (Copias Controladas) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
   
   <style>
@@ -17,7 +17,7 @@
     .modal-backdrop { display: none; }
     .modal-backdrop.active { display: flex; }
     
-    /* Escudo de protección para modo lectura en operadores */
+    /* Escudo de protección para modo lectura estricta en operadores */
     .read-only-shield {
       position: absolute;
       top: 0; left: 0; right: 0; bottom: 0;
@@ -60,7 +60,7 @@
       </div>
 
       <div class="text-[11px] text-center text-slate-400 border-t pt-3 font-mono">
-        Cumplimiento EU Annex 11 / FDA 21 CFR Part 11 (RBAC)
+        Cumplimiento EU Annex 11 / FDA 21 CFR Part 11 (Modelo KAWAK / RBAC)
       </div>
     </div>
   </div>
@@ -81,6 +81,7 @@
       </div>
     </header>
 
+    <!-- NAVEGACIÓN PRINCIPAL (TODOS LOS MÓDULOS) -->
     <nav class="bg-slate-800 text-slate-300 rounded-xl p-1 mb-4 flex space-x-1 overflow-x-auto text-xs font-medium">
       <button data-tab="dashboard" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap bg-cyan-600 text-white font-bold cursor-pointer">📊 Dashboard</button>
       <button data-tab="documentos" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">📑 Gestión Documental</button>
@@ -90,7 +91,7 @@
       <button data-tab="metrologia" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">🛠️ Equipos & Calibración</button>
       <button data-tab="firmas" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">✍️ Firmas Part 11</button>
       <button data-tab="audit" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">📜 Audit Trail (ALCOA+)</button>
-      <button data-tab="admin" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 bg-slate-700 text-cyan-300 cursor-pointer admin-only">⚙️ Ajustes ERP</button>
+      <button data-tab="admin" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 bg-slate-700 text-cyan-300 cursor-pointer admin-only">⚙️ Ajustes & KAWAK Config</button>
     </nav>
 
     <main>
@@ -101,7 +102,7 @@
             <h1 class="text-base font-bold text-slate-900">Estado del Sistema de Gestión de Calidad (En Vivo)</h1>
             <p class="text-xs text-slate-500">Integridad de datos ALCOA+ y Supabase Storage Conectado</p>
           </div>
-          <span class="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">21 CFR Part 11 / EU Annex 11</span>
+          <span class="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">21 CFR Part 11 / KAWAK Style</span>
         </div>
 
         <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -123,7 +124,7 @@
           </div>
           <div class="bg-white p-3 rounded-xl border-l-4 border-l-rose-500 shadow-sm">
             <div class="text-slate-500 text-[11px]">Audit Trail Log</div>
-            <div id="cnt-audit" class="text-xl font-bold text-rose-600 mt-1">0</div>
+            <div id="cnt-audit" class="text-xl font-bold text-rose-600 mt-1">1</div>
           </div>
         </div>
       </div>
@@ -132,8 +133,8 @@
       <div id="view-documentos" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4">
         <div class="flex justify-between items-center mb-3">
           <div>
-            <h2 class="font-bold text-slate-800 text-sm">Gestión Documental & Workflows</h2>
-            <p class="text-xs text-slate-500">Control de versiones y almacenamiento en Supabase Storage</p>
+            <h2 class="font-bold text-slate-800 text-sm">Gestión Documental & Workflows (Listado Único)</h2>
+            <p class="text-xs text-slate-500">Control de versiones, almacenamiento en Supabase y parametrización KAWAK</p>
           </div>
           <button type="button" id="btn-open-modal-doc" class="bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow cursor-pointer admin-only">+ Solicitud / Nuevo Documento</button>
         </div>
@@ -205,40 +206,57 @@
         </div>
       </div>
 
-      <!-- ADMIN (KAWAK STYLE) -->
+      <!-- ADMIN / KAWAK CONFIG (MATRIZ DE ROLES Y PARÁMETROS) -->
       <div id="view-admin" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-4">
         <div class="flex justify-between items-center border-b pb-2">
           <div>
-            <h2 class="font-bold text-slate-800 text-sm">⚙️ Ajustes del Sistema ERP / QMS (Matriz de Roles RBAC)</h2>
-            <p class="text-xs text-slate-500">Gestión de usuarios corporativos, roles y privilegios GxP</p>
+            <h2 class="font-bold text-slate-800 text-sm">⚙️ Ajustes del Sistema & Configuración KAWAK (RBAC)</h2>
+            <p class="text-xs text-slate-500">Parámetros globales, alertas, tipos de documento y codificación automática</p>
           </div>
           <button type="button" class="bg-slate-800 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow cursor-pointer">+ Registrar Nuevo Usuario GxP</button>
         </div>
 
-        <table class="w-full border-collapse text-left text-xs">
-          <thead>
-            <tr class="bg-slate-100 text-slate-700 border-b">
-              <th class="p-2 border font-bold">Usuario</th>
-              <th class="p-2 border font-bold">Cargo</th>
-              <th class="p-2 border font-bold">Rol GxP</th>
-              <th class="p-2 border font-bold">Nivel de Acceso</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td class="p-2 border font-bold">Johan Aguilar</td>
-              <td class="p-2 border">QA Lead</td>
-              <td class="p-2 border"><span class="bg-purple-100 text-purple-800 px-2 py-0.5 rounded font-bold text-[10px]">ADMIN_QA</span></td>
-              <td class="p-2 border text-slate-500">Control total, creación de documentos y emisión de copias.</td>
-            </tr>
-            <tr>
-              <td class="p-2 border font-bold">Carlos Mendoza</td>
-              <td class="p-2 border">Operario de Producción</td>
-              <td class="p-2 border"><span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-bold text-[10px]">LECTOR</span></td>
-              <td class="p-2 border text-slate-500">Solo lectura de documentos vigentes (Protegido contra impresión).</td>
-            </tr>
-          </tbody>
-        </table>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+          <div class="bg-slate-50 p-3 rounded border space-y-2">
+            <h3 class="font-bold text-slate-700">📌 Parámetros del Módulo (Estilo KAWAK)</h3>
+            <div class="flex justify-between"><span>Días de alerta para revisión:</span><strong class="font-mono">30 días</strong></div>
+            <div class="flex justify-between"><span>Control de cambios obligatorio:</span><strong class="text-emerald-700">Activado</strong></div>
+            <div class="flex justify-between"><span>Modo de codificación:</span><strong class="font-mono">Automático [Proceso]-[Tipo]-[Consecutivo]</strong></div>
+          </div>
+          <div class="bg-slate-50 p-3 rounded border space-y-2">
+            <h3 class="font-bold text-slate-700">👥 Matriz de Permisos y Roles (RBAC)</h3>
+            <div class="flex justify-between"><span>ADMIN_QA (Johan Aguilar):</span><span class="text-purple-700 font-bold">Control Total</span></div>
+            <div class="flex justify-between"><span>LECTOR (Carlos Mendoza):</span><span class="text-amber-700 font-bold">Solo Lectura (Bloqueo Descarga)</span></div>
+          </div>
+        </div>
+
+        <div>
+          <h3 class="font-bold text-xs text-slate-700 mb-2">Usuarios Autorizados en Planta</h3>
+          <table class="w-full border-collapse text-left text-xs">
+            <thead>
+              <tr class="bg-slate-100 text-slate-700 border-b">
+                <th class="p-2 border font-bold">Usuario</th>
+                <th class="p-2 border font-bold">Cargo</th>
+                <th class="p-2 border font-bold">Rol GxP</th>
+                <th class="p-2 border font-bold">Nivel de Acceso</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="p-2 border font-bold">Johan Aguilar</td>
+                <td class="p-2 border">QA Lead</td>
+                <td class="p-2 border"><span class="bg-purple-100 text-purple-800 px-2 py-0.5 rounded font-bold text-[10px]">ADMIN_QA</span></td>
+                <td class="p-2 border text-slate-500">Creación, aprobación, emisión de copias y ajustes.</td>
+              </tr>
+              <tr>
+                <td class="p-2 border font-bold">Carlos Mendoza</td>
+                <td class="p-2 border">Operario de Producción</td>
+                <td class="p-2 border"><span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-bold text-[10px]">LECTOR</span></td>
+                <td class="p-2 border text-slate-500">Solo lectura de documentos vigentes (Protegido).</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </main>
   </div>
@@ -295,7 +313,7 @@
     <div class="bg-white rounded-xl max-w-lg w-full p-5 border shadow-2xl space-y-4">
       <div class="border-b pb-2">
         <h3 class="font-bold text-sm text-cyan-900">📑 Crear / Subir Nuevo Documento Controlado</h3>
-        <p class="text-xs text-slate-500">Registro en Supabase Storage y base de datos GxP.</p>
+        <p class="text-xs text-slate-500">Registro en Supabase Storage y base de datos GxP (Modelo KAWAK).</p>
       </div>
       
       <div class="space-y-3 text-xs">
@@ -547,7 +565,7 @@
         return;
       }
 
-      let fileUrl = 'https://pdfobject.com/pdf/sample.pdf'; // URL por defecto si no adjuntan
+      let fileUrl = 'https://pdfobject.com/pdf/sample.pdf';
       const client = getSupabase();
 
       if (client && fileInput.files.length > 0) {
