@@ -65,11 +65,11 @@
           <input type="password" id="loginPassword" value="123456" class="w-full p-2.5 border rounded-lg text-xs font-mono bg-slate-50 focus:bg-white" />
         </div>
 
-        <button type="button" id="btn-login-secure" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2.5 rounded-lg text-xs shadow transition cursor-pointer">
+        <button type="button" onclick="loginSeguro()" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2.5 rounded-lg text-xs shadow transition cursor-pointer">
           Iniciar Sesión Segura (21 CFR Part 11)
         </button>
 
-        <button type="button" id="btn-login-dev" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 rounded-lg text-xs shadow transition cursor-pointer">
+        <button type="button" onclick="loginDirecto()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 rounded-lg text-xs shadow transition cursor-pointer">
           ⚡ Ingreso Directo QA Lead (Johan Aguilar)
         </button>
       </div>
@@ -92,7 +92,7 @@
         <span id="userBadge" class="text-xs font-mono text-emerald-400 bg-emerald-950 px-3 py-1 rounded-full border border-emerald-500/30">
           Johan Aguilar (QA Lead)
         </span>
-        <button type="button" id="btn-logout" class="bg-rose-600 hover:bg-rose-700 text-white px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer">
+        <button type="button" onclick="cerrarSesion()" class="bg-rose-600 hover:bg-rose-700 text-white px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer">
           🚪 Salir
         </button>
       </div>
@@ -403,7 +403,7 @@
     </div>
   </div>
 
-  <!-- MODAL PARA CREAR NUEVO DOCUMENTO (RESTAURADO AL 100%) -->
+  <!-- MODAL PARA CREAR NUEVO DOCUMENTO -->
   <div id="modalDoc" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
     <div class="bg-white rounded-xl max-w-lg w-full p-5 border shadow-2xl space-y-4">
       <div class="border-b pb-2">
@@ -452,7 +452,7 @@
     </div>
   </div>
 
-  <!-- MODALES DE USUARIOS, DESVIACIONES Y EQUIPOS -->
+  <!-- MODALES AUXILIARES -->
   <div id="modalUser" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
     <div class="bg-white rounded-xl max-w-md w-full p-5 border shadow-2xl space-y-3">
       <h3 class="font-bold text-sm text-slate-800">👤 Registrar Usuario GxP</h3>
@@ -472,17 +472,29 @@
     </div>
   </div>
 
-  <!-- SCRIPT DEFINITIVO Y CONFIGURADO -->
+  <!-- SCRIPT CON DISPARADORES DIRECTOS E INICIALIZACIÓN SEGURA -->
   <script>
     const SUPABASE_URL = 'https://wmtvlxjzzwwhtybccrpe.supabase.co'; 
     const SUPABASE_ANON_KEY = 'sb_publishable_i4A7rEjukekMlaCKjXWaNA_ze54EVjl';          
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    
+    // Inicialización tolerante a fallos
+    let _supabaseClient = null;
+    function getSupabase() {
+      if (!_supabaseClient && typeof supabase !== 'undefined' && supabase.createClient) {
+        try {
+          _supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        } catch (e) {
+          console.warn("Error al inicializar Supabase Client:", e);
+        }
+      }
+      return _supabaseClient;
+    }
 
     window.activeGxpUser = { id: 'b40e33f1-6196-4b51-bfcb-6604d6daff50', nombre_completo: 'Johan Aguilar', cargo: 'QA Lead' };
 
-    // NOTA: He agregado un enlace PDF de muestra a la Lista de Chequeo Batch para que puedas visualizar que el panel de impresión GxP sí lo carga correctamente.
+    // Muestra de documentos con PDF compatible para el visor iframe
     window.cachedDocs = [
-      { id: '1', codigo: 'PH-GPD-F0-01', titulo: 'Lista de Chequeo Batch y Liberación de PT', tipo: 'FORMATO', version: '2.0', estado: 'Vigente', created_at: '2026-10-15', archivo_url: ''https://pdfobject.com/pdf/sample.pdf' },
+      { id: '1', codigo: 'PH-GPD-F0-01', titulo: 'Lista de Chequeo Batch y Liberación de PT', tipo: 'FORMATO', version: '2.0', estado: 'Vigente', created_at: '2026-10-15', archivo_url: 'https://pdfobject.com/pdf/sample.pdf' },
       { id: '2', codigo: 'PH-GPD-F0-01', titulo: 'Lista de Chequeo Batch y Liberación de PT', tipo: 'FORMATO', version: '1.0', estado: 'Obsoleto', created_at: '2026-05-10', archivo_url: '' },
       { id: '3', codigo: 'SOP-PRO-012', titulo: 'Limpieza e Higienización de Áreas Limpias Class C', tipo: 'SOP', version: '2.1', estado: 'Vigente', created_at: '2026-09-01', archivo_url: '' },
       { id: '4', codigo: 'SOP-QA-001', titulo: 'Procedimiento de Manejo de Desviaciones y NC', tipo: 'SOP', version: '3.0', estado: 'Vigente', created_at: '2026-08-20', archivo_url: '' },
@@ -499,36 +511,29 @@
     window.selectedDocForCopia = null;
     window.selectedDocForVersion = null;
 
-    function toggleModal(id, show) {
-      const m = document.getElementById(id);
-      if (m) {
-        if (show) m.classList.add('active'); else m.classList.remove('active');
-      }
-    }
+    // FUNCIONES GLOBALES DE NAVEGACIÓN Y LOGIN (DISPARO DIRECTO)
+    window.loginDirecto = function() {
+      localStorage.setItem('pharm_logged', 'true');
+      localStorage.setItem('pharm_user', 'Johan Aguilar');
+      window.abrirPortal({ id: 'b40e33f1-6196-4b51-bfcb-6604d6daff50', nombre_completo: 'Johan Aguilar', cargo: 'QA Lead' });
+    };
 
-    async function subirArchivoSupabase(fileInputId, codigoDoc, versionDoc) {
-      const fileInput = document.getElementById(fileInputId);
-      if (!fileInput || !fileInput.files || fileInput.files.length === 0) return ''; 
+    window.loginSeguro = function() {
+      const emailEl = document.getElementById('loginEmail');
+      const email = emailEl ? emailEl.value : 'Johan Aguilar';
+      localStorage.setItem('pharm_logged', 'true');
+      localStorage.setItem('pharm_user', email || 'Johan Aguilar');
+      window.abrirPortal({ id: 'b40e33f1-6196-4b51-bfcb-6604d6daff50', nombre_completo: email || 'Johan Aguilar', cargo: 'QA Lead' });
+    };
 
-      const file = fileInput.files[0];
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${codigoDoc}_v${versionDoc}_${Date.now()}.${fileExt}`;
-      const filePath = `qms-files/${fileName}`;
+    window.cerrarSesion = function() {
+      localStorage.removeItem('pharm_logged');
+      localStorage.removeItem('pharm_user');
+      location.reload();
+    };
 
-      const { data, error } = await supabaseClient.storage.from('documentos-gxp').upload(filePath, file);
-      if (error) {
-        console.error('Error al subir a Supabase Storage:', error);
-        alert('Error al adjuntar el archivo digital en la nube.');
-        return '';
-      }
-
-      const { data: publicURLData } = supabaseClient.storage.from('documentos-gxp').getPublicUrl(filePath);
-      return publicURLData.publicUrl;
-    }
-
-    function abrirPortal(user) {
+    window.abrirPortal = function(user) {
       if (user) window.activeGxpUser = user;
-      
       const loginView = document.getElementById('view-login');
       const portalView = document.getElementById('app-portal');
       
@@ -539,6 +544,39 @@
       if (badge) badge.innerText = `User: ${window.activeGxpUser.nombre_completo} (${window.activeGxpUser.cargo || 'QA Lead'})`;
       
       renderAllData();
+    };
+
+    function toggleModal(id, show) {
+      const m = document.getElementById(id);
+      if (m) {
+        if (show) m.classList.add('active'); else m.classList.remove('active');
+      }
+    }
+
+    async function subirArchivoSupabase(fileInputId, codigoDoc, versionDoc) {
+      const client = getSupabase();
+      if (!client) {
+        alert('Modo local: El servicio de almacenamiento no está disponible actualmente.');
+        return '';
+      }
+
+      const fileInput = document.getElementById(fileInputId);
+      if (!fileInput || !fileInput.files || fileInput.files.length === 0) return ''; 
+
+      const file = fileInput.files[0];
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${codigoDoc}_v${versionDoc}_${Date.now()}.${fileExt}`;
+      const filePath = `qms-files/${fileName}`;
+
+      const { data, error } = await client.storage.from('documentos-gxp').upload(filePath, file);
+      if (error) {
+        console.error('Error al subir a Supabase Storage:', error);
+        alert('Error al adjuntar el archivo digital en la nube.');
+        return '';
+      }
+
+      const { data: publicURLData } = client.storage.from('documentos-gxp').getPublicUrl(filePath);
+      return publicURLData.publicUrl;
     }
 
     function renderAllData() {
@@ -679,42 +717,11 @@
       toggleModal('modalExportPdf', true);
     }
 
+    // REGISTRO DE EVENTOS SECUNDARIOS TRAS LA CARGA DEL DOM
     document.addEventListener('DOMContentLoaded', function() {
-      
-      // PERSISTENCIA DE SESIÓN LOCAL
-      const btnSecure = document.getElementById('btn-login-secure');
-      const btnDev = document.getElementById('btn-login-dev');
-      const btnLogout = document.getElementById('btn-logout');
-
-      function loguearUsuario(email, cargo) {
-        localStorage.setItem('pharm_logged', 'true');
-        localStorage.setItem('pharm_user', email);
-        abrirPortal({ id: 'b40e33f1-6196-4b51-bfcb-6604d6daff50', nombre_completo: email, cargo: cargo });
-      }
-
-      if (btnSecure) {
-        btnSecure.addEventListener('click', function() {
-          const email = document.getElementById('loginEmail').value || 'Johan Aguilar';
-          loguearUsuario(email, 'QA Lead');
-        });
-      }
-
-      if (btnDev) {
-        btnDev.addEventListener('click', function() {
-          loguearUsuario('Johan Aguilar', 'QA Lead');
-        });
-      }
-
-      if (btnLogout) {
-        btnLogout.addEventListener('click', function() {
-          localStorage.removeItem('pharm_logged');
-          location.reload();
-        });
-      }
-
-      // Verificación automática al recargar
+      // Verificación automática de sesión guardada
       if (localStorage.getItem('pharm_logged') === 'true') {
-        abrirPortal({ 
+        window.abrirPortal({ 
           id: 'b40e33f1-6196-4b51-bfcb-6604d6daff50', 
           nombre_completo: localStorage.getItem('pharm_user') || 'Johan Aguilar', 
           cargo: 'QA Lead' 
@@ -737,7 +744,7 @@
         });
       });
 
-      // ACCIONES DINÁMICAS (PREVIEW, EMITIR, FIRMAR, VERSIÓN)
+      // MANEJO DE ACCIONES DINÁMICAS (TABLAS)
       document.addEventListener('click', function(e) {
         const target = e.target.closest('.btn-action');
         if (!target) return;
@@ -781,7 +788,7 @@
         }
       });
 
-      // MANEJO DE MODALES
+      // MODALES
       const modalsToClose = [
         ['btn-close-pdf', 'modalExportPdf'], ['btn-close-pdf-bottom', 'modalExportPdf'],
         ['btn-close-emitir', 'modalEmitirCopia'], ['btn-close-version', 'modalVersion'],
@@ -808,7 +815,7 @@
         if (el) el.addEventListener('click', printAction);
       });
 
-      // LÓGICA: CREAR NUEVO DOCUMENTO (CON SUPABASE)
+      // CREAR DOCUMENTO
       const btnSaveNewDoc = document.getElementById('btn-save-new-doc');
       if (btnSaveNewDoc) {
         btnSaveNewDoc.addEventListener('click', async function() {
@@ -822,7 +829,6 @@
             return;
           }
 
-          // Subida a Supabase
           const fileUrl = await subirArchivoSupabase('createDocFile', code, ver);
 
           window.cachedDocs.unshift({
@@ -840,7 +846,6 @@
           alert(`Documento GxP (${code}) creado y subido con éxito.`);
           toggleModal('modalDoc', false);
           
-          // Limpiar formulario
           document.getElementById('createDocTitle').value = '';
           document.getElementById('createDocCode').value = '';
           document.getElementById('createDocFile').value = '';
@@ -849,7 +854,7 @@
         });
       }
 
-      // LÓGICA: EMITIR COPIA FÍSICA
+      // EMITIR COPIA
       const btnConfirmEmitir = document.getElementById('btn-confirmar-emitir');
       if (btnConfirmEmitir) {
         btnConfirmEmitir.addEventListener('click', function() {
@@ -884,7 +889,7 @@
         });
       }
 
-      // LÓGICA: NUEVA VERSIÓN (CON SUPABASE)
+      // CREAR NUEVA VERSIÓN
       const btnConfirmVersion = document.getElementById('btn-confirmar-version');
       if (btnConfirmVersion) {
         btnConfirmVersion.addEventListener('click', async function() {
@@ -927,7 +932,7 @@
         });
       }
 
-      // LÓGICA: FIRMA ELECTRÓNICA
+      // FIRMA ELECTRÓNICA
       const btnConfirmSign = document.getElementById('btn-confirmar-sign');
       if (btnConfirmSign) {
         btnConfirmSign.addEventListener('click', function() {
