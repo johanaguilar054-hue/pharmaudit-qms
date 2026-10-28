@@ -1,4 +1,435 @@
-<!-- SCRIPT DEFINITIVO Y SEGURO -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PharmAudit ERP / QMS - Pharmor</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body { margin: 0; padding: 0; background-color: #f8fafc; font-family: ui-sans-serif, system-ui, sans-serif; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .modal-backdrop { display: none; }
+    .modal-backdrop.active { display: flex; }
+
+    .watermark-container { position: relative; overflow: hidden; }
+    .watermark-text {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(-30deg);
+      font-size: 3.5rem;
+      font-weight: 900;
+      opacity: 0.12;
+      pointer-events: none;
+      white-space: nowrap;
+      text-transform: uppercase;
+      user-select: none;
+      z-index: 10;
+    }
+
+    @media print {
+      body * { visibility: hidden; }
+      #pdf-printable-area, #pdf-printable-area * { visibility: visible; }
+      #pdf-printable-area {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+        border: none !important;
+      }
+      .no-print { display: none !important; }
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 p-4">
+
+  <!-- PANTALLA DE LOGIN INSTITUCIONAL -->
+  <div id="view-login" class="min-h-[80vh] flex items-center justify-center">
+    <div class="bg-white p-8 rounded-2xl shadow-xl border border-slate-200 max-w-md w-full space-y-5">
+      <div class="text-center">
+        <div class="text-3xl font-extrabold text-slate-900 tracking-tight">🛡️ PharmAudit</div>
+        <p class="text-xs text-slate-500 mt-1 font-mono">Portal de Gestión de Calidad GxP · Pharmor</p>
+      </div>
+
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Correo Institucional</label>
+          <input type="email" id="loginEmail" value="j.aguilar@pharmor.com.co" class="w-full p-2.5 border rounded-lg text-xs font-mono bg-slate-50 focus:bg-white" />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Contraseña</label>
+          <input type="password" id="loginPassword" value="123456" class="w-full p-2.5 border rounded-lg text-xs font-mono bg-slate-50 focus:bg-white" />
+        </div>
+
+        <button type="button" id="btn-login-secure" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2.5 rounded-lg text-xs shadow transition cursor-pointer">
+          Iniciar Sesión Segura (21 CFR Part 11)
+        </button>
+
+        <button type="button" id="btn-login-dev" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 rounded-lg text-xs shadow transition cursor-pointer">
+          ⚡ Ingreso Directo QA Lead (Johan Aguilar)
+        </button>
+      </div>
+
+      <div class="text-[11px] text-center text-slate-400 border-t pt-3 font-mono">
+        Cumplimiento EU Annex 11 / FDA 21 CFR Part 11
+      </div>
+    </div>
+  </div>
+
+  <!-- APLICACIÓN PRINCIPAL -->
+  <div id="app-portal" class="hidden">
+    <header class="bg-slate-900 text-white p-4 rounded-xl shadow-lg border-b-2 border-cyan-500 mb-4 flex justify-between items-center">
+      <div>
+        <span class="text-xl font-bold text-cyan-400">🛡️ PharmAudit</span>
+        <span class="text-xs text-slate-400 block font-mono">QMS / GxP ERP Compliance · Pharmor</span>
+      </div>
+      <div class="flex items-center space-x-3">
+        <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+        <span id="userBadge" class="text-xs font-mono text-emerald-400 bg-emerald-950 px-3 py-1 rounded-full border border-emerald-500/30">
+          Johan Aguilar (QA Lead)
+        </span>
+        <button type="button" id="btn-logout" class="bg-rose-600 hover:bg-rose-700 text-white px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer">
+          🚪 Salir
+        </button>
+      </div>
+    </header>
+
+    <nav class="bg-slate-800 text-slate-300 rounded-xl p-1 mb-4 flex space-x-1 overflow-x-auto text-xs font-medium">
+      <button data-tab="dashboard" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap bg-cyan-600 text-white font-bold cursor-pointer">📊 Dashboard</button>
+      <button data-tab="documentos" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">📑 Gestión Documental</button>
+      <button data-tab="copias" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 text-amber-300 font-bold cursor-pointer">📋 Copias Controladas</button>
+      <button data-tab="desviaciones" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">⚠️ Desviaciones & NC</button>
+      <button data-tab="capa" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">☑️ Módulo CAPA</button>
+      <button data-tab="metrologia" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">🛠️ Equipos & Calibración</button>
+      <button data-tab="firmas" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">✍️ Firmas Part 11</button>
+      <button data-tab="audit" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">📜 Audit Trail (ALCOA+)</button>
+      <button data-tab="admin" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 bg-slate-700 text-cyan-300 cursor-pointer">⚙️ Ajustes ERP</button>
+    </nav>
+
+    <main>
+      <div id="view-dashboard" class="tab-content active space-y-4">
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex justify-between items-center">
+          <div>
+            <h1 class="text-base font-bold text-slate-900">Estado del Sistema de Gestión de Calidad (En Vivo)</h1>
+            <p class="text-xs text-slate-500">Integridad de datos ALCOA+ y Supabase Storage Conectado</p>
+          </div>
+          <span class="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">21 CFR Part 11 / EU Annex 11</span>
+        </div>
+
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <div class="bg-white p-3 rounded-xl border-l-4 border-l-blue-500 shadow-sm">
+            <div class="text-slate-500 text-[11px]">Documentos</div>
+            <div id="cnt-docs" class="text-xl font-bold text-slate-800 mt-1">0</div>
+          </div>
+          <div class="bg-white p-3 rounded-xl border-l-4 border-l-amber-500 shadow-sm">
+            <div class="text-slate-500 text-[11px]">Copias Impresas Activas</div>
+            <div id="cnt-copias" class="text-xl font-bold text-amber-600 mt-1">0</div>
+          </div>
+          <div class="bg-white p-3 rounded-xl border-l-4 border-l-purple-500 shadow-sm">
+            <div class="text-slate-500 text-[11px]">CAPAs</div>
+            <div id="cnt-capas" class="text-xl font-bold text-purple-600 mt-1">0</div>
+          </div>
+          <div class="bg-white p-3 rounded-xl border-l-4 border-l-emerald-500 shadow-sm">
+            <div class="text-slate-500 text-[11px]">Equipos GxP</div>
+            <div id="cnt-eqps" class="text-xl font-bold text-emerald-600 mt-1">0</div>
+          </div>
+          <div class="bg-white p-3 rounded-xl border-l-4 border-l-rose-500 shadow-sm">
+            <div class="text-slate-500 text-[11px]">Audit Trail Log</div>
+            <div id="cnt-audit" class="text-xl font-bold text-rose-600 mt-1">0</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="view-documentos" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+        <div class="flex justify-between items-center mb-3">
+          <div>
+            <h2 class="font-bold text-slate-800 text-sm">Gestión Documental & Workflows</h2>
+            <p class="text-xs text-slate-500">Control de versiones, almacenamiento en Supabase y exportación PDF oficial</p>
+          </div>
+          <button type="button" id="btn-open-modal-doc" class="bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow cursor-pointer">+ Solicitud / Nuevo Documento</button>
+        </div>
+        <div id="list-docs" class="divide-y divide-slate-100 text-xs">Cargando...</div>
+      </div>
+
+      <div id="view-copias" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-4">
+        <div class="flex justify-between items-center border-b pb-3">
+          <div>
+            <h2 class="font-bold text-slate-800 text-sm">📋 Control y Emisión de Copias Controladas (GxP)</h2>
+            <p class="text-xs text-slate-500">Trazabilidad de copias físicas distribuidas en planta con QR de verificación</p>
+          </div>
+          <div class="bg-amber-50 border border-amber-200 px-3 py-1 rounded-lg text-xs text-amber-800 font-mono font-bold">
+            Conciliación Planta: <span id="formula-status">E = R + D (100%)</span>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full border-collapse text-left text-xs font-mono">
+            <thead>
+              <tr class="bg-slate-100 text-slate-700 border-b">
+                <th class="p-2 border font-bold">Consecutivo Copia</th>
+                <th class="p-2 border font-bold">Documento / Versión</th>
+                <th class="p-2 border font-bold">Área Destino</th>
+                <th class="p-2 border font-bold">Custodio / Responsable</th>
+                <th class="p-2 border font-bold">Fecha Emisión</th>
+                <th class="p-2 border font-bold">Estado Físico</th>
+                <th class="p-2 border font-bold text-center">Acción GxP</th>
+              </tr>
+            </thead>
+            <tbody id="list-copias-body" class="divide-y divide-slate-100">
+              <tr><td colspan="7" class="p-4 text-center text-slate-400">Cargando registros de copias...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="view-desviaciones" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-3">
+        <div class="flex justify-between items-center">
+          <h2 class="font-bold text-slate-800 text-sm">Desviaciones & NC</h2>
+          <button type="button" id="btn-open-modal-dev" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow cursor-pointer">+ Reportar Desviación / NC</button>
+        </div>
+        <div id="list-desvs" class="space-y-2 text-xs">Cargando...</div>
+      </div>
+
+      <div id="view-capa" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+        <h2 class="font-bold text-slate-800 text-sm mb-3">Planes CAPA Integrados</h2>
+        <div id="list-capas" class="space-y-2 text-xs">Cargando...</div>
+      </div>
+
+      <div id="view-metrologia" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+        <div class="flex justify-between items-center mb-3">
+          <h2 class="font-bold text-slate-800 text-sm">Equipos & Metrología GxP</h2>
+          <button type="button" id="btn-open-modal-eqp" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow cursor-pointer">+ Nuevo Equipo GxP</button>
+        </div>
+        <div id="list-eqps" class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">Cargando...</div>
+      </div>
+
+      <div id="view-firmas" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+        <h2 class="font-bold text-slate-800 text-sm mb-3">Registro de Firmas Electrónicas (21 CFR Part 11)</h2>
+        <div id="list-frms" class="space-y-2 text-xs">Cargando...</div>
+      </div>
+
+      <div id="view-audit" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+        <h2 class="font-bold text-slate-800 text-sm mb-3">Audit Trail Inalterable (ALCOA+)</h2>
+        <div id="list-auds" class="space-y-2 max-h-96 overflow-y-auto font-mono text-[11px]">Cargando...</div>
+      </div>
+
+      <div id="view-admin" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-4">
+        <div class="flex justify-between items-center border-b pb-2">
+          <div>
+            <h2 class="font-bold text-slate-800 text-sm">⚙️ Ajustes del Sistema ERP / QMS</h2>
+            <p class="text-xs text-slate-500">Gestión de usuarios corporativos, roles y credenciales GxP</p>
+          </div>
+          <button type="button" id="btn-open-modal-user" class="bg-slate-800 hover:bg-slate-900 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow cursor-pointer">+ Registrar Nuevo Usuario GxP</button>
+        </div>
+
+        <div>
+          <h3 class="font-bold text-xs text-slate-700 mb-2">Usuarios y Personal Autorizado</h3>
+          <div id="list-users" class="divide-y divide-slate-100 text-xs">Cargando usuarios...</div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- MODAL PDF PREVIEW -->
+  <div id="modalExportPdf" class="modal-backdrop fixed inset-0 bg-slate-900/70 backdrop-blur-sm items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl max-w-4xl w-full p-6 border shadow-2xl space-y-4 max-h-[95vh] flex flex-col">
+      <div class="border-b pb-2 flex justify-between items-center shrink-0">
+        <h3 class="font-bold text-sm text-slate-800">📜 Vista Previa & Impresión de Copia Controlada GxP</h3>
+        <div class="flex items-center space-x-2">
+          <button type="button" id="btn-print-top" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow cursor-pointer">
+            🖨️ Imprimir Copia Controlada
+          </button>
+          <button type="button" id="btn-close-pdf" class="text-slate-400 hover:text-slate-600 font-bold text-base px-2 cursor-pointer">✕</button>
+        </div>
+      </div>
+
+      <div class="overflow-y-auto p-2 flex-grow space-y-4">
+        <div id="pdf-printable-area" class="watermark-container bg-white p-8 border border-slate-300 text-slate-900 text-xs space-y-6">
+          <div id="pdfWatermark" class="watermark-text text-emerald-600">COPIA CONTROLADA</div>
+
+          <div class="border-2 border-slate-800 p-3 grid grid-cols-4 items-center text-center font-bold font-mono">
+            <div class="col-span-1 border-r-2 border-slate-800 pr-2">
+              <div class="text-sm">PHARMOR</div>
+              <div class="text-[9px] font-normal text-slate-600">QMS Compliance</div>
+            </div>
+            <div class="col-span-2 text-xs uppercase px-2" id="pdfDocTitle">SISTEMA DE GESTIÓN DE CALIDAD</div>
+            <div class="col-span-1 border-l-2 border-slate-800 pl-2 text-[10px] text-left space-y-0.5">
+              <div>Código: <span id="pdfDocCode" class="font-bold text-cyan-800"></span></div>
+              <div>Versión: <span id="pdfDocVersion"></span></div>
+              <div>Fecha: <span id="pdfDocDate"></span></div>
+            </div>
+          </div>
+
+          <div class="bg-amber-50/70 border-2 border-amber-400 p-3 rounded-lg flex justify-between items-center font-mono text-[11px]">
+            <div class="space-y-1">
+              <div><strong>N° Consecutivo Copia:</strong> <span id="pdfCopiaCode" class="font-bold text-amber-900">COP-OFFICIAL-DIGITAL</span></div>
+              <div><strong>Área de Asignación:</strong> <span id="pdfCopiaArea">Aseguramiento de Calidad</span></div>
+              <div><strong>Custodio Autorizado:</strong> <span id="pdfCopiaCustodio">Johan Aguilar (QA Lead)</span></div>
+            </div>
+            <div class="flex flex-col items-center">
+              <img id="pdfQrImage" src="" alt="QR Verification" class="w-16 h-16 p-1 bg-white border border-slate-300 rounded shadow-sm" />
+              <span class="text-[8px] text-slate-500 mt-0.5 font-bold">Escanea para verificar</span>
+            </div>
+          </div>
+
+          <div id="document-file-container" class="space-y-3">
+            <h4 class="font-bold text-xs uppercase border-b pb-1 text-slate-800">Cuerpo del Documento Oficial GxP</h4>
+            <div id="pdfViewerArea" class="w-full min-h-[300px] border rounded bg-slate-100 flex items-center justify-center p-4"></div>
+          </div>
+
+          <div class="space-y-2 border-t pt-4">
+            <h4 class="font-bold text-xs uppercase text-slate-800">Circuito de Aprobación & Firmas Electrónicas (21 CFR Part 11)</h4>
+            <table class="w-full border-collapse border border-slate-300 text-[10px] font-mono text-left">
+              <thead>
+                <tr class="bg-slate-100">
+                  <th class="border border-slate-300 p-1.5">Rol / Rol GxP</th>
+                  <th class="border border-slate-300 p-1.5">Responsable</th>
+                  <th class="border border-slate-300 p-1.5">Estado / Significado</th>
+                  <th class="border border-slate-300 p-1.5">Estampa de Tiempo</th>
+                </tr>
+              </thead>
+              <tbody id="pdfSignaturesTable">
+                <tr><td colspan="4" class="p-2 text-center text-slate-400">Cargando circuito de firmas...</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="border-t-2 border-slate-800 pt-2 text-[9px] font-mono text-slate-500 flex justify-between items-center">
+            <div>Generado automáticamente por PharmAudit ERP · Integridad ALCOA+</div>
+            <div>Sello Hash GxP: <span id="pdfSystemHash" class="font-bold text-slate-700"></span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex justify-end border-t pt-2 shrink-0 space-x-2">
+        <button type="button" id="btn-print-bottom" class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-1.5 rounded text-xs font-bold shadow cursor-pointer">
+          🖨️ Imprimir Copia Controlada
+        </button>
+        <button type="button" id="btn-close-pdf-bottom" class="px-4 py-1.5 border rounded text-xs cursor-pointer">Cerrar Vista Previa</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL EMITIR COPIA -->
+  <div id="modalEmitirCopia" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl max-w-md w-full p-5 border shadow-2xl space-y-3">
+      <div class="border-b pb-2 flex justify-between items-center">
+        <h3 class="font-bold text-sm text-amber-900">🖨️ Emitir Copia Controlada en Físico</h3>
+        <span id="copiaTargetCode" class="font-mono text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-bold"></span>
+      </div>
+
+      <div class="space-y-2.5 text-xs">
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Área Destinataria en Planta</label>
+          <select id="copiaArea" class="w-full p-2 border rounded bg-slate-50 font-semibold">
+            <option value="Planta de Producción">Planta de Producción (Sólidos / Líquidos)</option>
+            <option value="Control de Calidad">Laboratorio de Control de Calidad (QC)</option>
+            <option value="Aseguramiento de Calidad">Aseguramiento de Calidad (QA)</option>
+            <option value="Bodega / Almacén">Bodega y Almacén de Materias Primas</option>
+            <option value="Mantenimiento y Metrología">Mantenimiento y Metrología</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Custodio / Responsable de Recibir</label>
+          <select id="copiaCustodio" class="w-full p-2 border rounded bg-slate-50 font-semibold">
+            <option value="Johan Aguilar (QA Lead)">Johan Aguilar (QA Lead)</option>
+            <option value="Carlos Mendoza (Supervisor Producción)">Carlos Mendoza (Supervisor Producción)</option>
+            <option value="Laura Restrepo (Analista QC)">Laura Restrepo (Analista QC)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="flex justify-end space-x-2 pt-2 border-t">
+        <button type="button" id="btn-close-emitir" class="px-3 py-1 border rounded text-xs cursor-pointer">Cancelar</button>
+        <button type="button" id="btn-confirmar-emitir" class="px-4 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded text-xs font-bold shadow cursor-pointer">Generar & Imprimir Copia</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL NUEVA VERSIÓN -->
+  <div id="modalVersion" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl max-w-lg w-full p-5 border shadow-2xl space-y-3">
+      <div class="border-b pb-2 flex justify-between items-center">
+        <h3 class="font-bold text-sm text-cyan-900">🔄 Crear Nueva Versión (Control de Cambios)</h3>
+        <span id="verTargetCode" class="font-mono text-xs bg-cyan-100 text-cyan-800 px-2 py-0.5 rounded font-bold"></span>
+      </div>
+
+      <div class="space-y-2 text-xs">
+        <div class="grid grid-cols-2 gap-2">
+          <div><label class="block font-semibold text-slate-700">Versión Actual</label><input type="text" id="currentVer" readonly class="w-full p-2 border rounded font-mono bg-slate-100 font-bold" /></div>
+          <div><label class="block font-semibold text-slate-700">Nueva Versión Propuesta</label><input type="text" id="newVerNumber" placeholder="ej. 2.0" class="w-full p-2 border rounded font-mono bg-amber-50 font-bold border-amber-300" /></div>
+        </div>
+        <div><label class="block font-semibold text-slate-700">Justificación del Cambio / Control de Cambios GxP</label><textarea id="changeReason" rows="3" class="w-full p-2 border rounded text-xs" placeholder="Describa el motivo de la modificación..."></textarea></div>
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Nuevo Archivo Digital (.pdf, .doc, .docx)</label>
+          <input type="file" id="newVerFile" accept=".pdf,.doc,.docx" class="w-full p-2 border rounded bg-slate-50 text-xs font-mono" />
+        </div>
+      </div>
+
+      <div class="flex justify-end space-x-2 pt-2 border-t">
+        <button type="button" id="btn-close-version" class="px-3 py-1 border rounded text-xs cursor-pointer">Cancelar</button>
+        <button type="button" id="btn-confirmar-version" class="px-4 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white rounded text-xs font-bold shadow cursor-pointer">Subir a Storage & Generar Versión</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL FIRMA -->
+  <div id="modalSign" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl max-w-md w-full p-5 border shadow-2xl space-y-3">
+      <h3 class="font-bold text-sm">✍️ Firma Electrónica 21 CFR Part 11</h3>
+      <p class="text-xs text-slate-500">Firmando registro: <strong id="signTargetCode" class="text-cyan-700"></strong></p>
+      
+      <div>
+        <label class="block text-[11px] font-semibold text-slate-700 mb-1">Significado de la Firma:</label>
+        <select id="signMeaning" class="w-full p-2 border rounded text-xs bg-slate-50 font-semibold">
+          <option value="ELABORO">1. Elaboró (Pasa a En Revisión)</option>
+          <option value="REVISO">2. Revisó (Pasa a En Aprobación)</option>
+          <option value="APROBO">3. Aprobó (Pasa a Vigente)</option>
+        </select>
+      </div>
+
+      <input type="text" id="signReason" placeholder="Motivo de la firma" class="w-full p-2 border rounded text-xs" />
+      <input type="password" id="signPin" placeholder="PIN de firma (1234)" class="w-full p-2 border rounded text-xs font-mono" />
+      
+      <div class="flex justify-end space-x-2 pt-2">
+        <button type="button" id="btn-close-sign" class="px-3 py-1 border rounded text-xs cursor-pointer">Cancelar</button>
+        <button type="button" id="btn-confirmar-sign" class="px-3 py-1 bg-cyan-600 text-white rounded text-xs font-bold cursor-pointer">Estampar Firma</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODALES SIMPLES -->
+  <div id="modalDoc" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl max-w-lg w-full p-5 border shadow-2xl space-y-3">
+      <h3 class="font-bold text-sm text-cyan-900">📑 Crear / Subir Documento Controlado</h3>
+      <div class="flex justify-end pt-2 border-t"><button type="button" id="btn-close-doc" class="px-3 py-1 border rounded text-xs cursor-pointer">Cerrar</button></div>
+    </div>
+  </div>
+  <div id="modalUser" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl max-w-md w-full p-5 border shadow-2xl space-y-3">
+      <h3 class="font-bold text-sm text-slate-800">👤 Registrar Usuario GxP</h3>
+      <div class="flex justify-end pt-2 border-t"><button type="button" id="btn-close-user" class="px-3 py-1 border rounded text-xs cursor-pointer">Cerrar</button></div>
+    </div>
+  </div>
+  <div id="modalDev" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl max-w-md w-full p-5 border shadow-2xl space-y-3">
+      <h3 class="font-bold text-sm">⚠️ Reportar Desviación / NC</h3>
+      <div class="flex justify-end pt-2 border-t"><button type="button" id="btn-close-dev" class="px-3 py-1 border rounded text-xs cursor-pointer">Cerrar</button></div>
+    </div>
+  </div>
+  <div id="modalEqp" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl max-w-md w-full p-5 border shadow-2xl space-y-3">
+      <h3 class="font-bold text-sm">🛠️ Registrar Equipo GxP</h3>
+      <div class="flex justify-end pt-2 border-t"><button type="button" id="btn-close-eqp" class="px-3 py-1 border rounded text-xs cursor-pointer">Cerrar</button></div>
+    </div>
+  </div>
+
+  <!-- SCRIPT DEFINITIVO -->
   <script>
     const SUPABASE_URL = 'https://wmtvlxjzzwwhtybccrpe.supabase.co'; 
     const SUPABASE_ANON_KEY = 'sb_publishable_i4A7rEjukekMlaCKjXWaNA_ze54EVjl';          
@@ -203,7 +634,6 @@
       toggleModal('modalExportPdf', true);
     }
 
-    // INICIALIZACIÓN SEGURA DE EVENTOS AL CARGAR EL DOM
     document.addEventListener('DOMContentLoaded', function() {
       const btnSecure = document.getElementById('btn-login-secure');
       const btnDev = document.getElementById('btn-login-dev');
@@ -228,7 +658,6 @@
         });
       }
 
-      // NAVEGACIÓN PESTAÑAS
       document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.addEventListener('click', function() {
           const tabName = this.getAttribute('data-tab');
@@ -244,7 +673,6 @@
         });
       });
 
-      // ACCIONES DINÁMICAS
       document.addEventListener('click', function(e) {
         const target = e.target.closest('.btn-action');
         if (!target) return;
@@ -288,7 +716,6 @@
         }
       });
 
-      // CIERRE Y APERTURA DE MODALES
       const modalsToClose = [
         ['btn-close-pdf', 'modalExportPdf'], ['btn-close-pdf-bottom', 'modalExportPdf'],
         ['btn-close-emitir', 'modalEmitirCopia'], ['btn-close-version', 'modalVersion'],
@@ -309,14 +736,12 @@
         if (el) el.addEventListener('click', () => toggleModal(modalId, true));
       });
 
-      // IMPRESIÓN
       const printAction = () => window.print();
       ['btn-print-top', 'btn-print-bottom'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.addEventListener('click', printAction);
       });
 
-      // CONFIRMAR EMITIR COPIA
       const btnConfirmEmitir = document.getElementById('btn-confirmar-emitir');
       if (btnConfirmEmitir) {
         btnConfirmEmitir.addEventListener('click', function() {
@@ -351,7 +776,6 @@
         });
       }
 
-      // CONFIRMAR NUEVA VERSIÓN Y SUBIDA A STORAGE
       const btnConfirmVersion = document.getElementById('btn-confirmar-version');
       if (btnConfirmVersion) {
         btnConfirmVersion.addEventListener('click', async function() {
@@ -394,7 +818,6 @@
         });
       }
 
-      // CONFIRMAR FIRMA
       const btnConfirmSign = document.getElementById('btn-confirmar-sign');
       if (btnConfirmSign) {
         btnConfirmSign.addEventListener('click', function() {
@@ -409,3 +832,5 @@
       }
     });
   </script>
+</body>
+</html>
