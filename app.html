@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PharmAudit ERP / QMS - Pharmor</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Supabase para Storage y Base de Datos -->
+  <!-- Supabase para almacenamiento y base de datos -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <!-- PDF-Lib para inyección binaria de marcas de agua en Copias Controladas -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
@@ -14,6 +14,8 @@
     body { margin: 0; padding: 0; background-color: #f8fafc; font-family: ui-sans-serif, system-ui, sans-serif; }
     .tab-content { display: none; }
     .tab-content.active { display: block; }
+    .doc-subtab-content { display: none; }
+    .doc-subtab-content.active { display: block; }
     .modal-backdrop { display: none; }
     .modal-backdrop.active { display: flex; }
     
@@ -81,7 +83,7 @@
       </div>
     </header>
 
-    <!-- NAVEGACIÓN PRINCIPAL (TODOS LOS MÓDULOS) -->
+    <!-- NAVEGACIÓN PRINCIPAL DE MÓDULOS -->
     <nav class="bg-slate-800 text-slate-300 rounded-xl p-1 mb-4 flex space-x-1 overflow-x-auto text-xs font-medium">
       <button data-tab="dashboard" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap bg-cyan-600 text-white font-bold cursor-pointer">📊 Dashboard</button>
       <button data-tab="documentos" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">📑 Gestión Documental</button>
@@ -91,7 +93,7 @@
       <button data-tab="metrologia" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">🛠️ Equipos & Calibración</button>
       <button data-tab="firmas" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">✍️ Firmas Part 11</button>
       <button data-tab="audit" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">📜 Audit Trail (ALCOA+)</button>
-      <button data-tab="admin" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 bg-slate-700 text-cyan-300 cursor-pointer admin-only">⚙️ Ajustes & Parametrización</button>
+      <button data-tab="admin" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 bg-slate-700 text-cyan-300 cursor-pointer admin-only">⚙️ Ajustes & Configuración</button>
     </nav>
 
     <main>
@@ -107,11 +109,11 @@
 
         <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
           <div class="bg-white p-3 rounded-xl border-l-4 border-l-blue-500 shadow-sm">
-            <div class="text-slate-500 text-[11px]">Documentos</div>
+            <div class="text-slate-500 text-[11px]">Documentos Vigentes</div>
             <div id="cnt-docs" class="text-xl font-bold text-slate-800 mt-1">0</div>
           </div>
           <div class="bg-white p-3 rounded-xl border-l-4 border-l-amber-500 shadow-sm">
-            <div class="text-slate-500 text-[11px]">Copias Impresas Activas</div>
+            <div class="text-slate-500 text-[11px]">Copias Activas</div>
             <div id="cnt-copias" class="text-xl font-bold text-amber-600 mt-1">0</div>
           </div>
           <div class="bg-white p-3 rounded-xl border-l-4 border-l-purple-500 shadow-sm">
@@ -129,16 +131,117 @@
         </div>
       </div>
 
-      <!-- GESTIÓN DOCUMENTAL -->
-      <div id="view-documentos" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-        <div class="flex justify-between items-center mb-3">
-          <div>
-            <h2 class="font-bold text-slate-800 text-sm">Gestión Documental & Listado Maestro (Flujo GxP)</h2>
-            <p class="text-xs text-slate-500">Control de versiones, almacenamiento en Supabase y parametrización documental</p>
-          </div>
-          <button type="button" id="btn-open-modal-doc" class="bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow cursor-pointer admin-only">+ Nuevo Documento / Migración</button>
+      <!-- GESTIÓN DOCUMENTAL (ESTILO LISTADO ÚNICO KAWAK) -->
+      <div id="view-documentos" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-4">
+        
+        <!-- Sub-pestañas de estado (Listado único) -->
+        <div class="flex space-x-1 border-b pb-2 overflow-x-auto text-xs font-semibold">
+          <button data-subtab="vigente" class="doc-subtab-btn px-3 py-1.5 rounded-lg bg-cyan-600 text-white cursor-pointer">Vigente (<span id="count-vigente">0</span>)</button>
+          <button data-subtab="proceso" class="doc-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">En Proceso / Flujo (<span id="count-proceso">0</span>)</button>
+          <button data-subtab="vencer" class="doc-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">A Vencer (<span id="count-vencer">0</span>)</button>
+          <button data-subtab="vencido" class="doc-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">Vencidos (<span id="count-vencido">0</span>)</button>
+          <button data-subtab="migracion" class="doc-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">Migración (<span id="count-migracion">0</span>)</button>
+          <button data-subtab="obsoleto" class="doc-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">Documentos Obsoletos (<span id="count-obsoleto">0</span>)</button>
         </div>
-        <div id="list-docs" class="divide-y divide-slate-100 text-xs">Cargando...</div>
+
+        <div class="flex justify-between items-center">
+          <div class="flex space-x-2">
+            <button type="button" id="btn-open-modal-doc" class="bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow cursor-pointer admin-only">+ Crear / Migrar Documento</button>
+            <button type="button" id="btn-open-modal-version" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow cursor-pointer admin-only">🔄 Nueva Versión (Control de Cambios)</button>
+          </div>
+          <span class="text-xs text-slate-400 font-mono">Trazabilidad ALCOA+ Activa</span>
+        </div>
+
+        <!-- Contenido de Bandejas Documentales -->
+        <div id="subtab-vigente" class="doc-subtab-content active overflow-x-auto">
+          <table class="w-full border-collapse text-left text-xs">
+            <thead>
+              <tr class="bg-slate-100 text-slate-700 border-b">
+                <th class="p-2 border font-bold">Código</th>
+                <th class="p-2 border font-bold">Versión</th>
+                <th class="p-2 border font-bold">Título del Documento</th>
+                <th class="p-2 border font-bold">Proceso</th>
+                <th class="p-2 border font-bold">Estado GxP</th>
+                <th class="p-2 border font-bold text-center">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="table-vigente" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+
+        <div id="subtab-proceso" class="doc-subtab-content overflow-x-auto">
+          <table class="w-full border-collapse text-left text-xs">
+            <thead>
+              <tr class="bg-slate-100 text-slate-700 border-b">
+                <th class="p-2 border font-bold">Código</th>
+                <th class="p-2 border font-bold">Versión</th>
+                <th class="p-2 border font-bold">Título</th>
+                <th class="p-2 border font-bold">Fase del Flujo</th>
+                <th class="p-2 border font-bold text-center">Avanzar Workflow / Firmar</th>
+              </tr>
+            </thead>
+            <tbody id="table-proceso" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+
+        <div id="subtab-vencer" class="doc-subtab-content overflow-x-auto">
+          <table class="w-full border-collapse text-left text-xs">
+            <thead>
+              <tr class="bg-slate-100 text-slate-700 border-b">
+                <th class="p-2 border font-bold">Código</th>
+                <th class="p-2 border font-bold">Versión</th>
+                <th class="p-2 border font-bold">Título</th>
+                <th class="p-2 border font-bold">Días para Revisión</th>
+                <th class="p-2 border font-bold text-center">Acción</th>
+              </tr>
+            </thead>
+            <tbody id="table-vencer" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+
+        <div id="subtab-vencido" class="doc-subtab-content overflow-x-auto">
+          <table class="w-full border-collapse text-left text-xs">
+            <thead>
+              <tr class="bg-slate-100 text-slate-700 border-b">
+                <th class="p-2 border font-bold">Código</th>
+                <th class="p-2 border font-bold">Versión</th>
+                <th class="p-2 border font-bold">Título</th>
+                <th class="p-2 border font-bold text-center">Acción Requerida</th>
+              </tr>
+            </thead>
+            <tbody id="table-vencido" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+
+        <div id="subtab-migracion" class="doc-subtab-content overflow-x-auto">
+          <table class="w-full border-collapse text-left text-xs">
+            <thead>
+              <tr class="bg-slate-100 text-slate-700 border-b">
+                <th class="p-2 border font-bold">Código Histórico</th>
+                <th class="p-2 border font-bold">Versión</th>
+                <th class="p-2 border font-bold">Título</th>
+                <th class="p-2 border font-bold text-center">Estado Migración</th>
+              </tr>
+            </thead>
+            <tbody id="table-migracion" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+
+        <div id="subtab-obsoleto" class="doc-subtab-content overflow-x-auto">
+          <table class="w-full border-collapse text-left text-xs">
+            <thead>
+              <tr class="bg-slate-100 text-slate-700 border-b">
+                <th class="p-2 border font-bold">Código</th>
+                <th class="p-2 border font-bold">Versión Obsoleta</th>
+                <th class="p-2 border font-bold">Título del Documento</th>
+                <th class="p-2 border font-bold">Motivo de Sustitución / Control de Cambios</th>
+                <th class="p-2 border font-bold text-center">Acción</th>
+              </tr>
+            </thead>
+            <tbody id="table-obsoleto" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+
       </div>
 
       <!-- COPIAS CONTROLADAS (ADMIN ONLY) -->
@@ -206,11 +309,11 @@
         </div>
       </div>
 
-      <!-- ADMIN / PARAMETRIZACIÓN -->
+      <!-- ADMIN / CONFIGURACIÓN -->
       <div id="view-admin" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-4">
         <div class="flex justify-between items-center border-b pb-2">
           <div>
-            <h2 class="font-bold text-slate-800 text-sm">⚙️ Ajustes del Sistema & Núcleo de Parametrización (RBAC)</h2>
+            <h2 class="font-bold text-slate-800 text-sm">⚙️ Ajustes del Sistema & Configuración (RBAC)</h2>
             <p class="text-xs text-slate-500">Parámetros globales, alertas, tipos de documento y codificación automática</p>
           </div>
           <button type="button" class="bg-slate-800 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow cursor-pointer">+ Registrar Nuevo Usuario GxP</button>
@@ -228,34 +331,6 @@
             <div class="flex justify-between"><span>ADMIN_QA (Johan Aguilar):</span><span class="text-purple-700 font-bold">Control Total</span></div>
             <div class="flex justify-between"><span>LECTOR (Carlos Mendoza):</span><span class="text-amber-700 font-bold">Solo Lectura (Bloqueo Impresión)</span></div>
           </div>
-        </div>
-
-        <div>
-          <h3 class="font-bold text-xs text-slate-700 mb-2">Usuarios Autorizados en Planta</h3>
-          <table class="w-full border-collapse text-left text-xs">
-            <thead>
-              <tr class="bg-slate-100 text-slate-700 border-b">
-                <th class="p-2 border font-bold">Usuario</th>
-                <th class="p-2 border font-bold">Cargo</th>
-                <th class="p-2 border font-bold">Rol GxP</th>
-                <th class="p-2 border font-bold">Nivel de Acceso</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td class="p-2 border font-bold">Johan Aguilar</td>
-                <td class="p-2 border">QA Lead</td>
-                <td class="p-2 border"><span class="bg-purple-100 text-purple-800 px-2 py-0.5 rounded font-bold text-[10px]">ADMIN_QA</span></td>
-                <td class="p-2 border text-slate-500">Creación, nuevas versiones, emisión de copias y ajustes.</td>
-              </tr>
-              <tr>
-                <td class="p-2 border font-bold">Carlos Mendoza</td>
-                <td class="p-2 border">Operario de Producción</td>
-                <td class="p-2 border"><span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-bold text-[10px]">LECTOR</span></td>
-                <td class="p-2 border text-slate-500">Solo lectura de documentos vigentes (Protegido).</td>
-              </tr>
-            </tbody>
-          </table>
         </div>
       </div>
     </main>
@@ -308,50 +383,37 @@
     </div>
   </div>
 
-  <!-- MODAL NUEVO DOCUMENTO / NUEVA VERSIÓN / MIGRACIÓN -->
+  <!-- MODAL NUEVO DOCUMENTO (INICIA EN BORRADOR / FLUJO) -->
   <div id="modalDoc" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
     <div class="bg-white rounded-xl max-w-lg w-full p-5 border shadow-2xl space-y-4">
       <div class="border-b pb-2">
-        <h3 class="font-bold text-sm text-cyan-900" id="modalDocTitle">📑 Gestión de Documento (Creación / Versión / Migración)</h3>
-        <p class="text-xs text-slate-500">Control de cambios, metadatos y almacenamiento GxP.</p>
+        <h3 class="font-bold text-sm text-cyan-900">📑 Creación de Documento en Borrador (Inicia Workflow)</h3>
+        <p class="text-xs text-slate-500">El documento pasará por elaboración, revisión y aprobación.</p>
       </div>
       
       <div class="space-y-3 text-xs">
         <div>
-          <label class="block font-semibold mb-1">Método de Creación</label>
-          <select id="docCreationMode" class="w-full p-2 border rounded bg-slate-50 font-bold text-cyan-800" onchange="toggleCreationMode()">
-            <option value="NUEVO">Nuevo Documento (Versión 1.0)</option>
-            <option value="VERSION">Nueva Versión (Control de Cambios)</option>
-            <option value="MIGRADO">Documento Migrado (Histórico)</option>
-          </select>
-        </div>
-
-        <div id="versionSelectorGroup" class="hidden">
-          <label class="block font-semibold mb-1">Seleccionar Documento Base a Actualizar</label>
-          <select id="baseDocSelect" class="w-full p-2 border rounded bg-amber-50 font-mono"></select>
-        </div>
-
-        <div>
           <label class="block font-semibold mb-1">Título del Documento</label>
           <input type="text" id="createDocTitle" placeholder="Ej: Procedimiento de Limpieza" class="w-full p-2 border rounded bg-slate-50" />
         </div>
-
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="block font-semibold mb-1">Código Corporativo</label>
             <input type="text" id="createDocCode" placeholder="Ej: SOP-PRO-020" class="w-full p-2 border rounded bg-slate-50 font-mono uppercase" />
           </div>
           <div>
-            <label class="block font-semibold mb-1">Versión</label>
+            <label class="block font-semibold mb-1">Versión Inicial</label>
             <input type="text" id="createDocVer" value="1.0" class="w-full p-2 border rounded bg-slate-50 font-mono" />
           </div>
         </div>
-
-        <div id="changeReasonGroup" class="hidden">
-          <label class="block font-semibold mb-1 text-amber-900">Justificación del Cambio (Control de Cambios)</label>
-          <textarea id="changeReasonInput" rows="2" class="w-full p-2 border rounded bg-amber-50" placeholder="Describa el motivo de la modificación de versión..."></textarea>
+        <div>
+          <label class="block font-semibold mb-1">Proceso Asociado</label>
+          <select id="createDocProceso" class="w-full p-2 border rounded bg-slate-50">
+            <option value="Gestión de Aseguramiento de Calidad">Gestión de Aseguramiento de Calidad</option>
+            <option value="Planta de Producción">Planta de Producción</option>
+            <option value="Control de Calidad (QC)">Control de Calidad (QC)</option>
+          </select>
         </div>
-
         <div>
           <label class="block font-semibold mb-1">Archivo Digital (.pdf)</label>
           <input type="file" id="createDocFile" accept=".pdf" class="w-full p-2 border rounded bg-slate-50 font-mono" />
@@ -360,7 +422,51 @@
 
       <div class="flex justify-end space-x-2 pt-3 border-t">
         <button type="button" onclick="toggleModal('modalDoc', false)" class="px-3 py-1.5 border rounded text-xs">Cancelar</button>
-        <button type="button" id="btn-save-new-doc" class="px-4 py-1.5 bg-cyan-600 text-white rounded text-xs font-bold shadow cursor-pointer">Registrar en Sistema</button>
+        <button type="button" id="btn-save-new-doc" class="px-4 py-1.5 bg-cyan-600 text-white rounded text-xs font-bold shadow cursor-pointer">Iniciar Elaboración (Borrador)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL NUEVA VERSIÓN (CONTROL DE CAMBIOS Y OBSOLESCENCIA AUTOMÁTICA) -->
+  <div id="modalVersion" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl max-w-lg w-full p-5 border shadow-2xl space-y-4">
+      <div class="border-b pb-2">
+        <h3 class="font-bold text-sm text-amber-900">🔄 Generar Nueva Versión & Volver Obsoleta la Anterior</h3>
+        <p class="text-xs text-slate-500">Al aprobar la nueva versión, la anterior pasará automáticamente a Obsoleta.</p>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block font-semibold mb-1">Seleccionar Documento Vigente a Actualizar</label>
+          <select id="versionDocSelect" class="w-full p-2 border rounded bg-slate-50 font-mono" onchange="cargarDatosVersionBase()"></select>
+        </div>
+        <div>
+          <label class="block font-semibold mb-1">Nuevo Título</label>
+          <input type="text" id="verNewTitle" class="w-full p-2 border rounded bg-slate-50" />
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-semibold mb-1">Código</label>
+            <input type="text" id="verNewCode" readonly class="w-full p-2 border rounded bg-slate-100 font-mono" />
+          </div>
+          <div>
+            <label class="block font-semibold mb-1">Nueva Versión Propuesta</label>
+            <input type="text" id="verNewNumber" value="2.0" class="w-full p-2 border rounded bg-amber-50 font-mono font-bold" />
+          </div>
+        </div>
+        <div>
+          <label class="block font-semibold mb-1 text-amber-900">Justificación del Cambio (Control de Cambios Obligatorio)</label>
+          <textarea id="verChangeReason" rows="2" class="w-full p-2 border rounded bg-amber-50" placeholder="Describa el motivo de la nueva versión..."></textarea>
+        </div>
+        <div>
+          <label class="block font-semibold mb-1">Nuevo Archivo Digital (.pdf)</label>
+          <input type="file" id="verNewFile" accept=".pdf" class="w-full p-2 border rounded bg-slate-50 font-mono" />
+        </div>
+      </div>
+
+      <div class="flex justify-end space-x-2 pt-3 border-t">
+        <button type="button" onclick="toggleModal('modalVersion', false)" class="px-3 py-1.5 border rounded text-xs">Cancelar</button>
+        <button type="button" id="btn-confirm-version" class="px-4 py-1.5 bg-amber-600 text-white rounded text-xs font-bold shadow cursor-pointer">Registrar Nueva Versión (Inicia en Proceso)</button>
       </div>
     </div>
   </div>
@@ -385,11 +491,14 @@
     window.activeGxpUser = null;
     window.selectedDocId = null;
 
+    // BASE DE DATOS LOCAL INICIAL CON ESTADOS DEL FLUJO
     window.cachedDocs = [
-      { id: '1', codigo: 'PH-GPD-F0-01', titulo: 'Lista de Chequeo Batch y Liberación de PT', version: '2.0', estado: 'Vigente', archivo_url: 'https://pdfobject.com/pdf/sample.pdf' },
-      { id: '2', codigo: 'SOP-PRO-012', titulo: 'Limpieza e Higienización de Áreas Limpias', version: '2.1', estado: 'Vigente', archivo_url: '' }
+      { id: '1', codigo: 'PH-GPD-F0-01', titulo: 'Lista de Chequeo Batch y Liberación de PT', version: '2.0', estado: 'VIGENTE', fase: 'Aprobado', proceso: 'Gestión de Aseguramiento de Calidad', archivo_url: 'https://pdfobject.com/pdf/sample.pdf', motivo_cambio: 'Creación Inicial' },
+      { id: '2', codigo: 'SOP-PRO-012', titulo: 'Limpieza e Higienización de Áreas Limpias', version: '2.1', estado: 'VIGENTE', fase: 'Aprobado', proceso: 'Planta de Producción', archivo_url: '', motivo_cambio: 'Creación Inicial' },
+      { id: '3', codigo: 'SOP-QA-005', titulo: 'Control Ambiental en Zonas Clasificadas', version: '1.0', estado: 'PROCESO', fase: 'Elaboración', proceso: 'Gestión de Aseguramiento de Calidad', archivo_url: 'https://pdfobject.com/pdf/sample.pdf', motivo_cambio: 'Borrador inicial' }
     ];
     window.cachedCopias = [];
+    window.cachedObsoletos = [];
 
     // LOGIN FUNCTIONS
     window.loginDirectoAdmin = function() {
@@ -432,47 +541,29 @@
 
     document.getElementById('btn-close-pdf').addEventListener('click', () => toggleModal('modalExportPdf', false));
     
-    document.getElementById('btn-open-modal-doc').addEventListener('click', () => {
-      // Poblar selector de documentos base para nuevas versiones
-      const select = document.getElementById('baseDocSelect');
-      select.innerHTML = window.cachedDocs.map(d => `<option value="${d.id}">${d.codigo} v${d.version} - ${d.titulo}</option>`).join('');
-      toggleCreationMode();
-      toggleModal('modalDoc', true);
+    document.getElementById('btn-open-modal-doc').addEventListener('click', () => toggleModal('modalDoc', true));
+    
+    document.getElementById('btn-open-modal-version').addEventListener('click', () => {
+      const select = document.getElementById('versionDocSelect');
+      const vigentes = window.cachedDocs.filter(d => d.estado === 'VIGENTE');
+      select.innerHTML = vigentes.map(d => `<option value="${d.id}">${d.codigo} v${d.version} - ${d.titulo}</option>`).join('');
+      cargarDatosVersionBase();
+      toggleModal('modalVersion', true);
     });
 
-    // CONTROL DE MODO DE CREACIÓN (NUEVO, NUEVA VERSIÓN, MIGRADO)
-    window.toggleCreationMode = function() {
-      const mode = document.getElementById('docCreationMode').value;
-      const versionGroup = document.getElementById('versionSelectorGroup');
-      const changeGroup = document.getElementById('changeReasonGroup');
-      const verInput = document.getElementById('createDocVer');
-
-      if (mode === 'VERSION') {
-        versionGroup.classList.remove('hidden');
-        changeGroup.classList.remove('hidden');
-        verInput.value = '2.0';
-        // Precargar datos del documento base seleccionado
-        const baseId = document.getElementById('baseDocSelect').value;
-        const baseDoc = window.cachedDocs.find(x => x.id === baseId);
-        if(baseDoc) {
-          document.getElementById('createDocTitle').value = baseDoc.titulo;
-          document.getElementById('createDocCode').value = baseDoc.codigo;
-        }
-      } else if (mode === 'NUEVO') {
-        versionGroup.classList.add('hidden');
-        changeGroup.classList.add('hidden');
-        verInput.value = '1.0';
-        document.getElementById('createDocTitle').value = '';
-        document.getElementById('createDocCode').value = '';
-      } else {
-        // MIGRADO
-        versionGroup.classList.add('hidden');
-        changeGroup.classList.add('hidden');
-        verInput.value = '1.0 (Migrado)';
+    function cargarDatosVersionBase() {
+      const baseId = document.getElementById('versionDocSelect').value;
+      const doc = window.cachedDocs.find(x => x.id === baseId);
+      if (doc) {
+        document.getElementById('verNewTitle').value = doc.titulo;
+        document.getElementById('verNewCode').value = doc.codigo;
+        const vParts = doc.version.split('.');
+        const nextVer = (parseInt(vParts[0]) || 1) + '.0';
+        document.getElementById('verNewNumber').value = nextVer;
       }
-    };
+    }
 
-    // NAVEGACIÓN PESTAÑAS
+    // NAVEGACIÓN PRINCIPAL DE PESTAÑAS
     document.querySelectorAll('.nav-btn').forEach(btn => {
       btn.addEventListener('click', function() {
         document.querySelectorAll('.tab-content').forEach(v => v.classList.remove('active'));
@@ -482,56 +573,137 @@
       });
     });
 
+    // NAVEGACIÓN SUB-PESTAÑAS DE GESTIÓN DOCUMENTAL (LISTADO ÚNICO)
+    document.querySelectorAll('.doc-subtab-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        document.querySelectorAll('.doc-subtab-content').forEach(v => v.classList.remove('active'));
+        document.querySelectorAll('.doc-subtab-btn').forEach(b => {
+          b.classList.remove('bg-cyan-600', 'text-white');
+          b.classList.add('bg-slate-100', 'text-slate-700');
+        });
+        document.getElementById('subtab-' + this.getAttribute('data-subtab')).classList.add('active');
+        this.classList.add('bg-cyan-600', 'text-white');
+        this.classList.remove('bg-slate-100', 'text-slate-700');
+      });
+    });
+
     function renderAllData() {
-      document.getElementById('cnt-docs').innerText = window.cachedDocs.length;
+      const vigentes = window.cachedDocs.filter(d => d.estado === 'VIGENTE');
+      const enProceso = window.cachedDocs.filter(d => d.estado === 'PROCESO');
+      const migracion = window.cachedDocs.filter(d => d.estado === 'MIGRACION');
+      const obsoletos = window.cachedObsoletos;
+
+      document.getElementById('cnt-docs').innerText = vigentes.length;
       document.getElementById('cnt-copias').innerText = window.cachedCopias.length;
 
-      const listDocs = document.getElementById('list-docs');
-      listDocs.innerHTML = window.cachedDocs.map(d => {
-        const isAdmin = window.activeGxpUser.rol === 'ADMIN_QA';
-        let acciones = `<button onclick="viewDocument('${d.id}')" class="bg-slate-100 border px-2.5 py-1 rounded font-bold text-slate-700 cursor-pointer">👁️ Ver Documento</button>`;
-        
-        if(isAdmin) {
-          acciones += `<button onclick="abrirModalEmitir('${d.id}')" class="bg-amber-50 border border-amber-300 text-amber-800 px-2.5 py-1 rounded font-bold ml-2 cursor-pointer">🖨️ Emitir Copia Controlada</button>`;
-        }
+      document.getElementById('count-vigente').innerText = vigentes.length;
+      document.getElementById('count-proceso').innerText = enProceso.length;
+      document.getElementById('count-vencer').innerText = 0;
+      document.getElementById('count-vencido').innerText = 0;
+      document.getElementById('count-migracion').innerText = migracion.length;
+      document.getElementById('count-obsoleto').innerText = obsoletos.length;
 
-        return `
-          <div class="py-3 flex justify-between items-center">
-            <div>
-              <span class="font-mono font-bold text-cyan-700">${d.codigo} v${d.version}</span> - 
-              <span class="font-semibold">${d.titulo}</span>
-              <div class="mt-2 text-[10px] space-x-1">${acciones}</div>
-            </div>
-            <span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-[10px] font-bold">${d.estado}</span>
-          </div>
-        `;
-      }).join('');
+      // 1. RENDER VIGENTE
+      document.getElementById('table-vigente').innerHTML = vigentes.length ? vigentes.map(d => `
+        <tr class="hover:bg-slate-50">
+          <td class="p-2 border font-mono font-bold text-cyan-700">${d.codigo}</td>
+          <td class="p-2 border font-mono">v${d.version}</td>
+          <td class="p-2 border font-semibold">${d.titulo}</td>
+          <td class="p-2 border text-slate-600">${d.proceso}</td>
+          <td class="p-2 border"><span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold text-[10px]">VIGENTE</span></td>
+          <td class="p-2 border text-center space-x-1">
+            <button onclick="viewDocument('${d.id}')" class="bg-slate-100 border px-2 py-1 rounded font-bold text-slate-700 cursor-pointer">👁️ Ver</button>
+            <button onclick="abrirModalEmitir('${d.id}')" class="bg-amber-50 border border-amber-300 text-amber-800 px-2 py-1 rounded font-bold cursor-pointer admin-only">🖨️ Copia</button>
+          </td>
+        </tr>
+      `).join('') : `<tr><td colspan="6" class="p-4 text-center text-slate-400">No hay documentos vigentes.</td></tr>`;
 
+      // 2. RENDER EN PROCESO (FLUJO: Elaboración -> Revisión -> Aprobación)
+      document.getElementById('table-proceso').innerHTML = enProceso.length ? enProceso.map(d => `
+        <tr class="hover:bg-slate-50">
+          <td class="p-2 border font-mono font-bold text-cyan-700">${d.codigo}</td>
+          <td class="p-2 border font-mono">v${d.version}</td>
+          <td class="p-2 border font-semibold">${d.titulo}</td>
+          <td class="p-2 border"><span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-bold text-[10px]">Fase: ${d.fase}</span></td>
+          <td class="p-2 border text-center">
+            <button onclick="avanzarWorkflow('${d.id}')" class="bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-1 rounded font-bold cursor-pointer">
+              ✍️ Firmar & Avanzar Fase
+            </button>
+          </td>
+        </tr>
+      `).join('') : `<tr><td colspan="5" class="p-4 text-center text-slate-400">No hay documentos en proceso de aprobación.</td></tr>`;
+
+      // 3. RENDER OBSOLETOS (Automáticos al cambiar versión)
+      document.getElementById('table-obsoleto').innerHTML = obsoletos.length ? obsoletos.map(o => `
+        <tr class="hover:bg-slate-50 bg-rose-50/40">
+          <td class="p-2 border font-mono font-bold text-rose-800">${o.codigo}</td>
+          <td class="p-2 border font-mono text-rose-600">v${o.version}</td>
+          <td class="p-2 border font-semibold">${o.titulo}</td>
+          <td class="p-2 border text-slate-700 italic">${o.motivo_cambio}</td>
+          <td class="p-2 border text-center">
+            <button onclick="viewDocument('${o.id}')" class="bg-slate-100 border px-2 py-1 rounded font-bold text-slate-700 cursor-pointer">👁️ Ver Archivo</button>
+          </td>
+        </tr>
+      `).join('') : `<tr><td colspan="5" class="p-4 text-center text-slate-400">Papelera de documentos obsoletos vacía.</td></tr>`;
+
+      // 4. RENDER MIGRACIÓN
+      document.getElementById('table-migracion').innerHTML = migracion.length ? migracion.map(m => `
+        <tr class="hover:bg-slate-50">
+          <td class="p-2 border font-mono font-bold text-slate-700">${m.codigo}</td>
+          <td class="p-2 border font-mono">v${m.version}</td>
+          <td class="p-2 border font-semibold">${m.titulo}</td>
+          <td class="p-2 border text-center"><span class="bg-purple-100 text-purple-800 px-2 py-0.5 rounded font-bold text-[10px]">MIGRADO HISTÓRICO</span></td>
+        </tr>
+      `).join('') : `<tr><td colspan="4" class="p-4 text-center text-slate-400">Sin documentos migrados registrados.</td></tr>`;
+
+      // RENDER COPIAS
       const listCopias = document.getElementById('list-copias-body');
-      if(window.cachedCopias.length === 0) {
-        listCopias.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400">Sin copias emitidas.</td></tr>`;
-      } else {
-        listCopias.innerHTML = window.cachedCopias.map(c => `
-          <tr class="hover:bg-slate-50">
-            <td class="p-2 border font-bold text-amber-900">${c.codigo}</td>
-            <td class="p-2 border">${c.doc}</td>
-            <td class="p-2 border">${c.area}</td>
-            <td class="p-2 border">${c.custodio}</td>
-            <td class="p-2 border"><span class="bg-emerald-100 text-emerald-800 px-2 rounded text-[10px] font-bold">ACTIVA</span></td>
-          </tr>
-        `).join('');
-      }
+      listCopias.innerHTML = window.cachedCopias.length ? window.cachedCopias.map(c => `
+        <tr class="hover:bg-slate-50">
+          <td class="p-2 border font-bold text-amber-900">${c.codigo}</td>
+          <td class="p-2 border">${c.doc}</td>
+          <td class="p-2 border">${c.area}</td>
+          <td class="p-2 border">${c.custodio}</td>
+          <td class="p-2 border"><span class="bg-emerald-100 text-emerald-800 px-2 rounded text-[10px] font-bold">ACTIVA</span></td>
+        </tr>
+      `).join('') : `<tr><td colspan="5" class="p-4 text-center text-slate-400">Sin copias emitidas.</td></tr>`;
     }
 
-    // VISOR DE DOCUMENTOS CON RBAC
-    window.viewDocument = function(docId) {
+    // FLUJO DOCUMENTAL (AVANZAR FASE: Elaboración -> Revisión -> Aprobación -> Vigente)
+    window.avanzarWorkflow = function(docId) {
       const doc = window.cachedDocs.find(x => x.id === docId);
-      if (!doc || !doc.archivo_url) {
-        alert("Este documento no cuenta con un archivo PDF adjunto en este momento.");
+      if(!doc) return;
+
+      const pin = prompt(`Firma Electrónica Part 11 para "${doc.titulo}". Ingrese PIN de seguridad (Prueba: 1234):`);
+      if(pin !== '1234') {
+        alert("PIN incorrecto. Firma rechazada.");
         return;
       }
 
-      document.getElementById('pdfViewerTitle').innerText = `${doc.codigo} v${doc.version} - ${doc.titulo}`;
+      if(doc.fase === 'Elaboración') {
+        doc.fase = 'Revisión';
+        alert("Documento firmado en fase de Elaboración. Pasa a REVISIÓN.");
+      } else if(doc.fase === 'Revisión') {
+        doc.fase = 'Aprobación';
+        alert("Documento firmado en fase de Revisión. Pasa a APROBACIÓN.");
+      } else if(doc.fase === 'Aprobación') {
+        doc.fase = 'Aprobado';
+        doc.estado = 'VIGENTE';
+        alert("Documento Aprobado y firmado electrónicamente. Ahora es VIGENTE en el Listado Maestro.");
+      }
+      renderAllData();
+    };
+
+    // VISOR DE DOCUMENTOS CON RBAC
+    window.viewDocument = function(docId) {
+      // Buscar en vigentes, proceso u obsoletos
+      let doc = window.cachedDocs.find(x => x.id === docId) || window.cachedObsoletos.find(x => x.id === docId);
+      if (!doc || !doc.archivo_url) {
+        alert("Este documento no cuenta con un archivo PDF adjunto.");
+        return;
+      }
+
+      document.getElementById('pdfViewerTitle').innerText = `${doc.codigo} v${doc.version} - ${doc.titulo} [${doc.estado}]`;
       const viewerArea = document.getElementById('pdfViewerArea');
       const isAdmin = window.activeGxpUser.rol === 'ADMIN_QA';
 
@@ -613,22 +785,16 @@
       }
     });
 
-    // REGISTRAR DOCUMENTO / NUEVA VERSIÓN / MIGRADO
+    // REGISTRAR DOCUMENTO NUEVO EN BORRADOR
     document.getElementById('btn-save-new-doc').addEventListener('click', async function() {
-      const mode = document.getElementById('docCreationMode').value;
       const title = document.getElementById('createDocTitle').value;
       const code = document.getElementById('createDocCode').value.toUpperCase();
       const ver = document.getElementById('createDocVer').value;
+      const proceso = document.getElementById('createDocProceso').value;
       const fileInput = document.getElementById('createDocFile');
-      const changeReason = document.getElementById('changeReasonInput').value;
 
       if (!title || !code || !ver) {
         alert("Por favor complete los campos obligatorios.");
-        return;
-      }
-
-      if (mode === 'VERSION' && !changeReason) {
-        alert("Para crear una nueva versión, el control de cambios (justificación) es obligatorio.");
         return;
       }
 
@@ -645,18 +811,69 @@
         }
       }
 
-      window.cachedDocs.unshift({
+      window.cachedDocs.push({
         id: `doc_${Date.now()}`,
         codigo: code,
         titulo: title,
         version: ver,
-        estado: 'Vigente',
+        estado: 'PROCESO',
+        fase: 'Elaboración',
+        proceso: proceso,
         archivo_url: fileUrl,
-        motivo_cambio: changeReason || 'Creación inicial'
+        motivo_cambio: 'Creación inicial'
       });
 
-      alert(`Documento registrado con éxito bajo el método: ${mode}.`);
+      alert("Documento creado en estado Borrador (Fase Elaboración). Se ha agregado al flujo.");
       toggleModal('modalDoc', false);
+      renderAllData();
+    });
+
+    // GENERAR NUEVA VERSIÓN Y VOLVER OBSOLETA LA ANTERIOR AUTOMÁTICAMENTE
+    document.getElementById('btn-confirm-version').addEventListener('click', function() {
+      const baseId = document.getElementById('versionDocSelect').value;
+      const newTitle = document.getElementById('verNewTitle').value;
+      const newVer = document.getElementById('verNewNumber').value;
+      const reason = document.getElementById('verChangeReason').value;
+
+      if(!reason) {
+        alert("Debe ingresar la justificación del cambio para cumplir con el control de cambios GxP.");
+        return;
+      }
+
+      const docIndex = window.cachedDocs.findIndex(x => x.id === baseId);
+      if(docIndex === -1) return;
+
+      const oldDoc = window.cachedDocs[docIndex];
+
+      // 1. Mover la versión anterior a OBSOLETO automáticamente
+      window.cachedObsoletos.unshift({
+        id: oldDoc.id,
+        codigo: oldDoc.codigo,
+        titulo: oldDoc.titulo,
+        version: oldDoc.version,
+        estado: 'OBSOLETO',
+        motivo_cambio: reason,
+        archivo_url: oldDoc.archivo_url
+      });
+
+      // 2. Reemplazar o agregar la nueva versión en estado PROCESO (Flujo de aprobación)
+      window.cachedDocs.push({
+        id: `doc_${Date.now()}`,
+        codigo: oldDoc.codigo,
+        titulo: newTitle,
+        version: newVer,
+        estado: 'PROCESO',
+        fase: 'Elaboración',
+        proceso: oldDoc.proceso,
+        archivo_url: oldDoc.archivo_url,
+        motivo_cambio: reason
+      });
+
+      // Remover de vigentes actuales
+      window.cachedDocs.splice(docIndex, 1);
+
+      alert(`Versión v${newVer} creada en el flujo. La versión anterior (v${oldDoc.version}) ha pasado automáticamente a la bandeja de Documentos Obsoletos.`);
+      toggleModal('modalVersion', false);
       renderAllData();
     });
   </script>
