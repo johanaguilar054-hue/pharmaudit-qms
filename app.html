@@ -124,38 +124,46 @@
       document.querySelectorAll('.admin-only').forEach(el => { el.style.display = isAdmin ? 'block' : 'none'; });
 
       const btnDocs = document.querySelector('[data-tab="documentos"]');
-      if (btnDocs) btnDocs.click();
+      if (btnDocs) window.switchTab('documentos', btnDocs);
 
       if (typeof window.renderAllData === 'function') window.renderAllData();
       if (typeof window.renderConfigTablas === 'function') window.renderConfigTablas();
     };
 
+    // FUNCIÓN DE LOGIN CORREGIDA Y BLINDADA
     window.ejecutarLoginPrincipal = function() {
       const emailInput = document.getElementById('loginEmail').value.trim();
       const passInput = document.getElementById('loginPassword').value.trim();
-      const usuarioEncontrado = window.cachedUsuarios.find(u => u.correo.toLowerCase() === emailInput.toLowerCase() && u.password === passInput);
+      
+      // Búsqueda estricta cruzando correo y contraseña
+      const usuarioEncontrado = window.cachedUsuarios.find(u => 
+        u.correo.toLowerCase() === emailInput.toLowerCase() && 
+        u.password === passInput
+      );
 
       if (!usuarioEncontrado) {
-        alert("Credenciales incorrectas."); return;
+        alert("Credenciales incorrectas. Verifique su correo corporativo y contraseña."); 
+        return;
       }
       if (usuarioEncontrado.estado !== 'Activo') {
         alert("Acceso denegado: Su cuenta de usuario se encuentra INACTIVA en el sistema GxP.");
         return;
       }
+      
       window.activeGxpUser = usuarioEncontrado;
       window.registrarAuditTrail(usuarioEncontrado.correo, 'LOGIN_SUCCESS', 'Inicio de sesión exitoso al portal GxP');
       window.iniciarPortalVisual();
     };
 
-    window.ejecutarLoginAdmin = function() {
-      window.activeGxpUser = window.cachedUsuarios[0];
-      window.iniciarPortalVisual();
-    };
-
-    window.ejecutarLoginOperador = function() {
-      window.activeGxpUser = window.cachedUsuarios[1];
-      window.iniciarPortalVisual();
-    };
+    // Soporte para loguear pulsando "Enter"
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('loginPassword').addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') { window.ejecutarLoginPrincipal(); }
+      });
+      document.getElementById('loginEmail').addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') { document.getElementById('loginPassword').focus(); }
+      });
+    });
 
     window.registrarAuditTrail = function(user, accion, detalle) {
       const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 19);
@@ -170,7 +178,7 @@
 <body class="bg-slate-50 text-slate-800 p-4">
 
   <!-- ========================================================================= -->
-  <!-- LOGIN INSTITUCIONAL                                                       -->
+  <!-- LOGIN INSTITUCIONAL (SIN BACKDOORS DE DESARROLLO)                         -->
   <!-- ========================================================================= -->
   <div id="view-login" class="min-h-[80vh] flex items-center justify-center">
     <div class="bg-white p-8 rounded-2xl shadow-xl border border-slate-200 max-w-md w-full space-y-5 relative">
@@ -186,21 +194,12 @@
         </div>
         <div>
           <label class="block text-xs font-semibold text-slate-700 mb-1">Contraseña</label>
-          <input type="password" id="loginPassword" value="123" class="w-full p-2.5 border rounded-lg text-xs font-mono bg-slate-50 focus:bg-white outline-none focus:ring-2 focus:ring-cyan-500 transition-all" />
+          <input type="password" id="loginPassword" value="" placeholder="Ingrese su clave" class="w-full p-2.5 border rounded-lg text-xs font-mono bg-slate-50 focus:bg-white outline-none focus:ring-2 focus:ring-cyan-500 transition-all" />
         </div>
 
         <button type="button" onclick="window.ejecutarLoginPrincipal()" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2.5 rounded-lg text-xs shadow transition-colors cursor-pointer">
           Iniciar Sesión Segura (21 CFR Part 11)
         </button>
-
-        <div class="grid grid-cols-2 gap-2 pt-2">
-          <button type="button" onclick="window.ejecutarLoginAdmin()" class="bg-slate-800 hover:bg-slate-900 text-white font-bold py-2 rounded text-[11px] shadow transition-colors cursor-pointer">
-            ⚡ Admin QA
-          </button>
-          <button type="button" onclick="window.ejecutarLoginOperador()" class="bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 rounded text-[11px] shadow transition-colors cursor-pointer">
-            👁️ Operador
-          </button>
-        </div>
       </div>
       <div class="text-[11px] text-center text-slate-400 border-t pt-3 font-mono mt-4">Cumplimiento EU Annex 11 / FDA 21 CFR Part 11</div>
     </div>
@@ -226,15 +225,15 @@
 
     <!-- NAVEGACIÓN PRINCIPAL -->
     <nav class="bg-slate-800 text-slate-300 rounded-xl p-1 mb-4 flex space-x-1 overflow-x-auto text-xs font-medium">
-      <button data-tab="dashboard" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap bg-cyan-600 text-white font-bold cursor-pointer">📊 Dashboard</button>
-      <button data-tab="documentos" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">📑 Gestión Documental</button>
-      <button data-tab="copias" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 text-amber-300 font-bold cursor-pointer admin-only">📋 Copias Controladas</button>
-      <button data-tab="desviaciones" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">⚠️ Desviaciones & NC</button>
-      <button data-tab="capa" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">☑️ Módulo CAPA</button>
-      <button data-tab="metrologia" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">🛠️ Equipos & Calibración</button>
-      <button data-tab="firmas" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">✍️ Firmas Part 11</button>
-      <button data-tab="audit" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">📜 Audit Trail (ALCOA+)</button>
-      <button data-tab="admin" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 bg-slate-700 text-cyan-300 cursor-pointer admin-only">⚙️ Configuraciones GxP</button>
+      <button data-tab="dashboard" onclick="window.switchTab('dashboard', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap bg-cyan-600 text-white font-bold cursor-pointer">📊 Dashboard</button>
+      <button data-tab="documentos" onclick="window.switchTab('documentos', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">📑 Gestión Documental</button>
+      <button data-tab="copias" onclick="window.switchTab('copias', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 text-amber-300 font-bold cursor-pointer admin-only">📋 Copias Controladas</button>
+      <button data-tab="desviaciones" onclick="window.switchTab('desviaciones', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">⚠️ Desviaciones & NC</button>
+      <button data-tab="capa" onclick="window.switchTab('capa', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">☑️ Módulo CAPA</button>
+      <button data-tab="metrologia" onclick="window.switchTab('metrologia', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">🛠️ Equipos & Calibración</button>
+      <button data-tab="firmas" onclick="window.switchTab('firmas', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">✍️ Firmas Part 11</button>
+      <button data-tab="audit" onclick="window.switchTab('audit', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">📜 Audit Trail (ALCOA+)</button>
+      <button data-tab="admin" onclick="window.switchTab('admin', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 bg-slate-700 text-cyan-300 cursor-pointer admin-only">⚙️ Configuraciones GxP</button>
     </nav>
 
     <main>
@@ -275,10 +274,10 @@
       <!-- GESTIÓN DOCUMENTAL -->
       <div id="view-documentos" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-4">
         <div class="flex space-x-1 border-b pb-2 overflow-x-auto text-xs font-semibold">
-          <button data-subtab="vigente" class="doc-subtab-btn px-3 py-1.5 rounded-lg bg-cyan-600 text-white cursor-pointer">Vigente (<span id="count-vigente">0</span>)</button>
-          <button data-subtab="proceso" class="doc-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">En Proceso / Flujo (<span id="count-proceso">0</span>)</button>
-          <button data-subtab="migracion" class="doc-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">Migración (<span id="count-migracion">0</span>)</button>
-          <button data-subtab="obsoleto" class="doc-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">Documentos Obsoletos (<span id="count-obsoleto">0</span>)</button>
+          <button onclick="window.switchDocSubtab('vigente', this)" class="doc-subtab-btn px-3 py-1.5 rounded-lg bg-cyan-600 text-white cursor-pointer">Vigente (<span id="count-vigente">0</span>)</button>
+          <button onclick="window.switchDocSubtab('proceso', this)" class="doc-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">En Proceso / Flujo (<span id="count-proceso">0</span>)</button>
+          <button onclick="window.switchDocSubtab('migracion', this)" class="doc-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">Migración (<span id="count-migracion">0</span>)</button>
+          <button onclick="window.switchDocSubtab('obsoleto', this)" class="doc-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">Documentos Obsoletos (<span id="count-obsoleto">0</span>)</button>
         </div>
 
         <div class="flex justify-between items-center flex-wrap gap-2">
@@ -409,15 +408,15 @@
       <!-- CONFIGURACIONES GxP -->
       <div id="view-admin" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-4">
         <div class="flex space-x-1 border-b pb-2 text-xs font-semibold overflow-x-auto">
-          <button data-configsub="areas" class="config-subtab-btn px-3 py-1.5 rounded-lg bg-slate-800 text-white cursor-pointer">🏢 1. Áreas y Procesos</button>
-          <button data-configsub="empleados" class="config-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">👥 2. Empleados</button>
-          <button data-configsub="roles" class="config-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">🛡️ 3. Roles GxP</button>
-          <button data-configsub="matriz" class="config-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">📊 4. Matriz Permisos</button>
-          <button data-configsub="usuarios" class="config-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">🔑 5. Gestión de Usuarios</button>
-          <button data-configsub="parametros" class="config-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">⚙️ 6. Parámetros</button>
+          <button onclick="window.switchConfigSubtab('areas', this)" class="config-subtab-btn px-3 py-1.5 rounded-lg bg-slate-800 text-white cursor-pointer">🏢 1. Áreas y Procesos</button>
+          <button onclick="window.switchConfigSubtab('empleados', this)" class="config-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">👥 2. Empleados</button>
+          <button onclick="window.switchConfigSubtab('roles', this)" class="config-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">🛡️ 3. Roles GxP</button>
+          <button onclick="window.switchConfigSubtab('matriz', this)" class="config-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">📊 4. Matriz Permisos</button>
+          <button onclick="window.switchConfigSubtab('usuarios', this)" class="config-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">🔑 5. Gestión de Usuarios</button>
+          <button onclick="window.switchConfigSubtab('parametros', this)" class="config-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">⚙️ 6. Parámetros</button>
         </div>
 
-        <!-- SUBSECCIÓN 1: ÁREAS Y PROCESOS (CON BOTONES DE EDICIÓN) -->
+        <!-- SUBSECCIÓN 1: ÁREAS Y PROCESOS -->
         <div id="configsub-areas" class="config-subtab-content active space-y-4 text-xs">
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div class="space-y-2 border p-3 rounded-xl bg-slate-50">
@@ -437,7 +436,7 @@
           </div>
         </div>
 
-        <!-- SUBSECCIÓN 2: EMPLEADOS (CON BOTÓN DE EDICIÓN) -->
+        <!-- SUBSECCIÓN 2: EMPLEADOS -->
         <div id="configsub-empleados" class="config-subtab-content space-y-3 text-xs">
           <div class="flex justify-between items-center">
             <h3 class="font-bold text-slate-800">Directorio Maestro de Empleados</h3>
@@ -543,7 +542,7 @@
     </div>
   </div>
 
-  <!-- MODAL: CREAR / MIGRAR DOCUMENTO (RESTAURADO INPUT FILE Y PDF-LIB) -->
+  <!-- MODAL: CREAR / MIGRAR DOCUMENTO -->
   <div id="modalDoc" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
     <div class="bg-white rounded-xl max-w-lg w-full p-5 border shadow-2xl space-y-4 text-xs">
       <div class="border-b pb-2"><h3 class="font-bold text-sm text-cyan-900">📑 Creación / Subida de Documento GxP</h3></div>
@@ -574,7 +573,7 @@
     </div>
   </div>
 
-  <!-- MODAL: NUEVA VERSIÓN (RESTAURADO INPUT FILE Y CONTROL DE CAMBIOS) -->
+  <!-- MODAL: NUEVA VERSIÓN -->
   <div id="modalVersion" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
     <div class="bg-white rounded-xl max-w-lg w-full p-5 border shadow-2xl space-y-4 text-xs">
       <div class="border-b pb-2"><h3 class="font-bold text-sm text-amber-900">🔄 Generar Nueva Versión & Control de Cambios</h3></div>
@@ -731,7 +730,7 @@
   </div>
 
   <!-- ========================================================================= -->
-  <!-- SCRIPT LÓGICO UNIFICADO                                                   -->
+  <!-- SCRIPT LÓGICO UNIFICADO (SISTEMA DE NAVEGACIÓN BLINDADO)                  -->
   <!-- ========================================================================= -->
   <script>
     window.toggleModal = function(id, show) { 
@@ -739,41 +738,49 @@
       if (m) { show ? m.classList.add('active') : m.classList.remove('active'); } 
     };
 
-    document.addEventListener('DOMContentLoaded', () => {
-      document.querySelectorAll('.nav-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-          document.querySelectorAll('.tab-content').forEach(v => v.classList.remove('active'));
-          document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('bg-cyan-600', 'text-white'));
-          const target = document.getElementById('view-' + this.getAttribute('data-tab'));
-          if(target) target.classList.add('active');
-          this.classList.add('bg-cyan-600', 'text-white');
-        });
+    window.switchTab = function(tabId, btnElement) {
+      document.querySelectorAll('.tab-content').forEach(v => v.classList.remove('active'));
+      document.querySelectorAll('.nav-btn').forEach(b => {
+        b.classList.remove('bg-cyan-600', 'text-white');
+        if (!b.classList.contains('bg-slate-700')) {
+          b.classList.add('hover:bg-slate-700');
+        }
       });
+      const target = document.getElementById('view-' + tabId);
+      if(target) target.classList.add('active');
+      if(btnElement) {
+        btnElement.classList.add('bg-cyan-600', 'text-white');
+        btnElement.classList.remove('hover:bg-slate-700');
+      }
+    };
 
-      document.querySelectorAll('.doc-subtab-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-          document.querySelectorAll('.doc-subtab-content').forEach(v => v.classList.remove('active'));
-          document.querySelectorAll('.doc-subtab-btn').forEach(b => {
-            b.classList.remove('bg-cyan-600', 'text-white'); b.classList.add('bg-slate-100', 'text-slate-700');
-          });
-          const target = document.getElementById('subtab-' + this.getAttribute('data-subtab'));
-          if(target) target.classList.add('active');
-          this.classList.add('bg-cyan-600', 'text-white'); this.classList.remove('bg-slate-100', 'text-slate-700');
-        });
+    window.switchDocSubtab = function(tabId, btnElement) {
+      document.querySelectorAll('.doc-subtab-content').forEach(v => v.classList.remove('active'));
+      document.querySelectorAll('.doc-subtab-btn').forEach(b => {
+        b.classList.remove('bg-cyan-600', 'text-white');
+        b.classList.add('bg-slate-100', 'text-slate-700');
       });
+      const target = document.getElementById('subtab-' + tabId);
+      if(target) target.classList.add('active');
+      if(btnElement) {
+        btnElement.classList.add('bg-cyan-600', 'text-white');
+        btnElement.classList.remove('bg-slate-100', 'text-slate-700');
+      }
+    };
 
-      document.querySelectorAll('.config-subtab-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-          document.querySelectorAll('.config-subtab-content').forEach(v => v.classList.remove('active'));
-          document.querySelectorAll('.config-subtab-btn').forEach(b => {
-            b.classList.remove('bg-slate-800', 'text-white'); b.classList.add('bg-slate-100', 'text-slate-700');
-          });
-          const target = document.getElementById('configsub-' + this.getAttribute('data-configsub'));
-          if(target) target.classList.add('active');
-          this.classList.add('bg-slate-800', 'text-white'); this.classList.remove('bg-slate-100', 'text-slate-700');
-        });
+    window.switchConfigSubtab = function(tabId, btnElement) {
+      document.querySelectorAll('.config-subtab-content').forEach(v => v.classList.remove('active'));
+      document.querySelectorAll('.config-subtab-btn').forEach(b => {
+        b.classList.remove('bg-slate-800', 'text-white');
+        b.classList.add('bg-slate-100', 'text-slate-700');
       });
-    });
+      const target = document.getElementById('configsub-' + tabId);
+      if(target) target.classList.add('active');
+      if(btnElement) {
+        btnElement.classList.add('bg-slate-800', 'text-white');
+        btnElement.classList.remove('bg-slate-100', 'text-slate-700');
+      }
+    };
 
     window.renderAllData = function() {
       const vigentes = window.cachedDocs.filter(d => d.estado === 'VIGENTE');
@@ -846,7 +853,6 @@
     };
 
     window.renderConfigTablas = function() {
-      // 1. Áreas y Procesos con botones de edición
       document.getElementById('tablaAreasConfig').innerHTML = window.cachedAreas.map((a, idx) => `
         <tr class="border hover:bg-slate-50">
           <td class="p-1.5 border font-mono">${a.id}</td>
@@ -866,7 +872,6 @@
         `;
       }).join('');
 
-      // 2. Empleados con botón de edición
       document.getElementById('tablaEmpleadosConfig').innerHTML = window.cachedEmpleados.map((e, idx) => {
         const ar = window.cachedAreas.find(a => a.id === e.areaId);
         const estadoBadge = e.estado === 'Activo' ? '<span class="bg-emerald-100 text-emerald-800 px-2 rounded font-bold">Activo</span>' : '<span class="bg-rose-100 text-rose-800 px-2 rounded font-bold">Inactivo</span>';
@@ -885,7 +890,6 @@
         `;
       }).join('');
 
-      // 3. Roles
       document.getElementById('tablaRolesConfig').innerHTML = window.cachedRoles.map(r => `
         <tr class="hover:bg-slate-50 font-mono text-xs">
           <td class="p-2 border font-bold text-slate-700">${r.id}</td>
@@ -894,7 +898,6 @@
         </tr>
       `).join('');
 
-      // 4. Matriz Permisos
       document.getElementById('tablaMatrizConfig').innerHTML = window.cachedRoles.map(r => {
         const m = window.cachedMatrizPermisos[r.id] || {};
         return `
@@ -909,7 +912,6 @@
         `;
       }).join('');
 
-      // 5. Usuarios
       document.getElementById('tablaUsuariosConfig').innerHTML = window.cachedUsuarios.map((u, idx) => {
         const emp = window.cachedEmpleados.find(e => e.id === u.empleadoId);
         const rolesNombres = u.rolesIds.map(rid => {
@@ -937,7 +939,6 @@
         `;
       }).join('');
 
-      // Selects generales
       const selProc = document.getElementById('createDocProcesoSelect');
       if(selProc) selProc.innerHTML = window.cachedProcesos.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
 
@@ -951,9 +952,6 @@
       if(selCop) selCop.innerHTML = window.cachedAreas.map(a => `<option value="${a.nombre}">${a.nombre}</option>`).join('');
     };
 
-    // -------------------------------------------------------------------------
-    // FUNCIONALIDAD DE EDICIÓN Y GESTIÓN EN CONFIGURACIONES
-    // -------------------------------------------------------------------------
     window.abrirModalArea = function() {
       document.getElementById('modalAreaTitle').innerText = 'Crear Nueva Área';
       document.getElementById('areaEditIndex').value = '-1';
@@ -994,183 +992,4 @@
       const pr = window.cachedProcesos[idx];
       document.getElementById('modalProcesoTitle').innerText = `Editar Proceso: ${pr.nombre}`;
       document.getElementById('procesoEditIndex').value = idx;
-      document.getElementById('inputProcesoNombre').value = pr.nombre;
-      document.getElementById('selectProcesoArea').value = pr.areaId;
-      window.toggleModal('modalProceso', true);
-    };
-    window.guardarProcesoCompleto = function() {
-      const editIdx = parseInt(document.getElementById('procesoEditIndex').value);
-      const nom = document.getElementById('inputProcesoNombre').value.trim();
-      const areaId = document.getElementById('selectProcesoArea').value;
-      if(!nom) { alert("Ingrese nombre del proceso."); return; }
-      if(editIdx === -1) {
-        const id = 'pr_' + Date.now();
-        window.cachedProcesos.push({ id, nombre: nom, areaId });
-        window.registrarAuditTrail(window.activeGxpUser.correo, 'CREATE_PROCESO', `Creación de proceso GxP: ${nom}`);
-      } else {
-        const ant = window.cachedProcesos[editIdx].nombre;
-        window.cachedProcesos[editIdx].nombre = nom;
-        window.cachedProcesos[editIdx].areaId = areaId;
-        window.registrarAuditTrail(window.activeGxpUser.correo, 'UPDATE_PROCESO', `Actualización de proceso de '${ant}' a '${nom}'`);
-      }
-      window.toggleModal('modalProceso', false);
-      window.renderAllData();
-    };
-
-    window.abrirModalEmpleado = function() {
-      document.getElementById('modalEmpTitle').innerText = 'Registrar Empleado en Directorio Maestro';
-      document.getElementById('empEditIndex').value = '-1';
-      document.getElementById('empNombres').value = '';
-      document.getElementById('empApellidos').value = '';
-      document.getElementById('empCargo').value = 'Analista de Calidad';
-      document.getElementById('empCorreo').value = '';
-      document.getElementById('empEstadoSelect').value = 'Activo';
-      window.toggleModal('modalEmpleado', true);
-    };
-    window.abrirModalEditarEmpleado = function(idx) {
-      const emp = window.cachedEmpleados[idx];
-      document.getElementById('modalEmpTitle').innerText = `Editar Empleado: ${emp.nombres} ${emp.apellidos}`;
-      document.getElementById('empEditIndex').value = idx;
-      document.getElementById('empNombres').value = emp.nombres;
-      document.getElementById('empApellidos').value = emp.apellidos;
-      document.getElementById('empCargo').value = emp.cargo;
-      document.getElementById('empCorreo').value = emp.correo;
-      document.getElementById('empAreaSelect').value = emp.areaId;
-      document.getElementById('empEstadoSelect').value = emp.estado;
-      window.toggleModal('modalEmpleado', true);
-    };
-    window.guardarEmpleadoCompleto = function() {
-      const editIdx = parseInt(document.getElementById('empEditIndex').value);
-      const nombres = document.getElementById('empNombres').value.trim();
-      const apellidos = document.getElementById('empApellidos').value.trim();
-      const cargo = document.getElementById('empCargo').value.trim();
-      const correo = document.getElementById('empCorreo').value.trim();
-      const areaId = document.getElementById('empAreaSelect').value;
-      const estado = document.getElementById('empEstadoSelect').value;
-
-      if(!nombres || !correo) { alert("Complete campos obligatorios del empleado."); return; }
-      if(editIdx === -1) {
-        const id = window.cachedEmpleados.length + 1;
-        window.cachedEmpleados.push({ id, nombres, apellidos, cargo, correo, areaId, estado });
-        window.registrarAuditTrail(window.activeGxpUser.correo, 'CREATE_EMPLOYEE', `Registro de empleado: ${nombres} ${apellidos} (${correo})`);
-      } else {
-        const ant = window.cachedEmpleados[editIdx].correo;
-        window.cachedEmpleados[editIdx] = { ...window.cachedEmpleados[editIdx], nombres, apellidos, cargo, correo, areaId, estado };
-        window.registrarAuditTrail(window.activeGxpUser.correo, 'UPDATE_EMPLOYEE', `Actualización de empleado ${ant} -> ${correo} [Estado: ${estado}]`);
-      }
-      window.toggleModal('modalEmpleado', false);
-      window.renderAllData();
-    };
-
-    window.abrirModalRol = () => window.toggleModal('modalRol', true);
-    window.guardarNuevoRol = function() {
-      const id = document.getElementById('rolIdInput').value.trim();
-      const nombre = document.getElementById('rolNombreInput').value.trim();
-      const desc = document.getElementById('rolDescInput').value.trim();
-      if(!id || !nombre) { alert("Complete ID y nombre del rol."); return; }
-      window.cachedRoles.push({ id, nombre, desc });
-      window.cachedMatrizPermisos[id] = { lectura: true, crearEdicion: false, revision: false, aprobacionFirma: false, administracion: false };
-      window.registrarAuditTrail(window.activeGxpUser.correo, 'CREATE_ROLE', `Creación de rol GxP: ${nombre}`);
-      window.toggleModal('modalRol', false);
-      window.renderAllData();
-    };
-
-    window.poblarCheckboxesModalUsuario = function(rolesSeleccionados = [], areasSeleccionadas = []) {
-      const selEmp = document.getElementById('usrEmpSelect');
-      selEmp.innerHTML = window.cachedEmpleados.map(e => `<option value="${e.id}">${e.nombres} ${e.apellidos} (${e.correo})</option>`).join('');
-
-      const divRoles = document.getElementById('contenedorRolesCheckboxes');
-      divRoles.innerHTML = window.cachedRoles.map(r => {
-        const checked = rolesSeleccionados.includes(r.id) ? 'checked' : '';
-        return `<label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" name="chkRol" value="${r.id}" ${checked} class="rounded"> <span>${r.nombre}</span></label>`;
-      }).join('');
-
-      const divAreas = document.getElementById('contenedorAreasCheckboxes');
-      divAreas.innerHTML = window.cachedAreas.map(a => {
-        const checked = areasSeleccionadas.includes(a.id) ? 'checked' : '';
-        return `<label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" name="chkArea" value="${a.id}" ${checked} class="rounded"> <span>${a.nombre}</span></label>`;
-      }).join('');
-
-      window.sugerirCorreoEmpleado();
-    };
-
-    window.sugerirCorreoEmpleado = function() {
-      const empId = parseInt(document.getElementById('usrEmpSelect').value);
-      const emp = window.cachedEmpleados.find(e => e.id === empId);
-      if(emp) { document.getElementById('usrCorreoInput').value = emp.correo; }
-    };
-
-    window.abrirModalUsuario = function() {
-      document.getElementById('modalUsrTitle').innerText = 'Asignar Nuevo Usuario GxP';
-      document.getElementById('usrEditIndex').value = '-1';
-      document.getElementById('usrPasswordInput').value = '123';
-      document.getElementById('usrEstadoSelect').value = 'Activo';
-      window.poblarCheckboxesModalUsuario(['rol_viewer'], [window.cachedAreas[0].id]);
-      window.toggleModal('modalUsuario', true);
-    };
-
-    window.abrirModalEditarUsuario = function(idx) {
-      const usr = window.cachedUsuarios[idx];
-      if(!usr) return;
-      document.getElementById('modalUsrTitle').innerText = `Editar Usuario: ${usr.correo}`;
-      document.getElementById('usrEditIndex').value = idx;
-      document.getElementById('usrEmpSelect').value = usr.empleadoId;
-      document.getElementById('usrCorreoInput').value = usr.correo;
-      document.getElementById('usrPasswordInput').value = usr.password;
-      document.getElementById('usrEstadoSelect').value = usr.estado;
-      window.poblarCheckboxesModalUsuario(usr.rolesIds, usr.areasAsignadas);
-      window.toggleModal('modalUsuario', true);
-    };
-
-    window.guardarUsuarioCompleto = function() {
-      const editIdx = parseInt(document.getElementById('usrEditIndex').value);
-      const empId = parseInt(document.getElementById('usrEmpSelect').value);
-      const correo = document.getElementById('usrCorreoInput').value.trim();
-      const password = document.getElementById('usrPasswordInput').value.trim();
-      const estado = document.getElementById('usrEstadoSelect').value;
-
-      const rolesIds = Array.from(document.querySelectorAll('input[name="chkRol"]:checked')).map(el => el.value);
-      const areasAsignadas = Array.from(document.querySelectorAll('input[name="chkArea"]:checked')).map(el => el.value);
-
-      if(!correo || rolesIds.length === 0 || areasAsignadas.length === 0) {
-        alert("Debe seleccionar al menos un Rol y un Área autorizada para el usuario.");
-        return;
-      }
-
-      const correoExistente = window.cachedUsuarios.find((u, i) => u.correo.toLowerCase() === correo.toLowerCase() && i !== editIdx);
-      if(correoExistente) {
-        alert("Error GxP: El correo corporativo (Login) ya se encuentra asignado a otro usuario.");
-        return;
-      }
-
-      if (editIdx === -1) {
-        const id = window.cachedUsuarios.length + 1;
-        window.cachedUsuarios.push({ id, empleadoId: empId, correo, password, rolesIds, areasAsignadas, estado });
-        window.registrarAuditTrail(window.activeGxpUser.correo, 'CREATE_USER', `Creación de usuario GxP para ${correo}`);
-      } else {
-        window.cachedUsuarios[editIdx] = { ...window.cachedUsuarios[editIdx], empleadoId: empId, correo, password, rolesIds, areasAsignadas, estado };
-        window.registrarAuditTrail(window.activeGxpUser.correo, 'UPDATE_USER', `Actualización de usuario ${correo} [Estado: ${estado}]`);
-      }
-      window.toggleModal('modalUsuario', false);
-      window.renderAllData();
-    };
-
-    // -------------------------------------------------------------------------
-    // FLUJO DOCUMENTAL, SUBIDA DE ARCHIVO Y MARCA DE AGUA (PDF-LIB) RESTAURADOS
-    // -------------------------------------------------------------------------
-    window.viewDocument = function(docId) {
-      let doc = window.cachedDocs.find(x => x.id === docId) || window.cachedObsoletos.find(x => x.id === docId);
-      if (!doc || !doc.archivo_url) { alert("Este documento no cuenta con un archivo PDF adjunto."); return; }
-      document.getElementById('pdfViewerTitle').innerText = `${doc.codigo} v${doc.version} - ${doc.titulo} [${doc.estado}]`;
-      const viewerArea = document.getElementById('pdfViewerArea');
-      
-      const permisosEfectivos = window.obtenerPermisosEfectivos(window.activeGxpUser, doc.areaId);
-      if (permisosEfectivos.administracion) {
-        viewerArea.innerHTML = `<iframe src="${doc.archivo_url}" class="w-full h-full border-0"></iframe>`;
-      } else {
-        viewerArea.innerHTML = `<div class="read-only-shield" oncontextmenu="return false;"></div><iframe src="${doc.archivo_url}#toolbar=0&navpanes=0&scrollbar=0" class="w-full h-full border-0 pointer-events-none"></iframe>`;
-      }
-      window.toggleModal('modalExportPdf', true);
-    };
-
-    window.iniciarF
+      document.getElementById('input
