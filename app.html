@@ -156,10 +156,10 @@
 
       <!-- COPIAS CONTROLADAS -->
       <div id="view-copias" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-4">
-        <h2 class="font-bold text-slate-800 text-sm">📋 Control de Copias Físicas</h2>
+        <h2 class="font-bold text-slate-800 text-sm">📋 Control de Copias Físicas Oficiales</h2>
         <div class="overflow-x-auto">
           <table class="w-full border-collapse text-left text-xs font-mono">
-            <thead><tr class="bg-slate-100 text-slate-700 border-b"><th class="p-2 border">Copia</th><th class="p-2 border">Documento</th><th class="p-2 border">Área</th><th class="p-2 border">Custodio</th><th class="p-2 border">Estado</th></tr></thead>
+            <thead><tr class="bg-slate-100 text-slate-700 border-b"><th class="p-2 border">Copia (ID)</th><th class="p-2 border">Documento</th><th class="p-2 border">Área Destino</th><th class="p-2 border">Custodio</th><th class="p-2 border">Estado</th></tr></thead>
             <tbody id="list-copias-body" class="divide-y divide-slate-100"></tbody>
           </table>
         </div>
@@ -227,18 +227,18 @@
         <div id="configsub-matriz" class="config-subtab-content space-y-3 text-xs">
           <h3 class="font-bold">Matriz de Permisos</h3>
           <table class="w-full border-collapse text-center">
-            <thead><tr class="bg-slate-100 border font-mono"><th class="p-2 border text-left">Rol del Sistema</th><th class="p-2 border">Lectura</th><th class="p-2 border">Creación</th><th class="p-2 border">Revisión</th><th class="p-2 border">Aprobación</th><th class="p-2 border">Admin</th></tr></thead>
+            <thead><tr class="bg-slate-100 border font-mono"><th class="p-2 border text-left">Rol del Sistema</th><th class="p-2 border">Lectura</th><th class="p-2 border">Creación / Edición</th><th class="p-2 border">Revisión</th><th class="p-2 border">Aprobación / Firma</th><th class="p-2 border">Administración</th></tr></thead>
             <tbody id="tablaMatrizConfig" class="divide-y font-mono"></tbody>
           </table>
         </div>
 
         <div id="configsub-usuarios" class="config-subtab-content space-y-3 text-xs">
           <div class="flex justify-between items-center">
-            <h3 class="font-bold text-slate-800">Gestión de Usuarios</h3>
+            <h3 class="font-bold text-slate-800">Gestión de Usuarios GxP</h3>
             <button onclick="window.abrirModalUsuario()" class="bg-slate-800 text-white px-3 py-1.5 rounded font-bold shadow cursor-pointer">+ Asignar Usuario GxP</button>
           </div>
           <table class="w-full border-collapse text-left">
-            <thead><tr class="bg-slate-100 border font-mono"><th class="p-2 border">ID</th><th class="p-2 border">Empleado</th><th class="p-2 border">Correo</th><th class="p-2 border">Roles</th><th class="p-2 border">Áreas</th><th class="p-2 border">Estado</th><th class="p-2 border text-center">Acción</th></tr></thead>
+            <thead><tr class="bg-slate-100 border font-mono"><th class="p-2 border">ID</th><th class="p-2 border">Empleado</th><th class="p-2 border">Correo (Login)</th><th class="p-2 border">Roles</th><th class="p-2 border">Áreas Autorizadas</th><th class="p-2 border">Estado</th><th class="p-2 border text-center">Acción</th></tr></thead>
             <tbody id="tablaUsuariosConfig" class="divide-y"></tbody>
           </table>
         </div>
@@ -297,7 +297,6 @@
         </div>
         <div><label class="block font-semibold mb-1">Proceso GxP</label><select id="createDocProcesoSelect" class="w-full p-2 border rounded bg-slate-50 font-mono"></select></div>
         <div>
-          <!-- CAMPO INPUT FILE RESTAURADO Y PROTEGIDO -->
           <label class="block font-semibold mb-1 text-cyan-900">Archivo del Documento (PDF Oficial)</label>
           <input type="file" id="createDocFile" accept=".pdf" class="w-full p-1.5 border rounded bg-slate-50 font-mono" />
           <p class="text-[10px] text-slate-500 mt-0.5">Sube el documento PDF para ser firmado y gestionado (21 CFR Part 11).</p>
@@ -305,7 +304,7 @@
       </div>
       <div class="flex justify-end space-x-2 pt-3 border-t">
         <button type="button" onclick="window.toggleModal('modalDoc', false)" class="px-3 py-1.5 border rounded">Cancelar</button>
-        <button type="button" onclick="window.guardarNuevoDocumento()" class="px-4 py-1.5 bg-cyan-600 text-white rounded font-bold">Guardar</button>
+        <button type="button" onclick="window.guardarNuevoDocumento()" class="px-4 py-1.5 bg-cyan-600 text-white rounded font-bold">Guardar Borrador</button>
       </div>
     </div>
   </div>
@@ -332,7 +331,7 @@
   <!-- MODAL: NUEVA VERSIÓN -->
   <div id="modalVersion" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
     <div class="bg-white rounded-xl max-w-lg w-full p-5 border shadow-2xl space-y-4 text-xs">
-      <div class="border-b pb-2"><h3 class="font-bold text-sm text-amber-900">🔄 Generar Nueva Versión</h3></div>
+      <div class="border-b pb-2"><h3 class="font-bold text-sm text-amber-900">🔄 Generar Nueva Versión & Control de Cambios</h3></div>
       <div class="space-y-3">
         <div><label class="block font-semibold mb-1">Documento Vigente</label><select id="versionDocSelect" class="w-full p-2 border rounded bg-slate-50 font-mono" onchange="window.cargarDatosVersionBase()"></select></div>
         <div><label class="block font-semibold mb-1">Nuevo Título</label><input type="text" id="verNewTitle" class="w-full p-2 border rounded bg-slate-50" /></div>
@@ -341,11 +340,11 @@
           <div><label class="block font-semibold mb-1">Versión Propuesta</label><input type="text" id="verNewNumber" class="w-full p-2 border rounded bg-amber-50 font-mono font-bold" /></div>
         </div>
         <div><label class="block font-semibold mb-1 text-amber-900">Justificación</label><textarea id="verChangeReason" rows="2" class="w-full p-2 border rounded bg-amber-50"></textarea></div>
-        <div><label class="block font-semibold mb-1 text-amber-900">Archivo (PDF)</label><input type="file" id="verNewFile" accept=".pdf" class="w-full p-1.5 border rounded bg-slate-50 font-mono" /></div>
+        <div><label class="block font-semibold mb-1 text-amber-900">Archivo (PDF Actualizado)</label><input type="file" id="verNewFile" accept=".pdf" class="w-full p-1.5 border rounded bg-slate-50 font-mono" /></div>
       </div>
       <div class="flex justify-end space-x-2 pt-3 border-t">
         <button type="button" onclick="window.toggleModal('modalVersion', false)" class="px-3 py-1.5 border rounded">Cancelar</button>
-        <button type="button" onclick="window.guardarNuevaVersion()" class="px-4 py-1.5 bg-amber-600 text-white rounded font-bold">Registrar</button>
+        <button type="button" onclick="window.guardarNuevaVersion()" class="px-4 py-1.5 bg-amber-600 text-white rounded font-bold">Registrar Nueva Versión</button>
       </div>
     </div>
   </div>
@@ -378,7 +377,6 @@
     <div class="bg-white rounded-xl max-w-sm w-full p-4 border shadow-xl space-y-3 text-xs">
       <h3 class="font-bold text-slate-800" id="modalAreaTitle">Crear / Editar Área</h3>
       <input type="hidden" id="areaEditIndex" value="-1">
-      <!-- CAMPO ID DE ÁREA AHORA ES EDITABLE -->
       <div><label class="block mb-1 font-semibold">ID del Área (Editable)</label><input type="text" id="inputAreaId" class="w-full p-2 border rounded font-mono font-bold text-slate-700 bg-slate-100" /></div>
       <div><label class="block mb-1 font-semibold">Nombre del Área</label><input type="text" id="inputAreaNombre" class="w-full p-2 border rounded" /></div>
       <div class="flex justify-end space-x-2">
@@ -422,7 +420,7 @@
     </div>
   </div>
 
-  <!-- MODAL: USUARIO (CON EDICIÓN DE CLAVE) -->
+  <!-- MODAL: USUARIO -->
   <div id="modalUsuario" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
     <div class="bg-white rounded-xl max-w-lg w-full p-5 border shadow-xl space-y-3 text-xs">
       <h3 class="font-bold text-slate-800 text-sm" id="modalUsrTitle">Asignar / Editar Usuario</h3>
@@ -443,7 +441,7 @@
   </div>
 
   <!-- ========================================================================= -->
-  <!-- NÚCLEO JS (PERSISTENCIA Y LÓGICA DE NEGOCIO UNIFICADA)                    -->
+  <!-- NÚCLEO JS (PERSISTENCIA Y LÓGICA DE NEGOCIO COMPLETAMENTE RESTAURADA)     -->
   <!-- ========================================================================= -->
   <script>
     // SISTEMA DE GUARDADO PERSISTENTE EN LOCALSTORAGE
@@ -483,7 +481,6 @@
       }
     };
 
-    // Inicializar memoria DB al arrancar
     window.loadData();
     window.activeGxpUser = null;
     window.selectedDocId = null;
@@ -546,11 +543,112 @@
       if(auditDiv) auditDiv.innerHTML = window.auditTrailLogs.map(l => `[${l.fecha}] <strong>${l.usuario}</strong> [${l.accion}]: ${l.detalle}`).join('<br><hr class="border-slate-100">');
     };
 
-    // RENDERS
+    // FUNCIONALIDADES FALTANTES RESTAURADAS
+    window.exportarExcelAuditoria = function() {
+      const vigentes = window.cachedDocs.filter(d => d.estado === 'VIGENTE');
+      let htmlTabla = `<table><thead><tr><th>Código</th><th>Versión</th><th>Título del Documento</th><th>Proceso</th><th>Fecha de Aprobación</th><th>Fecha de Vencimiento</th><th>Estado GxP</th></tr></thead><tbody>`;
+      vigentes.forEach(d => {
+        const p = window.cachedProcesos.find(x => x.id === d.procesoId);
+        htmlTabla += `<tr><td>${d.codigo}</td><td>v${d.version}</td><td>${d.titulo}</td><td>${p ? p.nombre : 'N/A'}</td><td>${d.fechaAprob || 'N/A'}</td><td>${d.fechaVenc || 'N/A'}</td><td>${d.estado}</td></tr>`;
+      });
+      htmlTabla += `</tbody></table>`;
+      const blob = new Blob(['\ufeff' + htmlTabla], { type: 'application/vnd.ms-excel' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `Listado_Maestro_Pharmor_${new Date().toISOString().split('T')[0]}.xls`;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    };
+
+    window.cargarDatosVersionBase = function() {
+      const baseId = document.getElementById('versionDocSelect').value;
+      const doc = window.cachedDocs.find(x => x.id === baseId);
+      if (doc) {
+        document.getElementById('verNewTitle').value = doc.titulo;
+        document.getElementById('verNewCode').value = doc.codigo;
+        const vParts = doc.version.split('.');
+        document.getElementById('verNewNumber').value = (parseInt(vParts[0]) || 1) + '.0';
+      }
+    };
+
+    window.abrirModalNuevaVersion = function() {
+      const select = document.getElementById('versionDocSelect');
+      const vigentes = window.cachedDocs.filter(d => d.estado === 'VIGENTE');
+      select.innerHTML = vigentes.map(d => `<option value="${d.id}">${d.codigo} v${d.version} - ${d.titulo}</option>`).join('');
+      document.getElementById('verNewFile').value = '';
+      if(vigentes.length > 0) window.cargarDatosVersionBase();
+      window.toggleModal('modalVersion', true);
+    };
+
+    window.guardarNuevaVersion = function() {
+      const baseId = document.getElementById('versionDocSelect').value;
+      const newTitle = document.getElementById('verNewTitle').value;
+      const newVer = document.getElementById('verNewNumber').value;
+      const reason = document.getElementById('verChangeReason').value;
+      const fileInput = document.getElementById('verNewFile');
+
+      if(!reason) { alert("Justificación de cambio obligatoria."); return; }
+
+      const docIndex = window.cachedDocs.findIndex(x => x.id === baseId);
+      if(docIndex === -1) return;
+      const oldDoc = window.cachedDocs[docIndex];
+
+      let fileUrl = oldDoc.archivo_url;
+      if (fileInput.files && fileInput.files[0]) {
+        fileUrl = URL.createObjectURL(fileInput.files[0]);
+      }
+
+      window.cachedObsoletos.unshift({
+        id: oldDoc.id, codigo: oldDoc.codigo, titulo: oldDoc.titulo, version: oldDoc.version, estado: 'OBSOLETO', motivo_cambio: reason, archivo_url: oldDoc.archivo_url
+      });
+
+      window.cachedDocs.push({
+        id: `doc_${Date.now()}`, codigo: oldDoc.codigo, titulo: newTitle, version: newVer, estado: 'PROCESO', fase: 'Elaboración', procesoId: oldDoc.procesoId, areaId: oldDoc.areaId, fechaAprob: new Date().toISOString().split('T')[0], fechaVenc: oldDoc.fechaVenc, archivo_url: fileUrl, motivo_cambio: reason
+      });
+
+      window.cachedDocs.splice(docIndex, 1);
+      window.registrarAuditTrail(window.activeGxpUser.correo, 'NEW_VERSION', `Generación de versión v${newVer} para ${oldDoc.codigo}`);
+      window.saveData();
+      alert(`Versión v${newVer} en flujo. La versión anterior pasó a Obsoletos.`);
+      window.toggleModal('modalVersion', false);
+      window.renderAllData();
+    };
+
+    window.sugerirCorreoEmpleado = function() {
+      const empId = parseInt(document.getElementById('usrEmpSelect').value);
+      const emp = window.cachedEmpleados.find(e => e.id === empId);
+      if(emp) { document.getElementById('usrCorreoInput').value = emp.correo; }
+    };
+
+    window.poblarCheckboxesModalUsuario = function(rolesSeleccionados = [], areasSeleccionadas = []) {
+      const selEmp = document.getElementById('usrEmpSelect');
+      selEmp.innerHTML = window.cachedEmpleados.map(e => `<option value="${e.id}">${e.nombres} ${e.apellidos} (${e.correo})</option>`).join('');
+
+      const divRoles = document.getElementById('contenedorRolesCheckboxes');
+      divRoles.innerHTML = window.cachedRoles.map(r => {
+        const checked = rolesSeleccionados.includes(r.id) ? 'checked' : '';
+        return `<label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" name="chkRol" value="${r.id}" ${checked} class="rounded"> <span>${r.nombre}</span></label>`;
+      }).join('');
+
+      const divAreas = document.getElementById('contenedorAreasCheckboxes');
+      divAreas.innerHTML = window.cachedAreas.map(a => {
+        const checked = areasSeleccionadas.includes(a.id) ? 'checked' : '';
+        return `<label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" name="chkArea" value="${a.id}" ${checked} class="rounded"> <span>${a.nombre}</span></label>`;
+      }).join('');
+
+      window.sugerirCorreoEmpleado();
+    };
+
+    // RENDERS PRINCIPALES
     window.renderAllData = function() {
-      const vigentes = window.cachedDocs.filter(d => d.estado === 'VIGENTE'); const enProceso = window.cachedDocs.filter(d => d.estado === 'PROCESO');
-      document.getElementById('cnt-docs').innerText = vigentes.length; document.getElementById('count-vigente').innerText = vigentes.length;
+      const vigentes = window.cachedDocs.filter(d => d.estado === 'VIGENTE'); 
+      const enProceso = window.cachedDocs.filter(d => d.estado === 'PROCESO');
+      const obsoletos = window.cachedObsoletos;
+
+      document.getElementById('cnt-docs').innerText = vigentes.length; 
+      document.getElementById('count-vigente').innerText = vigentes.length;
       document.getElementById('count-proceso').innerText = enProceso.length;
+      document.getElementById('cnt-copias').innerText = window.cachedCopias.length;
+      document.getElementById('count-obsoleto').innerText = obsoletos.length;
 
       document.getElementById('table-vigente').innerHTML = vigentes.length ? vigentes.map(d => {
         const proc = window.cachedProcesos.find(p => p.id === d.procesoId); const area = window.cachedAreas.find(a => a.id === d.areaId);
@@ -571,6 +669,20 @@
         </td></tr>`;
       }).join('') : `<tr><td colspan="6" class="p-4 text-center text-slate-400">Sin documentos en proceso.</td></tr>`;
 
+      document.getElementById('table-obsoleto').innerHTML = obsoletos.length ? obsoletos.map(o => `
+        <tr class="hover:bg-slate-50 bg-rose-50/40">
+          <td class="p-2 border font-mono font-bold text-rose-800">${o.codigo}</td>
+          <td class="p-2 border font-mono text-rose-600">v${o.version}</td>
+          <td class="p-2 border font-semibold">${o.titulo}</td>
+          <td class="p-2 border text-slate-700 italic">${o.motivo_cambio}</td>
+          <td class="p-2 border text-center"><button onclick="window.viewDocument('${o.id}')" class="bg-slate-100 border px-2 py-1 rounded font-bold text-slate-700 cursor-pointer">👁️ Ver</button></td>
+        </tr>
+      `).join('') : `<tr><td colspan="5" class="p-4 text-center text-slate-400">Papelera vacía.</td></tr>`;
+
+      document.getElementById('list-copias-body').innerHTML = window.cachedCopias.length ? window.cachedCopias.map(c => `
+        <tr class="hover:bg-slate-50"><td class="p-2 border font-bold text-amber-900">${c.codigo}</td><td class="p-2 border">${c.doc}</td><td class="p-2 border">${c.area}</td><td class="p-2 border">${c.custodio}</td><td class="p-2 border"><span class="bg-emerald-100 text-emerald-800 px-2 rounded text-[10px] font-bold">ACTIVA</span></td></tr>
+      `).join('') : `<tr><td colspan="5" class="p-4 text-center text-slate-400">Sin copias emitidas.</td></tr>`;
+
       window.renderConfigTablas();
       const auditDiv = document.getElementById('list-auds');
       if(auditDiv) auditDiv.innerHTML = window.auditTrailLogs.map(l => `[${l.fecha}] <strong>${l.usuario}</strong> [${l.accion}]: ${l.detalle}`).join('<br><hr class="border-slate-100">');
@@ -580,14 +692,34 @@
       document.getElementById('tablaAreasConfig').innerHTML = window.cachedAreas.map((a, idx) => `<tr class="border hover:bg-slate-50"><td class="p-1.5 border font-mono">${a.id}</td><td class="p-1.5 border font-semibold">${a.nombre}</td><td class="p-1.5 border text-center"><button onclick="window.abrirModalEditarArea(${idx})" class="bg-cyan-50 border px-2 py-0.5 rounded font-bold cursor-pointer">✏️ Editar</button></td></tr>`).join('');
       document.getElementById('tablaProcesosConfig').innerHTML = window.cachedProcesos.map((p, idx) => { const ar = window.cachedAreas.find(a => a.id === p.areaId); return `<tr class="border hover:bg-slate-50"><td class="p-1.5 border font-semibold">${p.nombre}</td><td class="p-1.5 border font-mono text-[11px]">${ar ? ar.nombre : 'N/A'}</td><td class="p-1.5 border text-center"><button onclick="window.abrirModalEditarProceso(${idx})" class="bg-cyan-50 border px-2 py-0.5 rounded font-bold cursor-pointer">✏️ Editar</button></td></tr>`; }).join('');
       document.getElementById('tablaEmpleadosConfig').innerHTML = window.cachedEmpleados.map((e, idx) => { const ar = window.cachedAreas.find(a => a.id === e.areaId); return `<tr class="hover:bg-slate-50 font-mono text-xs"><td class="p-2 border">${e.id}</td><td class="p-2 border font-sans font-semibold">${e.nombres} ${e.apellidos}</td><td class="p-2 border font-sans">${e.cargo}</td><td class="p-2 border text-cyan-800">${e.correo}</td><td class="p-2 border font-sans">${ar ? ar.nombre : 'N/A'}</td><td class="p-2 border text-center">${e.estado==='Activo'?'<span class="bg-emerald-100 text-emerald-800 px-2 rounded">Activo</span>':'<span class="bg-rose-100 text-rose-800 px-2 rounded">Inactivo</span>'}</td><td class="p-2 border text-center"><button onclick="window.abrirModalEditarEmpleado(${idx})" class="bg-cyan-50 border px-2 py-1 rounded font-bold cursor-pointer">✏️ Editar</button></td></tr>`; }).join('');
+      
+      document.getElementById('tablaRolesConfig').innerHTML = window.cachedRoles.map(r => `
+        <tr class="hover:bg-slate-50 font-mono text-xs">
+          <td class="p-2 border font-bold text-slate-700">${r.id}</td><td class="p-2 border font-sans font-semibold">${r.nombre}</td><td class="p-2 border font-sans text-slate-600">${r.desc}</td>
+        </tr>
+      `).join('');
+
+      document.getElementById('tablaMatrizConfig').innerHTML = window.cachedRoles.map(r => {
+        const m = window.cachedMatrizPermisos[r.id] || {};
+        return `
+          <tr class="hover:bg-slate-50 text-xs">
+            <td class="p-2 border text-left font-bold font-sans">${r.nombre}</td>
+            <td class="p-2 border">${m.lectura ? '✅' : '❌'}</td><td class="p-2 border">${m.crearEdicion ? '✅' : '❌'}</td>
+            <td class="p-2 border">${m.revision ? '✅' : '❌'}</td><td class="p-2 border">${m.aprobacionFirma ? '✅' : '❌'}</td>
+            <td class="p-2 border">${m.administracion ? '✅' : '❌'}</td>
+          </tr>
+        `;
+      }).join('');
+
       document.getElementById('tablaUsuariosConfig').innerHTML = window.cachedUsuarios.map((u, idx) => { const emp = window.cachedEmpleados.find(e => e.id === u.empleadoId); return `<tr class="hover:bg-slate-50 font-mono text-xs"><td class="p-2 border">${u.id}</td><td class="p-2 border font-sans font-semibold">${emp ? emp.nombres + ' ' + emp.apellidos : 'N/A'}</td><td class="p-2 border text-cyan-800">${u.correo}</td><td class="p-2 border font-sans"><span class="bg-purple-100 text-purple-800 px-2 rounded text-[11px]">${u.rolesIds.join(', ')}</span></td><td class="p-2 border font-sans text-[11px] text-slate-600">${u.areasAsignadas.join(', ')}</td><td class="p-2 border text-center">${u.estado==='Activo'?'<span class="bg-emerald-100 text-emerald-800 px-2 rounded">Activo</span>':'<span class="bg-rose-100 text-rose-800 px-2 rounded">Inactivo</span>'}</td><td class="p-2 border text-center"><button onclick="window.abrirModalEditarUsuario(${idx})" class="bg-cyan-50 border px-2 py-1 rounded font-bold cursor-pointer">✏️ Editar</button></td></tr>`; }).join('');
       
       const selProc = document.getElementById('createDocProcesoSelect'); if(selProc) selProc.innerHTML = window.cachedProcesos.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
       const selArea = document.getElementById('selectProcesoArea'); if(selArea) selArea.innerHTML = window.cachedAreas.map(a => `<option value="${a.id}">${a.nombre}</option>`).join('');
       const selEmpArea = document.getElementById('empAreaSelect'); if(selEmpArea) selEmpArea.innerHTML = window.cachedAreas.map(a => `<option value="${a.id}">${a.nombre}</option>`).join('');
+      const selCopArea = document.getElementById('copiaAreaSelect'); if(selCopArea) selCopArea.innerHTML = window.cachedAreas.map(a => `<option value="${a.nombre}">${a.nombre}</option>`).join('');
     };
 
-    // EDICIÓN DE ÁREAS CON ID EDITABLE Y CASCADA DE ACTUALIZACIÓN
+    // EDICIÓN CON GUARDADO (SAVEDATA)
     window.abrirModalArea = function() { document.getElementById('modalAreaTitle').innerText = 'Nueva Área'; document.getElementById('areaEditIndex').value = '-1'; document.getElementById('inputAreaId').value = `ar_${Date.now()}`; document.getElementById('inputAreaNombre').value = ''; window.toggleModal('modalArea', true); };
     window.abrirModalEditarArea = function(idx) { const ar = window.cachedAreas[idx]; document.getElementById('modalAreaTitle').innerText = `Editar Área`; document.getElementById('areaEditIndex').value = idx; document.getElementById('inputAreaId').value = ar.id; document.getElementById('inputAreaNombre').value = ar.nombre; window.toggleModal('modalArea', true); };
     window.guardarAreaCompleta = function() {
@@ -603,7 +735,7 @@
       } else {
         const oldId = window.cachedAreas[editIdx].id;
         window.cachedAreas[editIdx].nombre = nom;
-        if(oldId !== newId) { // Cascada relacional si cambió el ID
+        if(oldId !== newId) { // Cascada relacional
           window.cachedAreas[editIdx].id = newId;
           window.cachedProcesos.forEach(p => { if(p.areaId === oldId) p.areaId = newId; });
           window.cachedEmpleados.forEach(e => { if(e.areaId === oldId) e.areaId = newId; });
@@ -616,7 +748,6 @@
       window.saveData(); window.toggleModal('modalArea', false); window.renderAllData();
     };
 
-    // RESTO DE FUNCIONES DE EDICIÓN CON GUARDADO (SAVEDATA)
     window.abrirModalEditarEmpleado = function(idx) { const emp = window.cachedEmpleados[idx]; document.getElementById('empEditIndex').value = idx; document.getElementById('empNombres').value = emp.nombres; document.getElementById('empApellidos').value = emp.apellidos; document.getElementById('empCargo').value = emp.cargo; document.getElementById('empCorreo').value = emp.correo; document.getElementById('empAreaSelect').value = emp.areaId; document.getElementById('empEstadoSelect').value = emp.estado; window.toggleModal('modalEmpleado', true); };
     window.guardarEmpleadoCompleto = function() {
       const editIdx = parseInt(document.getElementById('empEditIndex').value);
@@ -626,7 +757,26 @@
       window.saveData(); window.toggleModal('modalEmpleado', false); window.renderAllData();
     };
 
-    window.abrirModalEditarUsuario = function(idx) { const usr = window.cachedUsuarios[idx]; document.getElementById('usrEditIndex').value = idx; document.getElementById('usrEmpSelect').value = usr.empleadoId; document.getElementById('usrCorreoInput').value = usr.correo; document.getElementById('usrPasswordInput').value = usr.password; document.getElementById('usrEstadoSelect').value = usr.estado; document.getElementById('contenedorRolesCheckboxes').innerHTML = window.cachedRoles.map(r => `<label><input type="checkbox" name="chkRol" value="${r.id}" ${usr.rolesIds.includes(r.id)?'checked':''}> ${r.nombre}</label>`).join('<br>'); document.getElementById('contenedorAreasCheckboxes').innerHTML = window.cachedAreas.map(a => `<label><input type="checkbox" name="chkArea" value="${a.id}" ${usr.areasAsignadas.includes(a.id)?'checked':''}> ${a.nombre}</label>`).join('<br>'); window.toggleModal('modalUsuario', true); };
+    window.abrirModalUsuario = function() {
+      document.getElementById('modalUsrTitle').innerText = 'Asignar Nuevo Usuario';
+      document.getElementById('usrEditIndex').value = '-1';
+      document.getElementById('usrPasswordInput').value = '123';
+      document.getElementById('usrEstadoSelect').value = 'Activo';
+      window.poblarCheckboxesModalUsuario(['rol_viewer'], [window.cachedAreas[0].id]);
+      window.toggleModal('modalUsuario', true);
+    };
+
+    window.abrirModalEditarUsuario = function(idx) { 
+      const usr = window.cachedUsuarios[idx]; 
+      document.getElementById('usrEditIndex').value = idx; 
+      document.getElementById('usrEmpSelect').value = usr.empleadoId; 
+      document.getElementById('usrCorreoInput').value = usr.correo; 
+      document.getElementById('usrPasswordInput').value = usr.password; 
+      document.getElementById('usrEstadoSelect').value = usr.estado; 
+      window.poblarCheckboxesModalUsuario(usr.rolesIds, usr.areasAsignadas);
+      window.toggleModal('modalUsuario', true); 
+    };
+
     window.guardarUsuarioCompleto = function() {
       const editIdx = parseInt(document.getElementById('usrEditIndex').value);
       const data = { empleadoId: parseInt(document.getElementById('usrEmpSelect').value), correo: document.getElementById('usrCorreoInput').value, password: document.getElementById('usrPasswordInput').value, estado: document.getElementById('usrEstadoSelect').value, rolesIds: Array.from(document.querySelectorAll('input[name="chkRol"]:checked')).map(el => el.value), areasAsignadas: Array.from(document.querySelectorAll('input[name="chkArea"]:checked')).map(el => el.value) };
@@ -635,6 +785,7 @@
       window.saveData(); window.toggleModal('modalUsuario', false); window.renderAllData();
     };
 
+    window.abrirModalProceso = function() { document.getElementById('modalProcesoTitle').innerText = 'Nuevo Proceso'; document.getElementById('procesoEditIndex').value = '-1'; document.getElementById('inputProcesoNombre').value = ''; window.toggleModal('modalProceso', true); };
     window.abrirModalEditarProceso = function(idx) { const pr = window.cachedProcesos[idx]; document.getElementById('procesoEditIndex').value = idx; document.getElementById('inputProcesoNombre').value = pr.nombre; document.getElementById('selectProcesoArea').value = pr.areaId; window.toggleModal('modalProceso', true); };
     window.guardarProcesoCompleto = function() {
       const editIdx = parseInt(document.getElementById('procesoEditIndex').value);
@@ -644,7 +795,7 @@
       window.saveData(); window.toggleModal('modalProceso', false); window.renderAllData();
     };
 
-    // EDICIÓN DE DOCUMENTOS (METADATOS)
+    // EDICIÓN METADATOS DE DOCUMENTOS
     window.abrirModalEditarDoc = function(docId) {
       const doc = window.cachedDocs.find(x => x.id === docId); if(!doc) return;
       document.getElementById('editMetaId').value = docId; document.getElementById('editMetaTitle').value = doc.titulo;
@@ -662,55 +813,36 @@
       window.toggleModal('modalEditarDocMeta', false);
     };
 
-    // VISOR PDF CON INYECCIÓN DE MARCA DE AGUA AL VUELO
-    window.viewDocument = async function(docId) {
-      let doc = window.cachedDocs.find(x => x.id === docId) || window.cachedObsoletos.find(x => x.id === docId);
-      if (!doc || !doc.archivo_url) { alert("El documento no tiene PDF adjunto."); return; }
-      document.getElementById('pdfViewerTitle').innerText = `${doc.codigo} v${doc.version} - ${doc.titulo}`;
-      const viewerArea = document.getElementById('pdfViewerArea');
-      
-      // Mostrar modal con un mensaje de carga mientras se estampa la marca de agua
-      viewerArea.innerHTML = `<div class="flex h-full items-center justify-center font-bold text-slate-500 font-mono">Inyectando Marca de Agua GxP en el PDF...</div>`;
-      window.toggleModal('modalExportPdf', true);
-
-      try {
-        const existingPdfBytes = await fetch(doc.archivo_url).then(res => res.arrayBuffer());
-        const pdfDoc = await PDFLib.PDFDocument.load(existingPdfBytes);
-        const pages = pdfDoc.getPages();
-        const { rgb, degrees } = PDFLib;
-
-        // Inyectar marca de agua en todas las páginas basada en el estado
-        let marcaTexto = doc.estado === 'VIGENTE' ? 'COPIA NO CONTROLADA - VIGENTE' : `ESTADO: ${doc.estado} (NO VIGENTE)`;
-        pages.forEach(page => {
-          const { width, height } = page.getSize();
-          page.drawText(marcaTexto, { x: 50, y: height / 2, size: 30, color: rgb(0.8, 0.2, 0.2), rotate: degrees(-45), opacity: 0.3 });
-        });
-
-        const pdfBytesModified = await pdfDoc.save();
-        const blob = new Blob([pdfBytesModified], { type: 'application/pdf' });
-        const blobUrl = URL.createObjectURL(blob);
-
-        const permisosEfectivos = window.obtenerPermisosEfectivos(window.activeGxpUser, doc.areaId);
-        if (permisosEfectivos.administracion) {
-          viewerArea.innerHTML = `<iframe src="${blobUrl}" class="w-full h-full border-0"></iframe>`;
-        } else {
-          viewerArea.innerHTML = `<div class="read-only-shield" oncontextmenu="return false;"></div><iframe src="${blobUrl}#toolbar=0&navpanes=0&scrollbar=0" class="w-full h-full border-0 pointer-events-none"></iframe>`;
-        }
-      } catch (error) {
-        console.error("Error al inyectar PDFLib:", error);
-        viewerArea.innerHTML = `<iframe src="${doc.archivo_url}" class="w-full h-full border-0"></iframe>`; // Fallback si falla el PDF-lib (Ej. política CORS por archivos locales)
-      }
+    window.abrirModalNuevoDoc = function() {
+      document.getElementById('createDocFechaAprob').value = new Date().toISOString().split('T')[0];
+      const unAno = new Date(); unAno.setFullYear(unAno.getFullYear() + 2);
+      document.getElementById('createDocFechaVenc').value = unAno.toISOString().split('T')[0];
+      document.getElementById('createDocFile').value = '';
+      window.toggleModal('modalDoc', true);
     };
 
     window.guardarNuevoDocumento = function() {
       const fileInput = document.getElementById('createDocFile');
+      const docCode = document.getElementById('createDocCode').value.toUpperCase();
+      const procesoId = document.getElementById('createDocProcesoSelect').value;
+      const proc = window.cachedProcesos.find(p=>p.id===procesoId);
+      
+      if(!docCode || !proc) { alert("Completa Código y selecciona un proceso."); return; }
+
       let fileUrl = 'https://pdfobject.com/pdf/sample.pdf';
       if (fileInput.files && fileInput.files[0]) { fileUrl = URL.createObjectURL(fileInput.files[0]); }
       
-      const doc = { id: `doc_${Date.now()}`, codigo: document.getElementById('createDocCode').value.toUpperCase(), titulo: document.getElementById('createDocTitle').value, version: document.getElementById('createDocVer').value, estado: 'PROCESO', fase: 'Elaboración', procesoId: document.getElementById('createDocProcesoSelect').value, areaId: window.cachedProcesos.find(p=>p.id===document.getElementById('createDocProcesoSelect').value).areaId, fechaAprob: document.getElementById('createDocFechaAprob').value, fechaVenc: document.getElementById('createDocFechaVenc').value, archivo_url: fileUrl, motivo_cambio: 'Creación' };
+      const doc = { id: `doc_${Date.now()}`, codigo: docCode, titulo: document.getElementById('createDocTitle').value, version: document.getElementById('createDocVer').value, estado: 'PROCESO', fase: 'Elaboración', procesoId: procesoId, areaId: proc.areaId, fechaAprob: document.getElementById('createDocFechaAprob').value, fechaVenc: document.getElementById('createDocFechaVenc').value, archivo_url: fileUrl, motivo_cambio: 'Creación' };
       window.cachedDocs.push(doc);
       window.registrarAuditTrail(window.activeGxpUser.correo, 'CREATE_DOC', `Creado documento con archivo: ${doc.codigo}`);
       window.saveData(); window.toggleModal('modalDoc', false); window.renderAllData();
+    };
+
+    // FLUJO DE FIRMAS Y ESTADOS
+    window.iniciarFirmaElectronica = function(docId) {
+      const doc = window.cachedDocs.find(x => x.id === docId); if(!doc) return;
+      document.getElementById('firmaDocId').value = docId; document.getElementById('firmaUserEmail').value = window.activeGxpUser.correo; document.getElementById('firmaUserPassword').value = '';
+      window.toggleModal('modalFirmaPart11', true);
     };
 
     window.procesarFirmaElectronica = function() {
@@ -722,6 +854,98 @@
       if(doc.fase === 'Elaboración') doc.fase = 'Revisión'; else if(doc.fase === 'Revisión') doc.fase = 'Aprobación'; else if(doc.fase === 'Aprobación') { doc.fase = 'Aprobado'; doc.estado = 'VIGENTE'; }
       window.registrarAuditTrail(user.correo, 'FIRM', `Firma aplicada sobre ${doc.codigo}. Nuevo estado: ${doc.estado}`);
       window.saveData(); window.toggleModal('modalFirmaPart11', false); window.renderAllData();
+    };
+
+    // VISOR PDF Y MARCAS DE AGUA GxP DINÁMICAS (NO CONTROLADAS Y OBSOLETOS)
+    window.viewDocument = async function(docId) {
+      let doc = window.cachedDocs.find(x => x.id === docId) || window.cachedObsoletos.find(x => x.id === docId);
+      if (!doc || !doc.archivo_url) { alert("El documento no tiene PDF adjunto."); return; }
+      document.getElementById('pdfViewerTitle').innerText = `${doc.codigo} v${doc.version} - ${doc.titulo}`;
+      const viewerArea = document.getElementById('pdfViewerArea');
+      viewerArea.innerHTML = `<div class="flex h-full items-center justify-center font-bold text-slate-500 font-mono">Aplicando Reglas GxP e Inyectando Marca de Agua...</div>`;
+      window.toggleModal('modalExportPdf', true);
+
+      try {
+        const existingPdfBytes = await fetch(doc.archivo_url).then(res => res.arrayBuffer());
+        const pdfDoc = await PDFLib.PDFDocument.load(existingPdfBytes);
+        const pages = pdfDoc.getPages();
+        const { rgb, degrees } = PDFLib;
+
+        // LÓGICA DE MARCA DE AGUA SEGÚN GxP
+        let textoMarca = 'COPIA NO CONTROLADA';
+        let colorMarca = rgb(0.5, 0.5, 0.5); // Gris por defecto
+
+        if (doc.estado === 'OBSOLETO') {
+          textoMarca = 'DOCUMENTO OBSOLETO - NO USAR';
+          colorMarca = rgb(0.8, 0, 0); // Rojo intenso
+        } else if (doc.estado === 'VIGENTE') {
+          textoMarca = 'COPIA NO CONTROLADA - CONSULTA';
+        } else {
+          textoMarca = `BORRADOR / EN REVISIÓN`;
+          colorMarca = rgb(0.8, 0.5, 0.1); // Naranja
+        }
+
+        pages.forEach(page => {
+          const { width, height } = page.getSize();
+          page.drawText(textoMarca, { x: 50, y: height / 2, size: 35, color: colorMarca, rotate: degrees(-45), opacity: 0.3 });
+        });
+
+        const pdfBytesModified = await pdfDoc.save();
+        const blob = new Blob([pdfBytesModified], { type: 'application/pdf' });
+        const blobUrl = URL.createObjectURL(blob);
+        viewerArea.innerHTML = `<iframe src="${blobUrl}#toolbar=0" class="w-full h-full border-0"></iframe>`;
+      } catch (error) {
+        console.error(error); viewerArea.innerHTML = `<iframe src="${doc.archivo_url}" class="w-full h-full border-0"></iframe>`; 
+      }
+    };
+
+    // EMISIÓN DE COPIAS FÍSICAS (COPIAS CONTROLADAS GxP)
+    window.abrirModalEmitir = function(docId) { 
+      window.selectedDocId = docId; 
+      window.toggleModal('modalEmitirCopia', true); 
+    };
+
+    window.ejecutarInyeccionPDF = async function() {
+      const doc = window.cachedDocs.find(x => x.id === window.selectedDocId);
+      const area = document.getElementById('copiaAreaSelect').value;
+      const custodio = document.getElementById('copiaCustodioInput').value;
+      if (!doc || !doc.archivo_url) { alert("El documento no tiene un PDF adjunto."); return; }
+      
+      const btn = document.getElementById('btn-confirmar-emitir');
+      btn.innerText = "Inyectando Marca Controlada..."; btn.disabled = true;
+
+      try {
+        const existingPdfBytes = await fetch(doc.archivo_url).then(res => res.arrayBuffer());
+        const pdfDoc = await PDFLib.PDFDocument.load(existingPdfBytes);
+        const pages = pdfDoc.getPages();
+        const { rgb, degrees } = PDFLib;
+
+        pages.forEach(page => {
+          const { width, height } = page.getSize();
+          // INYECCIÓN FÍSICA PARA IMPRESIÓN (COPIA CONTROLADA)
+          page.drawText('COPIA CONTROLADA', { x: width / 2 - 220, y: height / 2 + 40, size: 50, color: rgb(0.8, 0, 0), rotate: degrees(-30), opacity: 0.3 });
+          page.drawText(`VIGENTE - Destino: ${area} (${custodio}) - Emisión: ${new Date().toLocaleDateString()}`, { x: 40, y: 25, size: 9, color: rgb(0.5, 0, 0) });
+        });
+
+        const pdfBytesModified = await pdfDoc.save();
+        const blob = new Blob([pdfBytesModified], { type: 'application/pdf' });
+        const blobUrl = URL.createObjectURL(blob);
+
+        const nextNum = window.cachedCopias.length + 1;
+        const copiaRecord = { codigo: `COP-${doc.codigo}-C0${nextNum}`, doc: `${doc.codigo} v${doc.version}`, area: area, custodio: custodio };
+        window.cachedCopias.unshift(copiaRecord);
+
+        window.registrarAuditTrail(window.activeGxpUser.correo, 'EMIT_COPY', `Emisión de Copia Controlada para el documento ${doc.codigo} (Destino: ${area})`);
+        window.saveData();
+
+        window.open(blobUrl, '_blank'); // Abrir para imprimir
+        window.toggleModal('modalEmitirCopia', false);
+        window.renderAllData();
+      } catch (err) {
+        console.error(err); alert("Error al inyectar el PDF.");
+      } finally {
+        btn.innerText = "Generar e Imprimir"; btn.disabled = false;
+      }
     };
 
     document.addEventListener('DOMContentLoaded', () => {
