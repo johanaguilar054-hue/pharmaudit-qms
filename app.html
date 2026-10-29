@@ -5,9 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PharmAudit ERP / QMS - Pharmor</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Supabase para almacenamiento y base de datos (Futuro) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <!-- PDF-Lib para inyección binaria de marcas de agua en PDFs -->
+  <!-- PDF-Lib para inyección binaria de marcas de agua GxP -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
   
   <style>
@@ -102,9 +101,9 @@
       <div id="view-documentos" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-4">
         <div class="flex space-x-1 border-b pb-2 overflow-x-auto text-xs font-semibold">
           <button onclick="window.switchDocSubtab('vigente', this)" class="doc-subtab-btn px-3 py-1.5 rounded-lg bg-cyan-600 text-white cursor-pointer">Vigente (<span id="count-vigente">0</span>)</button>
-          <button onclick="window.switchDocSubtab('proceso', this)" class="doc-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">En Proceso / Flujo (<span id="count-proceso">0</span>)</button>
+          <button onclick="window.switchDocSubtab('proceso', this)" class="doc-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">En Proceso (<span id="count-proceso">0</span>)</button>
           <button onclick="window.switchDocSubtab('migracion', this)" class="doc-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">Migración (<span id="count-migracion">0</span>)</button>
-          <button onclick="window.switchDocSubtab('obsoleto', this)" class="doc-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">Documentos Obsoletos (<span id="count-obsoleto">0</span>)</button>
+          <button onclick="window.switchDocSubtab('obsoleto', this)" class="doc-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">Obsoletos (<span id="count-obsoleto">0</span>)</button>
         </div>
 
         <div class="flex justify-between items-center flex-wrap gap-2">
@@ -254,7 +253,7 @@
   </div>
 
   <!-- ========================================================================= -->
-  <!-- MODALES                                                                   -->
+  <!-- MODALES DE OPERACIÓN GxP                                                  -->
   <!-- ========================================================================= -->
 
   <!-- VISOR PDF CON MARCA DE AGUA DINÁMICA -->
@@ -372,7 +371,7 @@
     </div>
   </div>
 
-  <!-- MODAL: ÁREA (CON CAMPO ID EDITABLE) -->
+  <!-- MODAL: ÁREA -->
   <div id="modalArea" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
     <div class="bg-white rounded-xl max-w-sm w-full p-4 border shadow-xl space-y-3 text-xs">
       <h3 class="font-bold text-slate-800" id="modalAreaTitle">Crear / Editar Área</h3>
@@ -431,113 +430,3 @@
         <div><label class="block mb-1 font-semibold">Contraseña</label><input type="password" id="usrPasswordInput" class="w-full p-2 border rounded font-mono" /></div>
       </div>
       <div><label class="block mb-1 font-semibold">Roles</label><div id="contenedorRolesCheckboxes" class="max-h-28 overflow-y-auto border p-2 rounded bg-slate-50 space-y-1"></div></div>
-      <div><label class="block mb-1 font-semibold">Áreas</label><div id="contenedorAreasCheckboxes" class="max-h-28 overflow-y-auto border p-2 rounded bg-slate-50 space-y-1"></div></div>
-      <div><label class="block mb-1 font-semibold">Estado</label><select id="usrEstadoSelect" class="w-full p-2 border rounded font-bold"><option value="Activo">Activo</option><option value="Inactivo">Inactivo</option></select></div>
-      <div class="flex justify-end space-x-2 pt-2 border-t">
-        <button onclick="window.toggleModal('modalUsuario', false)" class="px-3 py-1.5 border rounded">Cancelar</button>
-        <button onclick="window.guardarUsuarioCompleto()" class="px-4 py-1.5 bg-slate-800 text-white rounded font-bold shadow">Guardar Usuario</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ========================================================================= -->
-  <!-- NÚCLEO JS (PERSISTENCIA Y LÓGICA DE NEGOCIO COMPLETAMENTE RESTAURADA)     -->
-  <!-- ========================================================================= -->
-  <script>
-    // SISTEMA DE GUARDADO PERSISTENTE EN LOCALSTORAGE
-    const DB_KEY = 'pharmor_eqms_db';
-
-    window.saveData = function() {
-      const dbState = {
-        areas: window.cachedAreas, procesos: window.cachedProcesos, roles: window.cachedRoles,
-        matriz: window.cachedMatrizPermisos, empleados: window.cachedEmpleados,
-        usuarios: window.cachedUsuarios, docs: window.cachedDocs, copias: window.cachedCopias,
-        obsoletos: window.cachedObsoletos, audit: window.auditTrailLogs
-      };
-      localStorage.setItem(DB_KEY, JSON.stringify(dbState));
-    };
-
-    window.loadData = function() {
-      const dbStr = localStorage.getItem(DB_KEY);
-      if(dbStr) {
-        const dbState = JSON.parse(dbStr);
-        window.cachedAreas = dbState.areas || []; window.cachedProcesos = dbState.procesos || [];
-        window.cachedRoles = dbState.roles || []; window.cachedMatrizPermisos = dbState.matriz || {};
-        window.cachedEmpleados = dbState.empleados || []; window.cachedUsuarios = dbState.usuarios || [];
-        window.cachedDocs = dbState.docs || []; window.cachedCopias = dbState.copias || [];
-        window.cachedObsoletos = dbState.obsoletos || []; window.auditTrailLogs = dbState.audit || [];
-      } else {
-        // Datos Iniciales por defecto
-        window.cachedAreas = [ { id: 'ar_qa', nombre: 'Aseguramiento de Calidad (QA)' }, { id: 'ar_qc', nombre: 'Control de Calidad (QC)' }, { id: 'ar_prod', nombre: 'Planta de Producción' } ];
-        window.cachedProcesos = [ { id: 'pr_gestion', nombre: 'Gestión de Aseguramiento', areaId: 'ar_qa' } ];
-        window.cachedRoles = [ { id: 'rol_admin', nombre: 'QA Manager', desc: 'Admin' }, { id: 'rol_viewer', nombre: 'Viewer', desc: 'Lectura' } ];
-        window.cachedMatrizPermisos = { 'rol_admin': { lectura: true, crearEdicion: true, revision: true, aprobacionFirma: true, administracion: true }, 'rol_viewer': { lectura: true, crearEdicion: false, revision: false, aprobacionFirma: false, administracion: false } };
-        window.cachedEmpleados = [ { id: 1, nombres: 'Johan S.', apellidos: 'Aguilar', cargo: 'QA Lead', correo: 'j.aguilar@pharmor.com.co', areaId: 'ar_qa', estado: 'Activo' } ];
-        window.cachedUsuarios = [ { id: 1, empleadoId: 1, correo: 'j.aguilar@pharmor.com.co', password: '123', rolesIds: ['rol_admin'], areasAsignadas: ['ar_qa', 'ar_qc', 'ar_prod'], estado: 'Activo' } ];
-        window.cachedDocs = [ { id: '1', codigo: 'PH-GPD-F0-01', titulo: 'Lista de Chequeo Batch', version: '2.0', estado: 'VIGENTE', fase: 'Aprobado', procesoId: 'pr_gestion', areaId: 'ar_qa', fechaAprob: '2025-10-15', fechaVenc: '2027-10-15', archivo_url: 'https://pdfobject.com/pdf/sample.pdf', motivo_cambio: 'Inicial' } ];
-        window.cachedCopias = []; window.cachedObsoletos = [];
-        window.auditTrailLogs = [ { fecha: new Date().toISOString().replace('T', ' ').substring(0, 19), usuario: 'SYSTEM', accion: 'INIT', detalle: 'Base de datos inicializada.' } ];
-        window.saveData();
-      }
-    };
-
-    window.loadData();
-    window.activeGxpUser = null;
-    window.selectedDocId = null;
-
-    // NAVEGACIÓN (GUI)
-    window.toggleModal = function(id, show) { const m = document.getElementById(id); if (m) { show ? m.classList.add('active') : m.classList.remove('active'); } };
-    window.switchTab = function(tabId, btnElement) {
-      document.querySelectorAll('.tab-content').forEach(v => v.classList.remove('active'));
-      document.querySelectorAll('.nav-btn').forEach(b => { b.classList.remove('bg-cyan-600', 'text-white'); if (!b.classList.contains('bg-slate-700')) b.classList.add('hover:bg-slate-700'); });
-      const t = document.getElementById('view-' + tabId); if(t) t.classList.add('active');
-      if(btnElement) { btnElement.classList.add('bg-cyan-600', 'text-white'); btnElement.classList.remove('hover:bg-slate-700', 'bg-slate-700', 'text-cyan-300'); }
-    };
-    window.switchDocSubtab = function(tabId, btnElement) {
-      document.querySelectorAll('.doc-subtab-content').forEach(v => v.classList.remove('active'));
-      document.querySelectorAll('.doc-subtab-btn').forEach(b => { b.classList.remove('bg-cyan-600', 'text-white'); b.classList.add('bg-slate-100', 'text-slate-700'); });
-      const t = document.getElementById('subtab-' + tabId); if(t) t.classList.add('active');
-      if(btnElement) { btnElement.classList.add('bg-cyan-600', 'text-white'); btnElement.classList.remove('bg-slate-100', 'text-slate-700'); }
-    };
-    window.switchConfigSubtab = function(tabId, btnElement) {
-      document.querySelectorAll('.config-subtab-content').forEach(v => v.classList.remove('active'));
-      document.querySelectorAll('.config-subtab-btn').forEach(b => { b.classList.remove('bg-slate-800', 'text-white'); b.classList.add('bg-slate-100', 'text-slate-700'); });
-      const t = document.getElementById('configsub-' + tabId); if(t) t.classList.add('active');
-      if(btnElement) { btnElement.classList.add('bg-slate-800', 'text-white'); btnElement.classList.remove('bg-slate-100', 'text-slate-700'); }
-    };
-
-    // SEGURIDAD Y PERMISOS
-    window.obtenerPermisosEfectivos = function(usuario, areaDocumento) {
-      if (!usuario || usuario.estado !== 'Activo') return { lectura: false, crearEdicion: false, revision: false, aprobacionFirma: false, administracion: false };
-      const tieneAccesoArea = usuario.areasAsignadas.includes(areaDocumento) || usuario.rolesIds.includes('rol_admin');
-      if (!tieneAccesoArea) return { lectura: false, crearEdicion: false, revision: false, aprobacionFirma: false, administracion: false };
-      let perms = { lectura: false, crearEdicion: false, revision: false, aprobacionFirma: false, administracion: false };
-      usuario.rolesIds.forEach(rId => {
-        const pRol = window.cachedMatrizPermisos[rId];
-        if (pRol) {
-          if(pRol.lectura) perms.lectura = true; if(pRol.crearEdicion) perms.crearEdicion = true;
-          if(pRol.revision) perms.revision = true; if(pRol.aprobacionFirma) perms.aprobacionFirma = true;
-          if(pRol.administracion) perms.administracion = true;
-        }
-      });
-      return perms;
-    };
-    window.ejecutarLoginPrincipal = function() {
-      const email = document.getElementById('loginEmail').value.trim(); const pass = document.getElementById('loginPassword').value.trim();
-      const user = window.cachedUsuarios.find(u => u.correo.toLowerCase() === email.toLowerCase() && u.password === pass);
-      if (!user) { alert("Credenciales incorrectas."); return; }
-      if (user.estado !== 'Activo') { alert("Acceso denegado: Usuario INACTIVO."); return; }
-      window.activeGxpUser = user; window.registrarAuditTrail(user.correo, 'LOGIN', 'Inicio de sesión exitoso.');
-      document.getElementById('view-login').classList.add('hidden'); document.getElementById('app-portal').classList.remove('hidden');
-      const emp = window.cachedEmpleados.find(e => e.id === user.empleadoId);
-      document.getElementById('userBadge').innerText = `${emp ? emp.nombres + ' ' + emp.apellidos : user.correo}`;
-      document.querySelectorAll('.admin-only').forEach(el => { el.style.display = user.rolesIds.includes('rol_admin') ? 'block' : 'none'; });
-      const btnDash = document.querySelector('[data-tab="dashboard"]'); if (btnDash) window.switchTab('dashboard', btnDash);
-      window.renderAllData();
-    };
-    window.registrarAuditTrail = function(user, accion, detalle) {
-      const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 19);
-      window.auditTrailLogs.unshift({ fecha: timestamp, usuario: user, accion: accion, detalle: detalle });
-      window.saveData(); // Persistir log
-      const auditDiv = document.getElementById('list-auds');
-      if(auditDiv) auditDiv.innerHTML = window.auditTrailLogs.map(l => `[${l.fecha}] <strong>${l.usuario}</strong> [${l.accion}]: ${l.detalle}`).join('<br><hr class="border
