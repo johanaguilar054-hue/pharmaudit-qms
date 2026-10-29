@@ -67,16 +67,16 @@
       { id: 2, nombres: 'Carlos', apellidos: 'Mendoza', cargo: 'Operario de Producción', correo: 'c.mendoza@pharmor.com.co', areaId: 'ar_prod', estado: 'Activo' }
     ];
 
-    // 5. Maestro de Usuarios (Soporte multi-rol y múltiples áreas/procesos)
+    // 5. Maestro de Usuarios
     window.cachedUsuarios = [
       { id: 1, empleadoId: 1, correo: 'j.aguilar@pharmor.com.co', password: '123', rolesIds: ['rol_admin'], areasAsignadas: ['ar_qa', 'ar_qc', 'ar_prod', 'ar_mant'], estado: 'Activo' },
       { id: 2, empleadoId: 2, correo: 'c.mendoza@pharmor.com.co', password: '123', rolesIds: ['rol_viewer'], areasAsignadas: ['ar_prod'], estado: 'Activo' }
     ];
 
-    // 6. Base Documental
+    // 6. Base Documental (Incluyendo URL de archivo por defecto o Blob temporal)
     window.cachedDocs = [
       { id: '1', codigo: 'PH-GPD-F0-01', titulo: 'Lista de Chequeo Batch y Liberación de PT', version: '2.0', estado: 'VIGENTE', fase: 'Aprobado', procesoId: 'pr_gestion_calidad', areaId: 'ar_qa', fechaAprob: '2025-10-15', fechaVenc: '2027-10-15', archivo_url: 'https://pdfobject.com/pdf/sample.pdf', motivo_cambio: 'Creación Inicial' },
-      { id: '2', codigo: 'SOP-PRO-012', titulo: 'Limpieza e Higienización de Áreas Limpias', version: '2.1', estado: 'VIGENTE', fase: 'Aprobado', procesoId: 'pr_produccion_pt', areaId: 'ar_prod', fechaAprob: '2025-09-01', fechaVenc: '2026-09-01', archivo_url: '', motivo_cambio: 'Creación Inicial' },
+      { id: '2', codigo: 'SOP-PRO-012', titulo: 'Limpieza e Higienización de Áreas Limpias', version: '2.1', estado: 'VIGENTE', fase: 'Aprobado', procesoId: 'pr_produccion_pt', areaId: 'ar_prod', fechaAprob: '2025-09-01', fechaVenc: '2026-09-01', archivo_url: 'https://pdfobject.com/pdf/sample.pdf', motivo_cambio: 'Creación Inicial' },
       { id: '3', codigo: 'SOP-QA-005', titulo: 'Control Ambiental en Zonas Clasificadas', version: '1.0', estado: 'PROCESO', fase: 'Elaboración', procesoId: 'pr_gestion_calidad', areaId: 'ar_qa', fechaAprob: '', fechaVenc: '', archivo_url: 'https://pdfobject.com/pdf/sample.pdf', motivo_cambio: 'Borrador inicial' }
     ];
     
@@ -86,19 +86,14 @@
       { fecha: '2026-10-28 10:30:00', usuario: 'j.aguilar@pharmor.com.co', accion: 'SYSTEM_START', detalle: 'Inicialización de ERP eQMS con validación GAMP 5' }
     ];
 
-    // MODELO DE HERENCIA DE PERMISOS EFECTIVOS (Rol(es) ∩ Áreas Autorizadas)
     window.obtenerPermisosEfectivos = function(usuario, areaDocumento) {
       if (!usuario || usuario.estado !== 'Activo') {
         return { lectura: false, crearEdicion: false, revision: false, aprobacionFirma: false, administracion: false };
       }
-
-      // 1. Verificar restricción de Área (El usuario debe tener acceso al área del documento o ser Admin Global con ar_qa/todas)
       const tieneAccesoArea = usuario.areasAsignadas.includes(areaDocumento) || usuario.rolesIds.includes('rol_admin');
       if (!tieneAccesoArea) {
         return { lectura: false, crearEdicion: false, revision: false, aprobacionFirma: false, administracion: false };
       }
-
-      // 2. Unión de permisos si tiene múltiples roles (OR logic)
       let permisosAcumulados = { lectura: false, crearEdicion: false, revision: false, aprobacionFirma: false, administracion: false };
       usuario.rolesIds.forEach(rId => {
         const pRol = window.cachedMatrizPermisos[rId];
@@ -110,7 +105,6 @@
           if (pRol.administracion) permisosAcumulados.administracion = true;
         }
       });
-
       return permisosAcumulados;
     };
 
@@ -144,12 +138,10 @@
       if (!usuarioEncontrado) {
         alert("Credenciales incorrectas."); return;
       }
-      // REQUISITO DE ROBUSTEZ: Si el usuario está Inactivo, pierde inmediatamente el acceso
       if (usuarioEncontrado.estado !== 'Activo') {
         alert("Acceso denegado: Su cuenta de usuario se encuentra INACTIVA en el sistema GxP.");
         return;
       }
-
       window.activeGxpUser = usuarioEncontrado;
       window.registrarAuditTrail(usuarioEncontrado.correo, 'LOGIN_SUCCESS', 'Inicio de sesión exitoso al portal GxP');
       window.iniciarPortalVisual();
@@ -425,27 +417,27 @@
           <button data-configsub="parametros" class="config-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">⚙️ 6. Parámetros</button>
         </div>
 
-        <!-- SUBSECCIÓN 1: ÁREAS Y PROCESOS -->
+        <!-- SUBSECCIÓN 1: ÁREAS Y PROCESOS (CON BOTONES DE EDICIÓN) -->
         <div id="configsub-areas" class="config-subtab-content active space-y-4 text-xs">
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div class="space-y-2 border p-3 rounded-xl bg-slate-50">
               <div class="flex justify-between items-center"><h4 class="font-bold text-slate-800">Departamentos / Áreas</h4><button onclick="window.abrirModalArea()" class="bg-slate-800 text-white px-2 py-1 rounded text-[11px]">+ Nueva Área</button></div>
               <table class="w-full border-collapse bg-white">
-                <thead><tr class="bg-slate-100 border"><th class="p-1.5 border">ID</th><th class="p-1.5 border">Nombre del Área</th></tr></thead>
+                <thead><tr class="bg-slate-100 border"><th class="p-1.5 border">ID</th><th class="p-1.5 border">Nombre del Área</th><th class="p-1.5 border text-center">Acción</th></tr></thead>
                 <tbody id="tablaAreasConfig"></tbody>
               </table>
             </div>
             <div class="space-y-2 border p-3 rounded-xl bg-slate-50">
               <div class="flex justify-between items-center"><h4 class="font-bold text-slate-800">Procesos GxP</h4><button onclick="window.abrirModalProceso()" class="bg-cyan-600 text-white px-2 py-1 rounded text-[11px]">+ Nuevo Proceso</button></div>
               <table class="w-full border-collapse bg-white">
-                <thead><tr class="bg-slate-100 border"><th class="p-1.5 border">Proceso</th><th class="p-1.5 border">Área Asociada</th></tr></thead>
+                <thead><tr class="bg-slate-100 border"><th class="p-1.5 border">Proceso</th><th class="p-1.5 border">Área Asociada</th><th class="p-1.5 border text-center">Acción</th></tr></thead>
                 <tbody id="tablaProcesosConfig"></tbody>
               </table>
             </div>
           </div>
         </div>
 
-        <!-- SUBSECCIÓN 2: EMPLEADOS -->
+        <!-- SUBSECCIÓN 2: EMPLEADOS (CON BOTÓN DE EDICIÓN) -->
         <div id="configsub-empleados" class="config-subtab-content space-y-3 text-xs">
           <div class="flex justify-between items-center">
             <h3 class="font-bold text-slate-800">Directorio Maestro de Empleados</h3>
@@ -551,7 +543,7 @@
     </div>
   </div>
 
-  <!-- MODAL: CREAR / MIGRAR DOCUMENTO -->
+  <!-- MODAL: CREAR / MIGRAR DOCUMENTO (RESTAURADO INPUT FILE Y PDF-LIB) -->
   <div id="modalDoc" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
     <div class="bg-white rounded-xl max-w-lg w-full p-5 border shadow-2xl space-y-4 text-xs">
       <div class="border-b pb-2"><h3 class="font-bold text-sm text-cyan-900">📑 Creación / Subida de Documento GxP</h3></div>
@@ -569,6 +561,11 @@
           <label class="block font-semibold mb-1">Proceso GxP Asociado (Obligatorio)</label>
           <select id="createDocProcesoSelect" class="w-full p-2 border rounded bg-slate-50 font-mono"></select>
         </div>
+        <div>
+          <label class="block font-semibold mb-1 text-cyan-900">Archivo del Documento (PDF Oficial)</label>
+          <input type="file" id="createDocFile" accept=".pdf" class="w-full p-1.5 border rounded bg-slate-50 font-mono" />
+          <p class="text-[10px] text-slate-500 mt-0.5">Sube el documento PDF que será gestionado y firmado bajo 21 CFR Part 11.</p>
+        </div>
       </div>
       <div class="flex justify-end space-x-2 pt-3 border-t">
         <button type="button" onclick="window.toggleModal('modalDoc', false)" class="px-3 py-1.5 border rounded">Cancelar</button>
@@ -577,7 +574,7 @@
     </div>
   </div>
 
-  <!-- MODAL: NUEVA VERSIÓN -->
+  <!-- MODAL: NUEVA VERSIÓN (RESTAURADO INPUT FILE Y CONTROL DE CAMBIOS) -->
   <div id="modalVersion" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
     <div class="bg-white rounded-xl max-w-lg w-full p-5 border shadow-2xl space-y-4 text-xs">
       <div class="border-b pb-2"><h3 class="font-bold text-sm text-amber-900">🔄 Generar Nueva Versión & Control de Cambios</h3></div>
@@ -589,6 +586,10 @@
           <div><label class="block font-semibold mb-1">Versión Propuesta</label><input type="text" id="verNewNumber" value="2.0" class="w-full p-2 border rounded bg-amber-50 font-mono font-bold" /></div>
         </div>
         <div><label class="block font-semibold mb-1 text-amber-900">Justificación del Cambio</label><textarea id="verChangeReason" rows="2" class="w-full p-2 border rounded bg-amber-50"></textarea></div>
+        <div>
+          <label class="block font-semibold mb-1 text-amber-900">Archivo Actualizado de la Nueva Versión (PDF)</label>
+          <input type="file" id="verNewFile" accept=".pdf" class="w-full p-1.5 border rounded bg-slate-50 font-mono" />
+        </div>
       </div>
       <div class="flex justify-end space-x-2 pt-3 border-t">
         <button type="button" onclick="window.toggleModal('modalVersion', false)" class="px-3 py-1.5 border rounded">Cancelar</button>
@@ -627,45 +628,52 @@
     </div>
   </div>
 
-  <!-- MODAL: CONFIG - NUEVA ÁREA -->
+  <!-- MODAL: CONFIG - CREAR / EDITAR ÁREA -->
   <div id="modalArea" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
     <div class="bg-white rounded-xl max-w-sm w-full p-4 border shadow-xl space-y-3 text-xs">
-      <h3 class="font-bold text-slate-800">Crear Nueva Área / Departamento</h3>
-      <input type="text" id="inputAreaNombre" placeholder="Ej: Investigación y Desarrollo" class="w-full p-2 border rounded" />
+      <h3 class="font-bold text-slate-800" id="modalAreaTitle">Crear / Editar Área</h3>
+      <input type="hidden" id="areaEditIndex" value="-1">
+      <div><label class="block mb-1 font-semibold">Nombre del Área / Departamento</label><input type="text" id="inputAreaNombre" placeholder="Ej: Investigación y Desarrollo" class="w-full p-2 border rounded" /></div>
       <div class="flex justify-end space-x-2">
         <button onclick="window.toggleModal('modalArea', false)" class="px-2 py-1 border rounded">Cancelar</button>
-        <button onclick="window.guardarNuevaArea()" class="px-3 py-1 bg-slate-800 text-white rounded font-bold">Guardar</button>
+        <button onclick="window.guardarAreaCompleta()" class="px-3 py-1 bg-slate-800 text-white rounded font-bold">Guardar Área</button>
       </div>
     </div>
   </div>
 
-  <!-- MODAL: CONFIG - NUEVO PROCESO -->
+  <!-- MODAL: CONFIG - CREAR / EDITAR PROCESO -->
   <div id="modalProceso" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
     <div class="bg-white rounded-xl max-w-sm w-full p-4 border shadow-xl space-y-3 text-xs">
-      <h3 class="font-bold text-slate-800">Crear Nuevo Proceso GxP</h3>
-      <input type="text" id="inputProcesoNombre" placeholder="Ej: Control de Validación" class="w-full p-2 border rounded" />
-      <div><label class="block mb-1">Área Perteneciente</label><select id="selectProcesoArea" class="w-full p-2 border rounded"></select></div>
+      <h3 class="font-bold text-slate-800" id="modalProcesoTitle">Crear / Editar Proceso GxP</h3>
+      <input type="hidden" id="procesoEditIndex" value="-1">
+      <div><label class="block mb-1 font-semibold">Nombre del Proceso</label><input type="text" id="inputProcesoNombre" placeholder="Ej: Control de Validación" class="w-full p-2 border rounded" /></div>
+      <div><label class="block mb-1 font-semibold">Área Perteneciente</label><select id="selectProcesoArea" class="w-full p-2 border rounded"></select></div>
       <div class="flex justify-end space-x-2">
         <button onclick="window.toggleModal('modalProceso', false)" class="px-2 py-1 border rounded">Cancelar</button>
-        <button onclick="window.guardarNuevoProceso()" class="px-3 py-1 bg-cyan-600 text-white rounded font-bold">Guardar</button>
+        <button onclick="window.guardarProcesoCompleto()" class="px-3 py-1 bg-cyan-600 text-white rounded font-bold">Guardar Proceso</button>
       </div>
     </div>
   </div>
 
-  <!-- MODAL: CONFIG - NUEVO EMPLEADO -->
+  <!-- MODAL: CONFIG - CREAR / EDITAR EMPLEADO -->
   <div id="modalEmpleado" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
     <div class="bg-white rounded-xl max-w-md w-full p-5 border shadow-xl space-y-3 text-xs">
-      <h3 class="font-bold text-slate-800">Registrar Empleado en Directorio Maestro</h3>
+      <h3 class="font-bold text-slate-800" id="modalEmpTitle">Registrar / Editar Empleado</h3>
+      <input type="hidden" id="empEditIndex" value="-1">
       <div class="grid grid-cols-2 gap-2">
-        <div><label class="block mb-1">Nombres</label><input type="text" id="empNombres" class="w-full p-2 border rounded" /></div>
-        <div><label class="block mb-1">Apellidos</label><input type="text" id="empApellidos" class="w-full p-2 border rounded" /></div>
+        <div><label class="block mb-1 font-semibold">Nombres</label><input type="text" id="empNombres" class="w-full p-2 border rounded" /></div>
+        <div><label class="block mb-1 font-semibold">Apellidos</label><input type="text" id="empApellidos" class="w-full p-2 border rounded" /></div>
       </div>
-      <div><label class="block mb-1">Cargo</label><input type="text" id="empCargo" class="w-full p-2 border rounded" value="Analista de Calidad" /></div>
-      <div><label class="block mb-1">Correo Corporativo</label><input type="email" id="empCorreo" class="w-full p-2 border rounded font-mono" /></div>
-      <div><label class="block mb-1">Área Principal</label><select id="empAreaSelect" class="w-full p-2 border rounded"></select></div>
+      <div><label class="block mb-1 font-semibold">Cargo</label><input type="text" id="empCargo" class="w-full p-2 border rounded" value="Analista de Calidad" /></div>
+      <div><label class="block mb-1 font-semibold">Correo Corporativo</label><input type="email" id="empCorreo" class="w-full p-2 border rounded font-mono" /></div>
+      <div><label class="block mb-1 font-semibold">Área Principal</label><select id="empAreaSelect" class="w-full p-2 border rounded"></select></div>
+      <div>
+        <label class="block mb-1 font-semibold">Estado</label>
+        <select id="empEstadoSelect" class="w-full p-2 border rounded font-bold"><option value="Activo">Activo</option><option value="Inactivo">Inactivo</option></select>
+      </div>
       <div class="flex justify-end space-x-2 pt-2 border-t">
         <button onclick="window.toggleModal('modalEmpleado', false)" class="px-2 py-1 border rounded">Cancelar</button>
-        <button onclick="window.guardarNuevoEmpleado()" class="px-3 py-1 bg-slate-800 text-white rounded font-bold">Guardar Empleado</button>
+        <button onclick="window.guardarEmpleadoCompleto()" class="px-3 py-1 bg-slate-800 text-white rounded font-bold">Guardar Empleado</button>
       </div>
     </div>
   </div>
@@ -684,17 +692,15 @@
     </div>
   </div>
 
-  <!-- MODAL: CONFIG - CREAR / EDITAR USUARIO (MEJORA CRÍTICA) -->
+  <!-- MODAL: CONFIG - CREAR / EDITAR USUARIO -->
   <div id="modalUsuario" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
     <div class="bg-white rounded-xl max-w-lg w-full p-5 border shadow-xl space-y-3 text-xs">
       <h3 class="font-bold text-slate-800 text-sm" id="modalUsrTitle">Asignar / Editar Usuario GxP</h3>
       <input type="hidden" id="usrEditIndex" value="-1">
-      
       <div>
         <label class="block mb-1 font-semibold">Seleccionar Empleado (Relación 1:1)</label>
         <select id="usrEmpSelect" class="w-full p-2 border rounded font-mono bg-slate-50" onchange="window.sugerirCorreoEmpleado()"></select>
       </div>
-
       <div class="grid grid-cols-2 gap-2">
         <div>
           <label class="block mb-1 font-semibold">Correo Corporativo (Login Único)</label>
@@ -705,27 +711,18 @@
           <input type="password" id="usrPasswordInput" class="w-full p-2 border rounded font-mono" value="123" />
         </div>
       </div>
-
       <div>
         <label class="block mb-1 font-semibold">Roles GxP Asignados (Selección Múltiple)</label>
         <div id="contenedorRolesCheckboxes" class="max-h-28 overflow-y-auto border p-2 rounded bg-slate-50 space-y-1"></div>
-        <p class="text-[10px] text-slate-500 mt-0.5">Los permisos se heredan y acumulan mediante unión de roles.</p>
       </div>
-
       <div>
         <label class="block mb-1 font-semibold">Áreas / Procesos Autorizados (Selección Múltiple)</label>
         <div id="contenedorAreasCheckboxes" class="max-h-28 overflow-y-auto border p-2 rounded bg-slate-50 space-y-1"></div>
-        <p class="text-[10px] text-slate-500 mt-0.5">El alcance operativo se restringe a las áreas seleccionadas.</p>
       </div>
-
       <div>
         <label class="block mb-1 font-semibold">Estado del Usuario</label>
-        <select id="usrEstadoSelect" class="w-full p-2 border rounded font-bold">
-          <option value="Activo">Activo</option>
-          <option value="Inactivo">Inactivo (Bloqueo Inmediato)</option>
-        </select>
+        <select id="usrEstadoSelect" class="w-full p-2 border rounded font-bold"><option value="Activo">Activo</option><option value="Inactivo">Inactivo (Bloqueo Inmediato)</option></select>
       </div>
-
       <div class="flex justify-end space-x-2 pt-2 border-t">
         <button onclick="window.toggleModal('modalUsuario', false)" class="px-3 py-1.5 border rounded">Cancelar</button>
         <button onclick="window.guardarUsuarioCompleto()" class="px-4 py-1.5 bg-slate-800 text-white rounded font-bold shadow">Guardar Usuario GxP</button>
@@ -791,7 +788,6 @@
       if(document.getElementById('count-migracion')) document.getElementById('count-migracion').innerText = migracion.length;
       if(document.getElementById('count-obsoleto')) document.getElementById('count-obsoleto').innerText = obsoletos.length;
 
-      // Renderizar Vigentes
       document.getElementById('table-vigente').innerHTML = vigentes.length ? vigentes.map(d => {
         const proc = window.cachedProcesos.find(p => p.id === d.procesoId);
         const area = window.cachedAreas.find(a => a.id === d.areaId);
@@ -811,7 +807,6 @@
         `;
       }).join('') : `<tr><td colspan="7" class="p-4 text-center text-slate-400">No hay documentos vigentes.</td></tr>`;
 
-      // Renderizar En Proceso (Verificando permisos efectivos)
       document.getElementById('table-proceso').innerHTML = enProceso.length ? enProceso.map(d => {
         const proc = window.cachedProcesos.find(p => p.id === d.procesoId);
         const area = window.cachedAreas.find(a => a.id === d.areaId);
@@ -851,14 +846,30 @@
     };
 
     window.renderConfigTablas = function() {
-      document.getElementById('tablaAreasConfig').innerHTML = window.cachedAreas.map(a => `<tr class="border"><td class="p-1.5 border font-mono">${a.id}</td><td class="p-1.5 border font-semibold">${a.nombre}</td></tr>`).join('');
-      document.getElementById('tablaProcesosConfig').innerHTML = window.cachedProcesos.map(p => {
+      // 1. Áreas y Procesos con botones de edición
+      document.getElementById('tablaAreasConfig').innerHTML = window.cachedAreas.map((a, idx) => `
+        <tr class="border hover:bg-slate-50">
+          <td class="p-1.5 border font-mono">${a.id}</td>
+          <td class="p-1.5 border font-semibold">${a.nombre}</td>
+          <td class="p-1.5 border text-center"><button onclick="window.abrirModalEditarArea(${idx})" class="bg-cyan-50 border border-cyan-300 text-cyan-800 px-2 py-0.5 rounded font-bold cursor-pointer">✏️ Editar</button></td>
+        </tr>
+      `).join('');
+
+      document.getElementById('tablaProcesosConfig').innerHTML = window.cachedProcesos.map((p, idx) => {
         const ar = window.cachedAreas.find(a => a.id === p.areaId);
-        return `<tr class="border"><td class="p-1.5 border font-semibold">${p.nombre}</td><td class="p-1.5 border font-mono text-[11px]">${ar ? ar.nombre : 'N/A'}</td></tr>`;
+        return `
+          <tr class="border hover:bg-slate-50">
+            <td class="p-1.5 border font-semibold">${p.nombre}</td>
+            <td class="p-1.5 border font-mono text-[11px]">${ar ? ar.nombre : 'N/A'}</td>
+            <td class="p-1.5 border text-center"><button onclick="window.abrirModalEditarProceso(${idx})" class="bg-cyan-50 border border-cyan-300 text-cyan-800 px-2 py-0.5 rounded font-bold cursor-pointer">✏️ Editar</button></td>
+          </tr>
+        `;
       }).join('');
 
-      document.getElementById('tablaEmpleadosConfig').innerHTML = window.cachedEmpleados.map(e => {
+      // 2. Empleados con botón de edición
+      document.getElementById('tablaEmpleadosConfig').innerHTML = window.cachedEmpleados.map((e, idx) => {
         const ar = window.cachedAreas.find(a => a.id === e.areaId);
+        const estadoBadge = e.estado === 'Activo' ? '<span class="bg-emerald-100 text-emerald-800 px-2 rounded font-bold">Activo</span>' : '<span class="bg-rose-100 text-rose-800 px-2 rounded font-bold">Inactivo</span>';
         return `
           <tr class="hover:bg-slate-50 font-mono text-xs">
             <td class="p-2 border">${e.id}</td>
@@ -866,12 +877,15 @@
             <td class="p-2 border font-sans">${e.cargo}</td>
             <td class="p-2 border text-cyan-800">${e.correo}</td>
             <td class="p-2 border font-sans">${ar ? ar.nombre : 'N/A'}</td>
-            <td class="p-2 border text-center"><span class="bg-emerald-100 text-emerald-800 px-2 rounded font-bold">${e.estado}</span></td>
-            <td class="p-2 border text-center"><button onclick="window.cambiarEstadoEmp(${e.id})" class="bg-amber-50 border text-amber-800 px-2 py-0.5 rounded font-bold cursor-pointer">🔄 Estado</button></td>
+            <td class="p-2 border text-center">${estadoBadge}</td>
+            <td class="p-2 border text-center font-sans space-x-1">
+              <button onclick="window.abrirModalEditarEmpleado(${idx})" class="bg-cyan-50 border border-cyan-300 text-cyan-800 px-2 py-1 rounded font-bold cursor-pointer">✏️ Editar</button>
+            </td>
           </tr>
         `;
       }).join('');
 
+      // 3. Roles
       document.getElementById('tablaRolesConfig').innerHTML = window.cachedRoles.map(r => `
         <tr class="hover:bg-slate-50 font-mono text-xs">
           <td class="p-2 border font-bold text-slate-700">${r.id}</td>
@@ -880,6 +894,7 @@
         </tr>
       `).join('');
 
+      // 4. Matriz Permisos
       document.getElementById('tablaMatrizConfig').innerHTML = window.cachedRoles.map(r => {
         const m = window.cachedMatrizPermisos[r.id] || {};
         return `
@@ -894,22 +909,18 @@
         `;
       }).join('');
 
-      // TABLA DE GESTIÓN DE USUARIOS CON BOTÓN DE EDICIÓN CLARO
+      // 5. Usuarios
       document.getElementById('tablaUsuariosConfig').innerHTML = window.cachedUsuarios.map((u, idx) => {
         const emp = window.cachedEmpleados.find(e => e.id === u.empleadoId);
         const rolesNombres = u.rolesIds.map(rid => {
           const rol = window.cachedRoles.find(r => r.id === rid);
           return rol ? rol.nombre : rid;
         }).join(', ');
-
         const areasStr = u.areasAsignadas.map(aid => {
           const ar = window.cachedAreas.find(a => a.id === aid);
           return ar ? ar.nombre : aid;
         }).join(', ');
-
-        const estadoBadge = u.estado === 'Activo' 
-          ? '<span class="bg-emerald-100 text-emerald-800 px-2 rounded font-bold">Activo</span>' 
-          : '<span class="bg-rose-100 text-rose-800 px-2 rounded font-bold">Inactivo</span>';
+        const estadoBadge = u.estado === 'Activo' ? '<span class="bg-emerald-100 text-emerald-800 px-2 rounded font-bold">Activo</span>' : '<span class="bg-rose-100 text-rose-800 px-2 rounded font-bold">Inactivo</span>';
 
         return `
           <tr class="hover:bg-slate-50 font-mono text-xs">
@@ -941,43 +952,112 @@
     };
 
     // -------------------------------------------------------------------------
-    // FUNCIONALIDAD DE CONFIGURACIÓN Y EDICIÓN DE USUARIOS
+    // FUNCIONALIDAD DE EDICIÓN Y GESTIÓN EN CONFIGURACIONES
     // -------------------------------------------------------------------------
-    window.abrirModalArea = () => window.toggleModal('modalArea', true);
-    window.guardarNuevaArea = function() {
+    window.abrirModalArea = function() {
+      document.getElementById('modalAreaTitle').innerText = 'Crear Nueva Área';
+      document.getElementById('areaEditIndex').value = '-1';
+      document.getElementById('inputAreaNombre').value = '';
+      window.toggleModal('modalArea', true);
+    };
+    window.abrirModalEditarArea = function(idx) {
+      const ar = window.cachedAreas[idx];
+      document.getElementById('modalAreaTitle').innerText = `Editar Área: ${ar.nombre}`;
+      document.getElementById('areaEditIndex').value = idx;
+      document.getElementById('inputAreaNombre').value = ar.nombre;
+      window.toggleModal('modalArea', true);
+    };
+    window.guardarAreaCompleta = function() {
+      const editIdx = parseInt(document.getElementById('areaEditIndex').value);
       const nom = document.getElementById('inputAreaNombre').value.trim();
       if(!nom) { alert("Ingrese el nombre del área."); return; }
-      const id = 'ar_' + Date.now();
-      window.cachedAreas.push({ id, nombre: nom });
-      window.registrarAuditTrail(window.activeGxpUser.correo, 'CREATE_AREA', `Creación de área organizacional: ${nom}`);
+      if(editIdx === -1) {
+        const id = 'ar_' + Date.now();
+        window.cachedAreas.push({ id, nombre: nom });
+        window.registrarAuditTrail(window.activeGxpUser.correo, 'CREATE_AREA', `Creación de área: ${nom}`);
+      } else {
+        const ant = window.cachedAreas[editIdx].nombre;
+        window.cachedAreas[editIdx].nombre = nom;
+        window.registrarAuditTrail(window.activeGxpUser.correo, 'UPDATE_AREA', `Actualización de área de '${ant}' a '${nom}'`);
+      }
       window.toggleModal('modalArea', false);
       window.renderAllData();
     };
 
-    window.abrirModalProceso = () => window.toggleModal('modalProceso', true);
-    window.guardarNuevoProceso = function() {
+    window.abrirModalProceso = function() {
+      document.getElementById('modalProcesoTitle').innerText = 'Crear Nuevo Proceso GxP';
+      document.getElementById('procesoEditIndex').value = '-1';
+      document.getElementById('inputProcesoNombre').value = '';
+      window.toggleModal('modalProceso', true);
+    };
+    window.abrirModalEditarProceso = function(idx) {
+      const pr = window.cachedProcesos[idx];
+      document.getElementById('modalProcesoTitle').innerText = `Editar Proceso: ${pr.nombre}`;
+      document.getElementById('procesoEditIndex').value = idx;
+      document.getElementById('inputProcesoNombre').value = pr.nombre;
+      document.getElementById('selectProcesoArea').value = pr.areaId;
+      window.toggleModal('modalProceso', true);
+    };
+    window.guardarProcesoCompleto = function() {
+      const editIdx = parseInt(document.getElementById('procesoEditIndex').value);
       const nom = document.getElementById('inputProcesoNombre').value.trim();
       const areaId = document.getElementById('selectProcesoArea').value;
       if(!nom) { alert("Ingrese nombre del proceso."); return; }
-      const id = 'pr_' + Date.now();
-      window.cachedProcesos.push({ id, nombre: nom, areaId });
-      window.registrarAuditTrail(window.activeGxpUser.correo, 'CREATE_PROCESO', `Creación de proceso GxP: ${nom}`);
+      if(editIdx === -1) {
+        const id = 'pr_' + Date.now();
+        window.cachedProcesos.push({ id, nombre: nom, areaId });
+        window.registrarAuditTrail(window.activeGxpUser.correo, 'CREATE_PROCESO', `Creación de proceso GxP: ${nom}`);
+      } else {
+        const ant = window.cachedProcesos[editIdx].nombre;
+        window.cachedProcesos[editIdx].nombre = nom;
+        window.cachedProcesos[editIdx].areaId = areaId;
+        window.registrarAuditTrail(window.activeGxpUser.correo, 'UPDATE_PROCESO', `Actualización de proceso de '${ant}' a '${nom}'`);
+      }
       window.toggleModal('modalProceso', false);
       window.renderAllData();
     };
 
-    window.abrirModalEmpleado = () => window.toggleModal('modalEmpleado', true);
-    window.guardarNuevoEmpleado = function() {
+    window.abrirModalEmpleado = function() {
+      document.getElementById('modalEmpTitle').innerText = 'Registrar Empleado en Directorio Maestro';
+      document.getElementById('empEditIndex').value = '-1';
+      document.getElementById('empNombres').value = '';
+      document.getElementById('empApellidos').value = '';
+      document.getElementById('empCargo').value = 'Analista de Calidad';
+      document.getElementById('empCorreo').value = '';
+      document.getElementById('empEstadoSelect').value = 'Activo';
+      window.toggleModal('modalEmpleado', true);
+    };
+    window.abrirModalEditarEmpleado = function(idx) {
+      const emp = window.cachedEmpleados[idx];
+      document.getElementById('modalEmpTitle').innerText = `Editar Empleado: ${emp.nombres} ${emp.apellidos}`;
+      document.getElementById('empEditIndex').value = idx;
+      document.getElementById('empNombres').value = emp.nombres;
+      document.getElementById('empApellidos').value = emp.apellidos;
+      document.getElementById('empCargo').value = emp.cargo;
+      document.getElementById('empCorreo').value = emp.correo;
+      document.getElementById('empAreaSelect').value = emp.areaId;
+      document.getElementById('empEstadoSelect').value = emp.estado;
+      window.toggleModal('modalEmpleado', true);
+    };
+    window.guardarEmpleadoCompleto = function() {
+      const editIdx = parseInt(document.getElementById('empEditIndex').value);
       const nombres = document.getElementById('empNombres').value.trim();
       const apellidos = document.getElementById('empApellidos').value.trim();
       const cargo = document.getElementById('empCargo').value.trim();
       const correo = document.getElementById('empCorreo').value.trim();
       const areaId = document.getElementById('empAreaSelect').value;
+      const estado = document.getElementById('empEstadoSelect').value;
 
       if(!nombres || !correo) { alert("Complete campos obligatorios del empleado."); return; }
-      const id = window.cachedEmpleados.length + 1;
-      window.cachedEmpleados.push({ id, nombres, apellidos, cargo, correo, areaId, estado: 'Activo' });
-      window.registrarAuditTrail(window.activeGxpUser.correo, 'CREATE_EMPLOYEE', `Registro de empleado: ${nombres} ${apellidos} (${correo})`);
+      if(editIdx === -1) {
+        const id = window.cachedEmpleados.length + 1;
+        window.cachedEmpleados.push({ id, nombres, apellidos, cargo, correo, areaId, estado });
+        window.registrarAuditTrail(window.activeGxpUser.correo, 'CREATE_EMPLOYEE', `Registro de empleado: ${nombres} ${apellidos} (${correo})`);
+      } else {
+        const ant = window.cachedEmpleados[editIdx].correo;
+        window.cachedEmpleados[editIdx] = { ...window.cachedEmpleados[editIdx], nombres, apellidos, cargo, correo, areaId, estado };
+        window.registrarAuditTrail(window.activeGxpUser.correo, 'UPDATE_EMPLOYEE', `Actualización de empleado ${ant} -> ${correo} [Estado: ${estado}]`);
+      }
       window.toggleModal('modalEmpleado', false);
       window.renderAllData();
     };
@@ -995,19 +1075,16 @@
       window.renderAllData();
     };
 
-    // CONSTRUCTOR DE CHECKBOXES PARA ROLES Y ÁREAS EN MODAL DE USUARIO
     window.poblarCheckboxesModalUsuario = function(rolesSeleccionados = [], areasSeleccionadas = []) {
       const selEmp = document.getElementById('usrEmpSelect');
       selEmp.innerHTML = window.cachedEmpleados.map(e => `<option value="${e.id}">${e.nombres} ${e.apellidos} (${e.correo})</option>`).join('');
 
-      // Checkboxes Roles
       const divRoles = document.getElementById('contenedorRolesCheckboxes');
       divRoles.innerHTML = window.cachedRoles.map(r => {
         const checked = rolesSeleccionados.includes(r.id) ? 'checked' : '';
         return `<label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" name="chkRol" value="${r.id}" ${checked} class="rounded"> <span>${r.nombre}</span></label>`;
       }).join('');
 
-      // Checkboxes Áreas
       const divAreas = document.getElementById('contenedorAreasCheckboxes');
       divAreas.innerHTML = window.cachedAreas.map(a => {
         const checked = areasSeleccionadas.includes(a.id) ? 'checked' : '';
@@ -1020,9 +1097,7 @@
     window.sugerirCorreoEmpleado = function() {
       const empId = parseInt(document.getElementById('usrEmpSelect').value);
       const emp = window.cachedEmpleados.find(e => e.id === empId);
-      if(emp) {
-        document.getElementById('usrCorreoInput').value = emp.correo;
-      }
+      if(emp) { document.getElementById('usrCorreoInput').value = emp.correo; }
     };
 
     window.abrirModalUsuario = function() {
@@ -1034,18 +1109,15 @@
       window.toggleModal('modalUsuario', true);
     };
 
-    // FUNCIONALIDAD DE EDICIÓN DE USUARIO EXISTENTE
     window.abrirModalEditarUsuario = function(idx) {
       const usr = window.cachedUsuarios[idx];
       if(!usr) return;
-
       document.getElementById('modalUsrTitle').innerText = `Editar Usuario: ${usr.correo}`;
       document.getElementById('usrEditIndex').value = idx;
       document.getElementById('usrEmpSelect').value = usr.empleadoId;
       document.getElementById('usrCorreoInput').value = usr.correo;
       document.getElementById('usrPasswordInput').value = usr.password;
       document.getElementById('usrEstadoSelect').value = usr.estado;
-
       window.poblarCheckboxesModalUsuario(usr.rolesIds, usr.areasAsignadas);
       window.toggleModal('modalUsuario', true);
     };
@@ -1057,9 +1129,7 @@
       const password = document.getElementById('usrPasswordInput').value.trim();
       const estado = document.getElementById('usrEstadoSelect').value;
 
-      // Recolectar roles seleccionados
       const rolesIds = Array.from(document.querySelectorAll('input[name="chkRol"]:checked')).map(el => el.value);
-      // Recolectar áreas seleccionadas
       const areasAsignadas = Array.from(document.querySelectorAll('input[name="chkArea"]:checked')).map(el => el.value);
 
       if(!correo || rolesIds.length === 0 || areasAsignadas.length === 0) {
@@ -1067,48 +1137,26 @@
         return;
       }
 
-      // Validar unicidad del correo (Login único)
       const correoExistente = window.cachedUsuarios.find((u, i) => u.correo.toLowerCase() === correo.toLowerCase() && i !== editIdx);
       if(correoExistente) {
-        alert("Error de validación GxP: El correo corporativo (Login) ya se encuentra asignado a otro usuario en el sistema.");
+        alert("Error GxP: El correo corporativo (Login) ya se encuentra asignado a otro usuario.");
         return;
       }
 
       if (editIdx === -1) {
-        // Creación
         const id = window.cachedUsuarios.length + 1;
         window.cachedUsuarios.push({ id, empleadoId: empId, correo, password, rolesIds, areasAsignadas, estado });
-        window.registrarAuditTrail(window.activeGxpUser.correo, 'CREATE_USER', `Creación de usuario GxP con roles [${rolesIds.join(', ')}] para ${correo}`);
+        window.registrarAuditTrail(window.activeGxpUser.correo, 'CREATE_USER', `Creación de usuario GxP para ${correo}`);
       } else {
-        // Actualización / Edición con Trazabilidad completa en Audit Trail
-        const usrAntiguo = window.cachedUsuarios[editIdx];
-        window.cachedUsuarios[editIdx] = {
-          ...usrAntiguo,
-          empleadoId: empId,
-          correo,
-          password,
-          rolesIds,
-          areasAsignadas,
-          estado
-        };
-        window.registrarAuditTrail(window.activeGxpUser.correo, 'UPDATE_USER', `Actualización de credenciales/permisos para usuario ${correo}. Roles: [${rolesIds.join(', ')}], Áreas: [${areasAsignadas.join(', ')}], Estado: ${estado}`);
+        window.cachedUsuarios[editIdx] = { ...window.cachedUsuarios[editIdx], empleadoId: empId, correo, password, rolesIds, areasAsignadas, estado };
+        window.registrarAuditTrail(window.activeGxpUser.correo, 'UPDATE_USER', `Actualización de usuario ${correo} [Estado: ${estado}]`);
       }
-
       window.toggleModal('modalUsuario', false);
       window.renderAllData();
     };
 
-    window.cambiarEstadoEmp = function(id) {
-      const emp = window.cachedEmpleados.find(e => e.id === id);
-      if(emp) {
-        emp.estado = emp.estado === 'Activo' ? 'Inactivo' : 'Activo';
-        window.registrarAuditTrail(window.activeGxpUser.correo, 'TOGGLE_EMPLOYEE', `Cambio de estado empleado ${emp.correo} a ${emp.estado}`);
-        window.renderAllData();
-      }
-    };
-
     // -------------------------------------------------------------------------
-    // FLUJO DOCUMENTAL Y FIRMA ELECTRÓNICA 21 CFR PART 11
+    // FLUJO DOCUMENTAL, SUBIDA DE ARCHIVO Y MARCA DE AGUA (PDF-LIB) RESTAURADOS
     // -------------------------------------------------------------------------
     window.viewDocument = function(docId) {
       let doc = window.cachedDocs.find(x => x.id === docId) || window.cachedObsoletos.find(x => x.id === docId);
@@ -1125,187 +1173,4 @@
       window.toggleModal('modalExportPdf', true);
     };
 
-    window.iniciarFirmaElectronica = function(docId) {
-      const doc = window.cachedDocs.find(x => x.id === docId);
-      if(!doc) return;
-
-      // VALIDACIÓN DE PERMISOS EFECTIVOS (Rol + Área)
-      const permisosEfectivos = window.obtenerPermisosEfectivos(window.activeGxpUser, doc.areaId);
-      if (!permisosEfectivos.aprobacionFirma) {
-        alert("Acceso Denegado (Segregación de Funciones / Permisos Insuficientes): Su usuario no posee privilegios efectivos de Aprobación y Firma Electrónica para esta área.");
-        return;
-      }
-
-      document.getElementById('firmaDocId').value = docId;
-      document.getElementById('firmaUserEmail').value = window.activeGxpUser.correo;
-      document.getElementById('firmaUserPassword').value = '';
-      document.getElementById('firmaInfoDoc').innerText = `${doc.codigo} v${doc.version} - ${doc.titulo}`;
-      window.toggleModal('modalFirmaPart11', true);
-    };
-
-    window.procesarFirmaElectronica = function() {
-      const docId = document.getElementById('firmaDocId').value;
-      const email = document.getElementById('firmaUserEmail').value.trim();
-      const pass = document.getElementById('firmaUserPassword').value.trim();
-      const significado = document.getElementById('firmaSignificado').value;
-
-      const doc = window.cachedDocs.find(x => x.id === docId);
-      if(!doc) return;
-
-      const userAuth = window.cachedUsuarios.find(u => u.correo.toLowerCase() === email.toLowerCase() && u.password === pass && u.estado === 'Activo');
-      if(!userAuth) {
-        alert("Falla de Autenticación Part 11: Credenciales inválidas o usuario inactivo.");
-        return;
-      }
-
-      if(doc.fase === 'Elaboración') {
-        doc.fase = 'Revisión';
-        alert("Documento firmado electrónicamente. Pasa a estado de REVISIÓN.");
-      } else if(doc.fase === 'Revisión') {
-        doc.fase = 'Aprobación';
-        alert("Documento firmado electrónicamente. Pasa a estado de APROBACIÓN.");
-      } else if(doc.fase === 'Aprobación') {
-        doc.fase = 'Aprobado';
-        doc.estado = 'VIGENTE';
-        alert("Firma de Autorización Final exitosa. El documento es ahora VIGENTE.");
-      }
-
-      const emp = window.cachedEmpleados.find(e => e.id === userAuth.empleadoId);
-      const nombreFirmante = emp ? `${emp.nombres} ${emp.apellidos}` : userAuth.correo;
-      window.registrarAuditTrail(userAuth.correo, 'ELECTRONIC_SIGNATURE', `Firma Part 11 [${significado}] aplicada por ${nombreFirmante} sobre documento ${doc.codigo} v${doc.version}`);
-      
-      window.toggleModal('modalFirmaPart11', false);
-      window.renderAllData();
-    };
-
-    window.exportarExcelAuditoria = function() {
-      const vigentes = window.cachedDocs.filter(d => d.estado === 'VIGENTE');
-      let htmlTabla = `<table><thead><tr><th>Código</th><th>Versión</th><th>Título del Documento</th><th>Proceso</th><th>Fecha de Aprobación</th><th>Fecha de Vencimiento</th><th>Estado GxP</th></tr></thead><tbody>`;
-      vigentes.forEach(d => {
-        const p = window.cachedProcesos.find(x => x.id === d.procesoId);
-        htmlTabla += `<tr><td>${d.codigo}</td><td>v${d.version}</td><td>${d.titulo}</td><td>${p ? p.nombre : 'N/A'}</td><td>${d.fechaAprob || 'N/A'}</td><td>${d.fechaVenc || 'N/A'}</td><td>${d.estado}</td></tr>`;
-      });
-      htmlTabla += `</tbody></table>`;
-      const blob = new Blob(['\ufeff' + htmlTabla], { type: 'application/vnd.ms-excel' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = `Listado_Maestro_Pharmor_${new Date().toISOString().split('T')[0]}.xls`;
-      document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    };
-
-    window.abrirModalEmitir = function(docId) { window.selectedDocId = docId; window.toggleModal('modalEmitirCopia', true); };
-
-    window.ejecutarInyeccionPDF = async function() {
-      const doc = window.cachedDocs.find(x => x.id === window.selectedDocId);
-      const area = document.getElementById('copiaAreaSelect').value;
-      const custodio = document.getElementById('copiaCustodioInput').value;
-      if (!doc.archivo_url) { alert("El documento no tiene un PDF adjunto."); return; }
-      
-      const btn = document.getElementById('btn-confirmar-emitir');
-      btn.innerText = "Inyectando Marca de Agua..."; btn.disabled = true;
-
-      try {
-        const existingPdfBytes = await fetch(doc.archivo_url).then(res => res.arrayBuffer());
-        const pdfDoc = await PDFLib.PDFDocument.load(existingPdfBytes);
-        const pages = pdfDoc.getPages();
-        const { rgb, degrees } = PDFLib;
-
-        pages.forEach(page => {
-          const { width, height } = page.getSize();
-          page.drawText('COPIA CONTROLADA', { x: width / 2 - 220, y: height / 2 + 40, size: 50, color: rgb(0.8, 0, 0), rotate: degrees(-30), opacity: 0.3 });
-          page.drawText(`VIGENTE - Destino: ${area} (${custodio}) - ${new Date().toLocaleDateString()}`, { x: 40, y: 25, size: 9, color: rgb(0.5, 0, 0) });
-        });
-
-        const pdfBytesModified = await pdfDoc.save();
-        const blob = new Blob([pdfBytesModified], { type: 'application/pdf' });
-        const blobUrl = URL.createObjectURL(blob);
-
-        const nextNum = window.cachedCopias.length + 1;
-        window.cachedCopias.unshift({ codigo: `COP-${doc.codigo}-C0${nextNum}`, doc: `${doc.codigo} v${doc.version}`, area: area, custodio: custodio });
-
-        window.open(blobUrl, '_blank');
-        window.toggleModal('modalEmitirCopia', false);
-        window.renderAllData();
-      } catch (err) {
-        console.error(err); alert("Error al procesar la inyección PDF con la librería externa.");
-      } finally {
-        btn.innerText = "Generar e Imprimir"; btn.disabled = false;
-      }
-    };
-
-    window.abrirModalNuevoDoc = function() {
-      document.getElementById('createDocFechaAprob').value = new Date().toISOString().split('T')[0];
-      const unAno = new Date(); unAno.setFullYear(unAno.getFullYear() + 2);
-      document.getElementById('createDocFechaVenc').value = unAno.toISOString().split('T')[0];
-      window.toggleModal('modalDoc', true);
-    };
-
-    window.guardarNuevoDocumento = function() {
-      const title = document.getElementById('createDocTitle').value;
-      const code = document.getElementById('createDocCode').value.toUpperCase();
-      const ver = document.getElementById('createDocVer').value;
-      const fechaAprob = document.getElementById('createDocFechaAprob').value;
-      const fechaVenc = document.getElementById('createDocFechaVenc').value;
-      const procesoId = document.getElementById('createDocProcesoSelect').value;
-
-      const proc = window.cachedProcesos.find(p => p.id === procesoId);
-      if (!title || !code || !ver || !proc) { alert("Complete los campos obligatorios y seleccione un proceso GxP."); return; }
-
-      window.cachedDocs.push({
-        id: `doc_${Date.now()}`, codigo: code, titulo: title, version: ver, estado: 'PROCESO', fase: 'Elaboración', procesoId: procesoId, areaId: proc.areaId, fechaAprob: fechaAprob, fechaVenc: fechaVenc, archivo_url: 'https://pdfobject.com/pdf/sample.pdf', motivo_cambio: 'Creación inicial'
-      });
-
-      window.registrarAuditTrail(window.activeGxpUser.correo, 'CREATE_DOC', `Creación de borrador documental ${code} v${ver} amarrado al proceso ${proc.nombre}`);
-      alert("Documento creado en estado Borrador amarrado al proceso correspondiente.");
-      window.toggleModal('modalDoc', false);
-      window.renderAllData();
-    };
-
-    window.abrirModalNuevaVersion = function() {
-      const select = document.getElementById('versionDocSelect');
-      const vigentes = window.cachedDocs.filter(d => d.estado === 'VIGENTE');
-      select.innerHTML = vigentes.map(d => `<option value="${d.id}">${d.codigo} v${d.version} - ${d.titulo}</option>`).join('');
-      window.cargarDatosVersionBase();
-      window.toggleModal('modalVersion', true);
-    };
-
-    window.cargarDatosVersionBase = function() {
-      const baseId = document.getElementById('versionDocSelect').value;
-      const doc = window.cachedDocs.find(x => x.id === baseId);
-      if (doc) {
-        document.getElementById('verNewTitle').value = doc.titulo;
-        document.getElementById('verNewCode').value = doc.codigo;
-        const vParts = doc.version.split('.');
-        document.getElementById('verNewNumber').value = (parseInt(vParts[0]) || 1) + '.0';
-      }
-    };
-
-    window.guardarNuevaVersion = function() {
-      const baseId = document.getElementById('versionDocSelect').value;
-      const newTitle = document.getElementById('verNewTitle').value;
-      const newVer = document.getElementById('verNewNumber').value;
-      const reason = document.getElementById('verChangeReason').value;
-
-      if(!reason) { alert("Justificación de cambio obligatoria (Control de Cambios GxP)."); return; }
-
-      const docIndex = window.cachedDocs.findIndex(x => x.id === baseId);
-      if(docIndex === -1) return;
-      const oldDoc = window.cachedDocs[docIndex];
-
-      window.cachedObsoletos.unshift({
-        id: oldDoc.id, codigo: oldDoc.codigo, titulo: oldDoc.titulo, version: oldDoc.version, estado: 'OBSOLETO', motivo_cambio: reason, archivo_url: oldDoc.archivo_url
-      });
-
-      window.cachedDocs.push({
-        id: `doc_${Date.now()}`, codigo: oldDoc.codigo, titulo: newTitle, version: newVer, estado: 'PROCESO', fase: 'Elaboración', procesoId: oldDoc.procesoId, areaId: oldDoc.areaId, fechaAprob: new Date().toISOString().split('T')[0], fechaVenc: oldDoc.fechaVenc, archivo_url: oldDoc.archivo_url, motivo_cambio: reason
-      });
-
-      window.cachedDocs.splice(docIndex, 1);
-      window.registrarAuditTrail(window.activeGxpUser.correo, 'NEW_VERSION', `Generación de versión v${newVer} para ${oldDoc.codigo}. Versión anterior v${oldDoc.version} pasada a obsoleto.`);
-      alert(`Versión v${newVer} en flujo. La versión anterior pasó a Obsoletos.`);
-      window.toggleModal('modalVersion', false);
-      window.renderAllData();
-    };
-  </script>
-</body>
-</html>
+    window.iniciarF
