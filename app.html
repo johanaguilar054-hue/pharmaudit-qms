@@ -22,158 +22,6 @@
     .modal-backdrop.active { display: flex; }
     .read-only-shield { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 50; background: transparent; }
   </style>
-
-  <!-- ========================================================================= -->
-  <!-- NÚCLEO LÓGICO Y DATOS GxP                                                 -->
-  <!-- ========================================================================= -->
-  <script>
-    window.activeGxpUser = null;
-    window.selectedDocId = null;
-
-    // 1. Estructura Organizacional
-    window.cachedAreas = [
-      { id: 'ar_qa', nombre: 'Aseguramiento de Calidad (QA)' },
-      { id: 'ar_qc', nombre: 'Control de Calidad (QC)' },
-      { id: 'ar_prod', nombre: 'Planta de Producción' },
-      { id: 'ar_mant', nombre: 'Mantenimiento y Metrología' }
-    ];
-
-    window.cachedProcesos = [
-      { id: 'pr_gestion_calidad', nombre: 'Gestión de Aseguramiento de Calidad', areaId: 'ar_qa' },
-      { id: 'pr_control_fisicoquimico', nombre: 'Control Físico-Químico y Microbiológico', areaId: 'ar_qc' },
-      { id: 'pr_produccion_pt', nombre: 'Proceso de Manufactura y Envasado PT', areaId: 'ar_prod' },
-      { id: 'pr_metrologia_eq', nombre: 'Calibración y Calificación de Equipos GxP', areaId: 'ar_mant' }
-    ];
-
-    // 2. Roles del Sistema GxP
-    window.cachedRoles = [
-      { id: 'rol_admin', nombre: 'System Administrator / QA Manager', desc: 'Control total de configuraciones, usuarios y auditoría.' },
-      { id: 'rol_author', nombre: 'Document Author', desc: 'Creación y edición de borradores documentales en su área.' },
-      { id: 'rol_approver', nombre: 'Document Approver / Process Owner', desc: 'Facultad de firma electrónica y aprobación de vigencias en su área.' },
-      { id: 'rol_viewer', nombre: 'Viewer / Operador de Planta', desc: 'Visualización estricta de documentos vigentes.' }
-    ];
-
-    // 3. Matriz de Permisos por Rol
-    window.cachedMatrizPermisos = {
-      'rol_admin': { lectura: true, crearEdicion: true, revision: true, aprobacionFirma: true, administracion: true },
-      'rol_author': { lectura: true, crearEdicion: true, revision: true, aprobacionFirma: false, administracion: false },
-      'rol_approver': { lectura: true, crearEdicion: true, revision: true, aprobacionFirma: true, administracion: false },
-      'rol_viewer': { lectura: true, crearEdicion: false, revision: false, aprobacionFirma: false, administracion: false }
-    };
-
-    // 4. Maestro de Empleados
-    window.cachedEmpleados = [
-      { id: 1, nombres: 'Johan Sebastian', apellidos: 'Aguilar Rojas', cargo: 'QA Lead', correo: 'j.aguilar@pharmor.com.co', areaId: 'ar_qa', estado: 'Activo' },
-      { id: 2, nombres: 'Carlos', apellidos: 'Mendoza', cargo: 'Operario de Producción', correo: 'c.mendoza@pharmor.com.co', areaId: 'ar_prod', estado: 'Activo' }
-    ];
-
-    // 5. Maestro de Usuarios
-    window.cachedUsuarios = [
-      { id: 1, empleadoId: 1, correo: 'j.aguilar@pharmor.com.co', password: '123', rolesIds: ['rol_admin'], areasAsignadas: ['ar_qa', 'ar_qc', 'ar_prod', 'ar_mant'], estado: 'Activo' },
-      { id: 2, empleadoId: 2, correo: 'c.mendoza@pharmor.com.co', password: '123', rolesIds: ['rol_viewer'], areasAsignadas: ['ar_prod'], estado: 'Activo' }
-    ];
-
-    // 6. Base Documental (Incluyendo URL de archivo por defecto o Blob temporal)
-    window.cachedDocs = [
-      { id: '1', codigo: 'PH-GPD-F0-01', titulo: 'Lista de Chequeo Batch y Liberación de PT', version: '2.0', estado: 'VIGENTE', fase: 'Aprobado', procesoId: 'pr_gestion_calidad', areaId: 'ar_qa', fechaAprob: '2025-10-15', fechaVenc: '2027-10-15', archivo_url: 'https://pdfobject.com/pdf/sample.pdf', motivo_cambio: 'Creación Inicial' },
-      { id: '2', codigo: 'SOP-PRO-012', titulo: 'Limpieza e Higienización de Áreas Limpias', version: '2.1', estado: 'VIGENTE', fase: 'Aprobado', procesoId: 'pr_produccion_pt', areaId: 'ar_prod', fechaAprob: '2025-09-01', fechaVenc: '2026-09-01', archivo_url: 'https://pdfobject.com/pdf/sample.pdf', motivo_cambio: 'Creación Inicial' },
-      { id: '3', codigo: 'SOP-QA-005', titulo: 'Control Ambiental en Zonas Clasificadas', version: '1.0', estado: 'PROCESO', fase: 'Elaboración', procesoId: 'pr_gestion_calidad', areaId: 'ar_qa', fechaAprob: '', fechaVenc: '', archivo_url: 'https://pdfobject.com/pdf/sample.pdf', motivo_cambio: 'Borrador inicial' }
-    ];
-    
-    window.cachedCopias = [];
-    window.cachedObsoletos = [];
-    window.auditTrailLogs = [
-      { fecha: '2026-10-28 10:30:00', usuario: 'j.aguilar@pharmor.com.co', accion: 'SYSTEM_START', detalle: 'Inicialización de ERP eQMS con validación GAMP 5' }
-    ];
-
-    window.obtenerPermisosEfectivos = function(usuario, areaDocumento) {
-      if (!usuario || usuario.estado !== 'Activo') {
-        return { lectura: false, crearEdicion: false, revision: false, aprobacionFirma: false, administracion: false };
-      }
-      const tieneAccesoArea = usuario.areasAsignadas.includes(areaDocumento) || usuario.rolesIds.includes('rol_admin');
-      if (!tieneAccesoArea) {
-        return { lectura: false, crearEdicion: false, revision: false, aprobacionFirma: false, administracion: false };
-      }
-      let permisosAcumulados = { lectura: false, crearEdicion: false, revision: false, aprobacionFirma: false, administracion: false };
-      usuario.rolesIds.forEach(rId => {
-        const pRol = window.cachedMatrizPermisos[rId];
-        if (pRol) {
-          if (pRol.lectura) permisosAcumulados.lectura = true;
-          if (pRol.crearEdicion) permisosAcumulados.crearEdicion = true;
-          if (pRol.revision) permisosAcumulados.revision = true;
-          if (pRol.aprobacionFirma) permisosAcumulados.aprobacionFirma = true;
-          if (pRol.administracion) permisosAcumulados.administracion = true;
-        }
-      });
-      return permisosAcumulados;
-    };
-
-    window.iniciarPortalVisual = function() {
-      document.getElementById('view-login').classList.add('hidden');
-      document.getElementById('app-portal').classList.remove('hidden');
-
-      const emp = window.cachedEmpleados.find(e => e.id === window.activeGxpUser.empleadoId);
-      const rolesNombres = window.activeGxpUser.rolesIds.map(rid => {
-        const r = window.cachedRoles.find(x => x.id === rid);
-        return r ? r.nombre : rid;
-      }).join(', ');
-      
-      document.getElementById('userBadge').innerText = `${emp ? emp.nombres + ' ' + emp.apellidos : window.activeGxpUser.correo} (${rolesNombres})`;
-
-      const isAdmin = window.activeGxpUser.rolesIds.includes('rol_admin');
-      document.querySelectorAll('.admin-only').forEach(el => { el.style.display = isAdmin ? 'block' : 'none'; });
-
-      const btnDocs = document.querySelector('[data-tab="documentos"]');
-      if (btnDocs) window.switchTab('documentos', btnDocs);
-
-      if (typeof window.renderAllData === 'function') window.renderAllData();
-      if (typeof window.renderConfigTablas === 'function') window.renderConfigTablas();
-    };
-
-    // FUNCIÓN DE LOGIN CORREGIDA Y BLINDADA
-    window.ejecutarLoginPrincipal = function() {
-      const emailInput = document.getElementById('loginEmail').value.trim();
-      const passInput = document.getElementById('loginPassword').value.trim();
-      
-      // Búsqueda estricta cruzando correo y contraseña
-      const usuarioEncontrado = window.cachedUsuarios.find(u => 
-        u.correo.toLowerCase() === emailInput.toLowerCase() && 
-        u.password === passInput
-      );
-
-      if (!usuarioEncontrado) {
-        alert("Credenciales incorrectas. Verifique su correo corporativo y contraseña."); 
-        return;
-      }
-      if (usuarioEncontrado.estado !== 'Activo') {
-        alert("Acceso denegado: Su cuenta de usuario se encuentra INACTIVA en el sistema GxP.");
-        return;
-      }
-      
-      window.activeGxpUser = usuarioEncontrado;
-      window.registrarAuditTrail(usuarioEncontrado.correo, 'LOGIN_SUCCESS', 'Inicio de sesión exitoso al portal GxP');
-      window.iniciarPortalVisual();
-    };
-
-    // Soporte para loguear pulsando "Enter"
-    document.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('loginPassword').addEventListener('keypress', function (e) {
-        if (e.key === 'Enter') { window.ejecutarLoginPrincipal(); }
-      });
-      document.getElementById('loginEmail').addEventListener('keypress', function (e) {
-        if (e.key === 'Enter') { document.getElementById('loginPassword').focus(); }
-      });
-    });
-
-    window.registrarAuditTrail = function(user, accion, detalle) {
-      const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 19);
-      window.auditTrailLogs.unshift({ fecha: timestamp, usuario: user, accion: accion, detalle: detalle });
-      const auditDiv = document.getElementById('list-auds');
-      if(auditDiv) {
-        auditDiv.innerHTML = window.auditTrailLogs.map(l => `[${l.fecha}] <strong>${l.usuario}</strong> [${l.accion}]: ${l.detalle}`).join('<br>');
-      }
-    };
-  </script>
 </head>
 <body class="bg-slate-50 text-slate-800 p-4">
 
@@ -730,9 +578,69 @@
   </div>
 
   <!-- ========================================================================= -->
-  <!-- SCRIPT LÓGICO UNIFICADO (SISTEMA DE NAVEGACIÓN BLINDADO)                  -->
+  <!-- SCRIPT LÓGICO Y DATOS (BLOQUE ÚNICO, COMPLETO Y UNIFICADO AL FINAL)       -->
   <!-- ========================================================================= -->
   <script>
+    window.activeGxpUser = null;
+    window.selectedDocId = null;
+
+    // 1. Estructura Organizacional
+    window.cachedAreas = [
+      { id: 'ar_qa', nombre: 'Aseguramiento de Calidad (QA)' },
+      { id: 'ar_qc', nombre: 'Control de Calidad (QC)' },
+      { id: 'ar_prod', nombre: 'Planta de Producción' },
+      { id: 'ar_mant', nombre: 'Mantenimiento y Metrología' }
+    ];
+
+    window.cachedProcesos = [
+      { id: 'pr_gestion_calidad', nombre: 'Gestión de Aseguramiento de Calidad', areaId: 'ar_qa' },
+      { id: 'pr_control_fisicoquimico', nombre: 'Control Físico-Químico y Microbiológico', areaId: 'ar_qc' },
+      { id: 'pr_produccion_pt', nombre: 'Proceso de Manufactura y Envasado PT', areaId: 'ar_prod' },
+      { id: 'pr_metrologia_eq', nombre: 'Calibración y Calificación de Equipos GxP', areaId: 'ar_mant' }
+    ];
+
+    // 2. Roles del Sistema GxP
+    window.cachedRoles = [
+      { id: 'rol_admin', nombre: 'System Administrator / QA Manager', desc: 'Control total de configuraciones, usuarios y auditoría.' },
+      { id: 'rol_author', nombre: 'Document Author', desc: 'Creación y edición de borradores documentales en su área.' },
+      { id: 'rol_approver', nombre: 'Document Approver / Process Owner', desc: 'Facultad de firma electrónica y aprobación de vigencias en su área.' },
+      { id: 'rol_viewer', nombre: 'Viewer / Operador de Planta', desc: 'Visualización estricta de documentos vigentes.' }
+    ];
+
+    // 3. Matriz de Permisos por Rol
+    window.cachedMatrizPermisos = {
+      'rol_admin': { lectura: true, crearEdicion: true, revision: true, aprobacionFirma: true, administracion: true },
+      'rol_author': { lectura: true, crearEdicion: true, revision: true, aprobacionFirma: false, administracion: false },
+      'rol_approver': { lectura: true, crearEdicion: true, revision: true, aprobacionFirma: true, administracion: false },
+      'rol_viewer': { lectura: true, crearEdicion: false, revision: false, aprobacionFirma: false, administracion: false }
+    };
+
+    // 4. Maestro de Empleados
+    window.cachedEmpleados = [
+      { id: 1, nombres: 'Johan Sebastian', apellidos: 'Aguilar Rojas', cargo: 'QA Lead', correo: 'j.aguilar@pharmor.com.co', areaId: 'ar_qa', estado: 'Activo' },
+      { id: 2, nombres: 'Carlos', apellidos: 'Mendoza', cargo: 'Operario de Producción', correo: 'c.mendoza@pharmor.com.co', areaId: 'ar_prod', estado: 'Activo' }
+    ];
+
+    // 5. Maestro de Usuarios
+    window.cachedUsuarios = [
+      { id: 1, empleadoId: 1, correo: 'j.aguilar@pharmor.com.co', password: '123', rolesIds: ['rol_admin'], areasAsignadas: ['ar_qa', 'ar_qc', 'ar_prod', 'ar_mant'], estado: 'Activo' },
+      { id: 2, empleadoId: 2, correo: 'c.mendoza@pharmor.com.co', password: '123', rolesIds: ['rol_viewer'], areasAsignadas: ['ar_prod'], estado: 'Activo' }
+    ];
+
+    // 6. Base Documental
+    window.cachedDocs = [
+      { id: '1', codigo: 'PH-GPD-F0-01', titulo: 'Lista de Chequeo Batch y Liberación de PT', version: '2.0', estado: 'VIGENTE', fase: 'Aprobado', procesoId: 'pr_gestion_calidad', areaId: 'ar_qa', fechaAprob: '2025-10-15', fechaVenc: '2027-10-15', archivo_url: 'https://pdfobject.com/pdf/sample.pdf', motivo_cambio: 'Creación Inicial' },
+      { id: '2', codigo: 'SOP-PRO-012', titulo: 'Limpieza e Higienización de Áreas Limpias', version: '2.1', estado: 'VIGENTE', fase: 'Aprobado', procesoId: 'pr_produccion_pt', areaId: 'ar_prod', fechaAprob: '2025-09-01', fechaVenc: '2026-09-01', archivo_url: 'https://pdfobject.com/pdf/sample.pdf', motivo_cambio: 'Creación Inicial' },
+      { id: '3', codigo: 'SOP-QA-005', titulo: 'Control Ambiental en Zonas Clasificadas', version: '1.0', estado: 'PROCESO', fase: 'Elaboración', procesoId: 'pr_gestion_calidad', areaId: 'ar_qa', fechaAprob: '', fechaVenc: '', archivo_url: 'https://pdfobject.com/pdf/sample.pdf', motivo_cambio: 'Borrador inicial' }
+    ];
+    
+    window.cachedCopias = [];
+    window.cachedObsoletos = [];
+    window.auditTrailLogs = [
+      { fecha: '2026-10-28 10:30:00', usuario: 'j.aguilar@pharmor.com.co', accion: 'SYSTEM_START', detalle: 'Inicialización de ERP eQMS con validación GAMP 5' }
+    ];
+
+    // LÓGICA DE NAVEGACIÓN Y TABS
     window.toggleModal = function(id, show) { 
       const m = document.getElementById(id); 
       if (m) { show ? m.classList.add('active') : m.classList.remove('active'); } 
@@ -740,17 +648,25 @@
 
     window.switchTab = function(tabId, btnElement) {
       document.querySelectorAll('.tab-content').forEach(v => v.classList.remove('active'));
+      
+      // Reiniciar estado visual de los botones de navegación
       document.querySelectorAll('.nav-btn').forEach(b => {
         b.classList.remove('bg-cyan-600', 'text-white');
-        if (!b.classList.contains('bg-slate-700')) {
-          b.classList.add('hover:bg-slate-700');
+        if(b.getAttribute('data-tab') === 'admin') {
+           b.classList.add('bg-slate-700', 'text-cyan-300'); // Estilo especial para admin
+        } else {
+           b.classList.add('hover:bg-slate-700');
         }
       });
+
+      // Mostrar el contenido objetivo
       const target = document.getElementById('view-' + tabId);
       if(target) target.classList.add('active');
+
+      // Aplicar estado activo al botón clickeado
       if(btnElement) {
         btnElement.classList.add('bg-cyan-600', 'text-white');
-        btnElement.classList.remove('hover:bg-slate-700');
+        btnElement.classList.remove('hover:bg-slate-700', 'bg-slate-700', 'text-cyan-300');
       }
     };
 
@@ -782,6 +698,84 @@
       }
     };
 
+    // FUNCIONES DE CONTROL DE ACCESO
+    window.obtenerPermisosEfectivos = function(usuario, areaDocumento) {
+      if (!usuario || usuario.estado !== 'Activo') {
+        return { lectura: false, crearEdicion: false, revision: false, aprobacionFirma: false, administracion: false };
+      }
+      const tieneAccesoArea = usuario.areasAsignadas.includes(areaDocumento) || usuario.rolesIds.includes('rol_admin');
+      if (!tieneAccesoArea) {
+        return { lectura: false, crearEdicion: false, revision: false, aprobacionFirma: false, administracion: false };
+      }
+      let permisosAcumulados = { lectura: false, crearEdicion: false, revision: false, aprobacionFirma: false, administracion: false };
+      usuario.rolesIds.forEach(rId => {
+        const pRol = window.cachedMatrizPermisos[rId];
+        if (pRol) {
+          if (pRol.lectura) permisosAcumulados.lectura = true;
+          if (pRol.crearEdicion) permisosAcumulados.crearEdicion = true;
+          if (pRol.revision) permisosAcumulados.revision = true;
+          if (pRol.aprobacionFirma) permisosAcumulados.aprobacionFirma = true;
+          if (pRol.administracion) permisosAcumulados.administracion = true;
+        }
+      });
+      return permisosAcumulados;
+    };
+
+    window.iniciarPortalVisual = function() {
+      document.getElementById('view-login').classList.add('hidden');
+      document.getElementById('app-portal').classList.remove('hidden');
+
+      const emp = window.cachedEmpleados.find(e => e.id === window.activeGxpUser.empleadoId);
+      const rolesNombres = window.activeGxpUser.rolesIds.map(rid => {
+        const r = window.cachedRoles.find(x => x.id === rid);
+        return r ? r.nombre : rid;
+      }).join(', ');
+      
+      document.getElementById('userBadge').innerText = `${emp ? emp.nombres + ' ' + emp.apellidos : window.activeGxpUser.correo} (${rolesNombres})`;
+
+      const isAdmin = window.activeGxpUser.rolesIds.includes('rol_admin');
+      document.querySelectorAll('.admin-only').forEach(el => { el.style.display = isAdmin ? 'block' : 'none'; });
+
+      // Forzar navegación al Dashboard por defecto al entrar
+      const btnDash = document.querySelector('[data-tab="dashboard"]');
+      if (btnDash) window.switchTab('dashboard', btnDash);
+
+      if (typeof window.renderAllData === 'function') window.renderAllData();
+    };
+
+    window.ejecutarLoginPrincipal = function() {
+      const emailInput = document.getElementById('loginEmail').value.trim();
+      const passInput = document.getElementById('loginPassword').value.trim();
+      
+      const usuarioEncontrado = window.cachedUsuarios.find(u => 
+        u.correo.toLowerCase() === emailInput.toLowerCase() && 
+        u.password === passInput
+      );
+
+      if (!usuarioEncontrado) {
+        alert("Credenciales incorrectas. Verifique su correo corporativo y contraseña."); 
+        return;
+      }
+      if (usuarioEncontrado.estado !== 'Activo') {
+        alert("Acceso denegado: Su cuenta de usuario se encuentra INACTIVA en el sistema GxP.");
+        return;
+      }
+      
+      window.activeGxpUser = usuarioEncontrado;
+      window.registrarAuditTrail(usuarioEncontrado.correo, 'LOGIN_SUCCESS', 'Inicio de sesión exitoso al portal GxP');
+      window.iniciarPortalVisual();
+    };
+
+    window.registrarAuditTrail = function(user, accion, detalle) {
+      const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 19);
+      window.auditTrailLogs.unshift({ fecha: timestamp, usuario: user, accion: accion, detalle: detalle });
+      const auditDiv = document.getElementById('list-auds');
+      if(auditDiv) {
+        auditDiv.innerHTML = window.auditTrailLogs.map(l => `[${l.fecha}] <strong>${l.usuario}</strong> [${l.accion}]: ${l.detalle}`).join('<br>');
+      }
+    };
+
+    // FUNCIONES DE RENDERIZADO (DOM)
     window.renderAllData = function() {
       const vigentes = window.cachedDocs.filter(d => d.estado === 'VIGENTE');
       const enProceso = window.cachedDocs.filter(d => d.estado === 'PROCESO');
@@ -939,6 +933,7 @@
         `;
       }).join('');
 
+      // Llenar Selects
       const selProc = document.getElementById('createDocProcesoSelect');
       if(selProc) selProc.innerHTML = window.cachedProcesos.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
 
@@ -952,6 +947,7 @@
       if(selCop) selCop.innerHTML = window.cachedAreas.map(a => `<option value="${a.nombre}">${a.nombre}</option>`).join('');
     };
 
+    // FUNCIONES DE EDICIÓN DE CONFIGURACIÓN
     window.abrirModalArea = function() {
       document.getElementById('modalAreaTitle').innerText = 'Crear Nueva Área';
       document.getElementById('areaEditIndex').value = '-1';
@@ -992,4 +988,395 @@
       const pr = window.cachedProcesos[idx];
       document.getElementById('modalProcesoTitle').innerText = `Editar Proceso: ${pr.nombre}`;
       document.getElementById('procesoEditIndex').value = idx;
-      document.getElementById('input
+      document.getElementById('inputProcesoNombre').value = pr.nombre;
+      document.getElementById('selectProcesoArea').value = pr.areaId;
+      window.toggleModal('modalProceso', true);
+    };
+    window.guardarProcesoCompleto = function() {
+      const editIdx = parseInt(document.getElementById('procesoEditIndex').value);
+      const nom = document.getElementById('inputProcesoNombre').value.trim();
+      const areaId = document.getElementById('selectProcesoArea').value;
+      if(!nom) { alert("Ingrese nombre del proceso."); return; }
+      if(editIdx === -1) {
+        const id = 'pr_' + Date.now();
+        window.cachedProcesos.push({ id, nombre: nom, areaId });
+        window.registrarAuditTrail(window.activeGxpUser.correo, 'CREATE_PROCESO', `Creación de proceso GxP: ${nom}`);
+      } else {
+        const ant = window.cachedProcesos[editIdx].nombre;
+        window.cachedProcesos[editIdx].nombre = nom;
+        window.cachedProcesos[editIdx].areaId = areaId;
+        window.registrarAuditTrail(window.activeGxpUser.correo, 'UPDATE_PROCESO', `Actualización de proceso de '${ant}' a '${nom}'`);
+      }
+      window.toggleModal('modalProceso', false);
+      window.renderAllData();
+    };
+
+    window.abrirModalEmpleado = function() {
+      document.getElementById('modalEmpTitle').innerText = 'Registrar Empleado en Directorio Maestro';
+      document.getElementById('empEditIndex').value = '-1';
+      document.getElementById('empNombres').value = '';
+      document.getElementById('empApellidos').value = '';
+      document.getElementById('empCargo').value = 'Analista de Calidad';
+      document.getElementById('empCorreo').value = '';
+      document.getElementById('empEstadoSelect').value = 'Activo';
+      window.toggleModal('modalEmpleado', true);
+    };
+    window.abrirModalEditarEmpleado = function(idx) {
+      const emp = window.cachedEmpleados[idx];
+      document.getElementById('modalEmpTitle').innerText = `Editar Empleado: ${emp.nombres} ${emp.apellidos}`;
+      document.getElementById('empEditIndex').value = idx;
+      document.getElementById('empNombres').value = emp.nombres;
+      document.getElementById('empApellidos').value = emp.apellidos;
+      document.getElementById('empCargo').value = emp.cargo;
+      document.getElementById('empCorreo').value = emp.correo;
+      document.getElementById('empAreaSelect').value = emp.areaId;
+      document.getElementById('empEstadoSelect').value = emp.estado;
+      window.toggleModal('modalEmpleado', true);
+    };
+    window.guardarEmpleadoCompleto = function() {
+      const editIdx = parseInt(document.getElementById('empEditIndex').value);
+      const nombres = document.getElementById('empNombres').value.trim();
+      const apellidos = document.getElementById('empApellidos').value.trim();
+      const cargo = document.getElementById('empCargo').value.trim();
+      const correo = document.getElementById('empCorreo').value.trim();
+      const areaId = document.getElementById('empAreaSelect').value;
+      const estado = document.getElementById('empEstadoSelect').value;
+
+      if(!nombres || !correo) { alert("Complete campos obligatorios del empleado."); return; }
+      if(editIdx === -1) {
+        const id = window.cachedEmpleados.length + 1;
+        window.cachedEmpleados.push({ id, nombres, apellidos, cargo, correo, areaId, estado });
+        window.registrarAuditTrail(window.activeGxpUser.correo, 'CREATE_EMPLOYEE', `Registro de empleado: ${nombres} ${apellidos} (${correo})`);
+      } else {
+        const ant = window.cachedEmpleados[editIdx].correo;
+        window.cachedEmpleados[editIdx] = { ...window.cachedEmpleados[editIdx], nombres, apellidos, cargo, correo, areaId, estado };
+        window.registrarAuditTrail(window.activeGxpUser.correo, 'UPDATE_EMPLOYEE', `Actualización de empleado ${ant} -> ${correo} [Estado: ${estado}]`);
+      }
+      window.toggleModal('modalEmpleado', false);
+      window.renderAllData();
+    };
+
+    window.abrirModalRol = () => window.toggleModal('modalRol', true);
+    window.guardarNuevoRol = function() {
+      const id = document.getElementById('rolIdInput').value.trim();
+      const nombre = document.getElementById('rolNombreInput').value.trim();
+      const desc = document.getElementById('rolDescInput').value.trim();
+      if(!id || !nombre) { alert("Complete ID y nombre del rol."); return; }
+      window.cachedRoles.push({ id, nombre, desc });
+      window.cachedMatrizPermisos[id] = { lectura: true, crearEdicion: false, revision: false, aprobacionFirma: false, administracion: false };
+      window.registrarAuditTrail(window.activeGxpUser.correo, 'CREATE_ROLE', `Creación de rol GxP: ${nombre}`);
+      window.toggleModal('modalRol', false);
+      window.renderAllData();
+    };
+
+    window.poblarCheckboxesModalUsuario = function(rolesSeleccionados = [], areasSeleccionadas = []) {
+      const selEmp = document.getElementById('usrEmpSelect');
+      selEmp.innerHTML = window.cachedEmpleados.map(e => `<option value="${e.id}">${e.nombres} ${e.apellidos} (${e.correo})</option>`).join('');
+
+      const divRoles = document.getElementById('contenedorRolesCheckboxes');
+      divRoles.innerHTML = window.cachedRoles.map(r => {
+        const checked = rolesSeleccionados.includes(r.id) ? 'checked' : '';
+        return `<label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" name="chkRol" value="${r.id}" ${checked} class="rounded"> <span>${r.nombre}</span></label>`;
+      }).join('');
+
+      const divAreas = document.getElementById('contenedorAreasCheckboxes');
+      divAreas.innerHTML = window.cachedAreas.map(a => {
+        const checked = areasSeleccionadas.includes(a.id) ? 'checked' : '';
+        return `<label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" name="chkArea" value="${a.id}" ${checked} class="rounded"> <span>${a.nombre}</span></label>`;
+      }).join('');
+
+      window.sugerirCorreoEmpleado();
+    };
+
+    window.sugerirCorreoEmpleado = function() {
+      const empId = parseInt(document.getElementById('usrEmpSelect').value);
+      const emp = window.cachedEmpleados.find(e => e.id === empId);
+      if(emp) { document.getElementById('usrCorreoInput').value = emp.correo; }
+    };
+
+    window.abrirModalUsuario = function() {
+      document.getElementById('modalUsrTitle').innerText = 'Asignar Nuevo Usuario GxP';
+      document.getElementById('usrEditIndex').value = '-1';
+      document.getElementById('usrPasswordInput').value = '123';
+      document.getElementById('usrEstadoSelect').value = 'Activo';
+      window.poblarCheckboxesModalUsuario(['rol_viewer'], [window.cachedAreas[0].id]);
+      window.toggleModal('modalUsuario', true);
+    };
+
+    window.abrirModalEditarUsuario = function(idx) {
+      const usr = window.cachedUsuarios[idx];
+      if(!usr) return;
+      document.getElementById('modalUsrTitle').innerText = `Editar Usuario: ${usr.correo}`;
+      document.getElementById('usrEditIndex').value = idx;
+      document.getElementById('usrEmpSelect').value = usr.empleadoId;
+      document.getElementById('usrCorreoInput').value = usr.correo;
+      document.getElementById('usrPasswordInput').value = usr.password;
+      document.getElementById('usrEstadoSelect').value = usr.estado;
+      window.poblarCheckboxesModalUsuario(usr.rolesIds, usr.areasAsignadas);
+      window.toggleModal('modalUsuario', true);
+    };
+
+    window.guardarUsuarioCompleto = function() {
+      const editIdx = parseInt(document.getElementById('usrEditIndex').value);
+      const empId = parseInt(document.getElementById('usrEmpSelect').value);
+      const correo = document.getElementById('usrCorreoInput').value.trim();
+      const password = document.getElementById('usrPasswordInput').value.trim();
+      const estado = document.getElementById('usrEstadoSelect').value;
+
+      const rolesIds = Array.from(document.querySelectorAll('input[name="chkRol"]:checked')).map(el => el.value);
+      const areasAsignadas = Array.from(document.querySelectorAll('input[name="chkArea"]:checked')).map(el => el.value);
+
+      if(!correo || rolesIds.length === 0 || areasAsignadas.length === 0) {
+        alert("Debe seleccionar al menos un Rol y un Área autorizada para el usuario.");
+        return;
+      }
+
+      const correoExistente = window.cachedUsuarios.find((u, i) => u.correo.toLowerCase() === correo.toLowerCase() && i !== editIdx);
+      if(correoExistente) {
+        alert("Error GxP: El correo corporativo (Login) ya se encuentra asignado a otro usuario.");
+        return;
+      }
+
+      if (editIdx === -1) {
+        const id = window.cachedUsuarios.length + 1;
+        window.cachedUsuarios.push({ id, empleadoId: empId, correo, password, rolesIds, areasAsignadas, estado });
+        window.registrarAuditTrail(window.activeGxpUser.correo, 'CREATE_USER', `Creación de usuario GxP para ${correo}`);
+      } else {
+        window.cachedUsuarios[editIdx] = { ...window.cachedUsuarios[editIdx], empleadoId: empId, correo, password, rolesIds, areasAsignadas, estado };
+        window.registrarAuditTrail(window.activeGxpUser.correo, 'UPDATE_USER', `Actualización de usuario ${correo} [Estado: ${estado}]`);
+      }
+      window.toggleModal('modalUsuario', false);
+      window.renderAllData();
+    };
+
+    // FLUJOS DOCUMENTALES
+    window.viewDocument = function(docId) {
+      let doc = window.cachedDocs.find(x => x.id === docId) || window.cachedObsoletos.find(x => x.id === docId);
+      if (!doc || !doc.archivo_url) { alert("Este documento no cuenta con un archivo PDF adjunto."); return; }
+      document.getElementById('pdfViewerTitle').innerText = `${doc.codigo} v${doc.version} - ${doc.titulo} [${doc.estado}]`;
+      const viewerArea = document.getElementById('pdfViewerArea');
+      
+      const permisosEfectivos = window.obtenerPermisosEfectivos(window.activeGxpUser, doc.areaId);
+      if (permisosEfectivos.administracion) {
+        viewerArea.innerHTML = `<iframe src="${doc.archivo_url}" class="w-full h-full border-0"></iframe>`;
+      } else {
+        viewerArea.innerHTML = `<div class="read-only-shield" oncontextmenu="return false;"></div><iframe src="${doc.archivo_url}#toolbar=0&navpanes=0&scrollbar=0" class="w-full h-full border-0 pointer-events-none"></iframe>`;
+      }
+      window.toggleModal('modalExportPdf', true);
+    };
+
+    window.iniciarFirmaElectronica = function(docId) {
+      const doc = window.cachedDocs.find(x => x.id === docId);
+      if(!doc) return;
+
+      const permisosEfectivos = window.obtenerPermisosEfectivos(window.activeGxpUser, doc.areaId);
+      if (!permisosEfectivos.aprobacionFirma) {
+        alert("Acceso Denegado: Su usuario no posee privilegios efectivos de Aprobación y Firma Electrónica para esta área.");
+        return;
+      }
+
+      document.getElementById('firmaDocId').value = docId;
+      document.getElementById('firmaUserEmail').value = window.activeGxpUser.correo;
+      document.getElementById('firmaUserPassword').value = '';
+      document.getElementById('firmaInfoDoc').innerText = `${doc.codigo} v${doc.version} - ${doc.titulo}`;
+      window.toggleModal('modalFirmaPart11', true);
+    };
+
+    window.procesarFirmaElectronica = function() {
+      const docId = document.getElementById('firmaDocId').value;
+      const email = document.getElementById('firmaUserEmail').value.trim();
+      const pass = document.getElementById('firmaUserPassword').value.trim();
+      const significado = document.getElementById('firmaSignificado').value;
+
+      const doc = window.cachedDocs.find(x => x.id === docId);
+      if(!doc) return;
+
+      const userAuth = window.cachedUsuarios.find(u => u.correo.toLowerCase() === email.toLowerCase() && u.password === pass && u.estado === 'Activo');
+      if(!userAuth) {
+        alert("Falla de Autenticación Part 11: Credenciales inválidas o usuario inactivo.");
+        return;
+      }
+
+      if(doc.fase === 'Elaboración') {
+        doc.fase = 'Revisión';
+        alert("Documento firmado electrónicamente. Pasa a estado de REVISIÓN.");
+      } else if(doc.fase === 'Revisión') {
+        doc.fase = 'Aprobación';
+        alert("Documento firmado electrónicamente. Pasa a estado de APROBACIÓN.");
+      } else if(doc.fase === 'Aprobación') {
+        doc.fase = 'Aprobado';
+        doc.estado = 'VIGENTE';
+        alert("Firma de Autorización Final exitosa. El documento es ahora VIGENTE.");
+      }
+
+      const emp = window.cachedEmpleados.find(e => e.id === userAuth.empleadoId);
+      const nombreFirmante = emp ? `${emp.nombres} ${emp.apellidos}` : userAuth.correo;
+      window.registrarAuditTrail(userAuth.correo, 'ELECTRONIC_SIGNATURE', `Firma Part 11 [${significado}] aplicada por ${nombreFirmante} sobre documento ${doc.codigo} v${doc.version}`);
+      
+      window.toggleModal('modalFirmaPart11', false);
+      window.renderAllData();
+    };
+
+    window.exportarExcelAuditoria = function() {
+      const vigentes = window.cachedDocs.filter(d => d.estado === 'VIGENTE');
+      let htmlTabla = `<table><thead><tr><th>Código</th><th>Versión</th><th>Título del Documento</th><th>Proceso</th><th>Fecha de Aprobación</th><th>Fecha de Vencimiento</th><th>Estado GxP</th></tr></thead><tbody>`;
+      vigentes.forEach(d => {
+        const p = window.cachedProcesos.find(x => x.id === d.procesoId);
+        htmlTabla += `<tr><td>${d.codigo}</td><td>v${d.version}</td><td>${d.titulo}</td><td>${p ? p.nombre : 'N/A'}</td><td>${d.fechaAprob || 'N/A'}</td><td>${d.fechaVenc || 'N/A'}</td><td>${d.estado}</td></tr>`;
+      });
+      htmlTabla += `</tbody></table>`;
+      const blob = new Blob(['\ufeff' + htmlTabla], { type: 'application/vnd.ms-excel' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `Listado_Maestro_Pharmor_${new Date().toISOString().split('T')[0]}.xls`;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    };
+
+    window.abrirModalEmitir = function(docId) { window.selectedDocId = docId; window.toggleModal('modalEmitirCopia', true); };
+
+    window.ejecutarInyeccionPDF = async function() {
+      const doc = window.cachedDocs.find(x => x.id === window.selectedDocId);
+      const area = document.getElementById('copiaAreaSelect').value;
+      const custodio = document.getElementById('copiaCustodioInput').value;
+      if (!doc.archivo_url) { alert("El documento no tiene un PDF adjunto."); return; }
+      
+      const btn = document.getElementById('btn-confirmar-emitir');
+      btn.innerText = "Inyectando Marca de Agua..."; btn.disabled = true;
+
+      try {
+        const existingPdfBytes = await fetch(doc.archivo_url).then(res => res.arrayBuffer());
+        const pdfDoc = await PDFLib.PDFDocument.load(existingPdfBytes);
+        const pages = pdfDoc.getPages();
+        const { rgb, degrees } = PDFLib;
+
+        pages.forEach(page => {
+          const { width, height } = page.getSize();
+          page.drawText('COPIA CONTROLADA', { x: width / 2 - 220, y: height / 2 + 40, size: 50, color: rgb(0.8, 0, 0), rotate: degrees(-30), opacity: 0.3 });
+          page.drawText(`VIGENTE - Destino: ${area} (${custodio}) - ${new Date().toLocaleDateString()}`, { x: 40, y: 25, size: 9, color: rgb(0.5, 0, 0) });
+        });
+
+        const pdfBytesModified = await pdfDoc.save();
+        const blob = new Blob([pdfBytesModified], { type: 'application/pdf' });
+        const blobUrl = URL.createObjectURL(blob);
+
+        const nextNum = window.cachedCopias.length + 1;
+        window.cachedCopias.unshift({ codigo: `COP-${doc.codigo}-C0${nextNum}`, doc: `${doc.codigo} v${doc.version}`, area: area, custodio: custodio });
+
+        window.open(blobUrl, '_blank');
+        window.toggleModal('modalEmitirCopia', false);
+        window.renderAllData();
+      } catch (err) {
+        console.error(err); alert("Error al procesar la inyección PDF con la librería externa.");
+      } finally {
+        btn.innerText = "Generar e Imprimir"; btn.disabled = false;
+      }
+    };
+
+    window.abrirModalNuevoDoc = function() {
+      document.getElementById('createDocFechaAprob').value = new Date().toISOString().split('T')[0];
+      const unAno = new Date(); unAno.setFullYear(unAno.getFullYear() + 2);
+      document.getElementById('createDocFechaVenc').value = unAno.toISOString().split('T')[0];
+      document.getElementById('createDocFile').value = '';
+      window.toggleModal('modalDoc', true);
+    };
+
+    window.guardarNuevoDocumento = function() {
+      const title = document.getElementById('createDocTitle').value;
+      const code = document.getElementById('createDocCode').value.toUpperCase();
+      const ver = document.getElementById('createDocVer').value;
+      const fechaAprob = document.getElementById('createDocFechaAprob').value;
+      const fechaVenc = document.getElementById('createDocFechaVenc').value;
+      const procesoId = document.getElementById('createDocProcesoSelect').value;
+      const fileInput = document.getElementById('createDocFile');
+
+      const proc = window.cachedProcesos.find(p => p.id === procesoId);
+      if (!title || !code || !ver || !proc) { alert("Complete los campos obligatorios y seleccione un proceso GxP."); return; }
+
+      let fileUrl = 'https://pdfobject.com/pdf/sample.pdf';
+      if (fileInput.files && fileInput.files[0]) {
+        fileUrl = URL.createObjectURL(fileInput.files[0]);
+      }
+
+      window.cachedDocs.push({
+        id: `doc_${Date.now()}`, codigo: code, titulo: title, version: ver, estado: 'PROCESO', fase: 'Elaboración', procesoId: procesoId, areaId: proc.areaId, fechaAprob: fechaAprob, fechaVenc: fechaVenc, archivo_url: fileUrl, motivo_cambio: 'Creación inicial'
+      });
+
+      window.registrarAuditTrail(window.activeGxpUser.correo, 'CREATE_DOC', `Creación de borrador documental ${code} v${ver} con archivo adjunto amarrado al proceso ${proc.nombre}`);
+      alert("Documento creado en estado Borrador con archivo adjunto.");
+      window.toggleModal('modalDoc', false);
+      window.renderAllData();
+    };
+
+    window.abrirModalNuevaVersion = function() {
+      const select = document.getElementById('versionDocSelect');
+      const vigentes = window.cachedDocs.filter(d => d.estado === 'VIGENTE');
+      select.innerHTML = vigentes.map(d => `<option value="${d.id}">${d.codigo} v${d.version} - ${d.titulo}</option>`).join('');
+      document.getElementById('verNewFile').value = '';
+      window.cargarDatosVersionBase();
+      window.toggleModal('modalVersion', true);
+    };
+
+    window.cargarDatosVersionBase = function() {
+      const baseId = document.getElementById('versionDocSelect').value;
+      const doc = window.cachedDocs.find(x => x.id === baseId);
+      if (doc) {
+        document.getElementById('verNewTitle').value = doc.titulo;
+        document.getElementById('verNewCode').value = doc.codigo;
+        const vParts = doc.version.split('.');
+        document.getElementById('verNewNumber').value = (parseInt(vParts[0]) || 1) + '.0';
+      }
+    };
+
+    window.guardarNuevaVersion = function() {
+      const baseId = document.getElementById('versionDocSelect').value;
+      const newTitle = document.getElementById('verNewTitle').value;
+      const newVer = document.getElementById('verNewNumber').value;
+      const reason = document.getElementById('verChangeReason').value;
+      const fileInput = document.getElementById('verNewFile');
+
+      if(!reason) { alert("Justificación de cambio obligatoria (Control de Cambios GxP)."); return; }
+
+      const docIndex = window.cachedDocs.findIndex(x => x.id === baseId);
+      if(docIndex === -1) return;
+      const oldDoc = window.cachedDocs[docIndex];
+
+      let fileUrl = oldDoc.archivo_url;
+      if (fileInput.files && fileInput.files[0]) {
+        fileUrl = URL.createObjectURL(fileInput.files[0]);
+      }
+
+      window.cachedObsoletos.unshift({
+        id: oldDoc.id, codigo: oldDoc.codigo, titulo: oldDoc.titulo, version: oldDoc.version, estado: 'OBSOLETO', motivo_cambio: reason, archivo_url: oldDoc.archivo_url
+      });
+
+      window.cachedDocs.push({
+        id: `doc_${Date.now()}`, codigo: oldDoc.codigo, titulo: newTitle, version: newVer, estado: 'PROCESO', fase: 'Elaboración', procesoId: oldDoc.procesoId, areaId: oldDoc.areaId, fechaAprob: new Date().toISOString().split('T')[0], fechaVenc: oldDoc.fechaVenc, archivo_url: fileUrl, motivo_cambio: reason
+      });
+
+      window.cachedDocs.splice(docIndex, 1);
+      window.registrarAuditTrail(window.activeGxpUser.correo, 'NEW_VERSION', `Generación de versión v${newVer} para ${oldDoc.codigo} con archivo actualizado.`);
+      alert(`Versión v${newVer} en flujo. La versión anterior pasó a Obsoletos.`);
+      window.toggleModal('modalVersion', false);
+      window.renderAllData();
+    };
+
+    // LISTENERS INICIALES AL CARGAR EL DOM
+    document.addEventListener('DOMContentLoaded', () => {
+      const passInput = document.getElementById('loginPassword');
+      const emailInput = document.getElementById('loginEmail');
+      
+      if(passInput) {
+        passInput.addEventListener('keypress', function (e) {
+          if (e.key === 'Enter') { window.ejecutarLoginPrincipal(); }
+        });
+      }
+      if(emailInput) {
+        emailInput.addEventListener('keypress', function (e) {
+          if (e.key === 'Enter') { document.getElementById('loginPassword').focus(); }
+        });
+      }
+    });
+
+  </script>
+</body>
+</html>
