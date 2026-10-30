@@ -201,10 +201,9 @@
           </div>
         </div>
 
-        <div id="configsub-empleados" class="config-subtab-content active space-y-3 text-xs">
+        <div id="configsub-empleados" class="config-subtab-content space-y-3 text-xs">
           <div class="flex justify-between items-center">
             <h3 class="font-bold text-slate-800">Directorio Maestro de Empleados</h3>
-            <!-- BOTÓN CORREGIDO Y ASEGURADO -->
             <button onclick="window.abrirModalEmpleado()" class="bg-slate-800 text-white px-3 py-1.5 rounded font-bold shadow cursor-pointer hover:bg-slate-700 transition">+ Registrar Empleado</button>
           </div>
           <table class="w-full border-collapse text-left">
@@ -213,19 +212,19 @@
           </table>
         </div>
 
-        <div id="configsub-roles" class="config-subtab-content space-y-3 text-xs">
-          <h3 class="font-bold">Roles del Sistema</h3>
+        <div id="configsub-roles" class="config-subtab-content active space-y-3 text-xs">
+          <h3 class="font-bold text-slate-800">Roles del Sistema</h3>
           <table class="w-full border-collapse text-left">
             <thead><tr class="bg-slate-100 border font-mono"><th class="p-2 border">ID Rol</th><th class="p-2 border">Nombre del Rol</th><th class="p-2 border">Descripción</th></tr></thead>
-            <tbody id="tablaRolesConfig" class="divide-y"></tbody>
+            <tbody id="tablaRolesConfig" class="divide-y bg-white"></tbody>
           </table>
         </div>
 
         <div id="configsub-matriz" class="config-subtab-content space-y-3 text-xs">
-          <h3 class="font-bold">Matriz de Permisos</h3>
+          <h3 class="font-bold text-slate-800">Matriz de Permisos</h3>
           <table class="w-full border-collapse text-center">
             <thead><tr class="bg-slate-100 border font-mono"><th class="p-2 border text-left">Rol del Sistema</th><th class="p-2 border">Lectura</th><th class="p-2 border">Creación / Edición</th><th class="p-2 border">Revisión</th><th class="p-2 border">Aprobación / Firma</th><th class="p-2 border">Administración</th></tr></thead>
-            <tbody id="tablaMatrizConfig" class="divide-y font-mono"></tbody>
+            <tbody id="tablaMatrizConfig" class="divide-y font-mono bg-white"></tbody>
           </table>
         </div>
 
@@ -437,8 +436,8 @@
   </div>
 
   <script>
-    // CAMBIO DE CLAVE PARA BORRAR CACHÉ CORRUPTO Y FORZAR REINICIO SEGURO
-    const DB_KEY = 'pharmor_eqms_db_v3';
+    // NUEVA CLAVE v4: RESTAURA TODOS LOS ROLES GxP FALTANTES DE MANERA DEFINITIVA
+    const DB_KEY = 'pharmor_eqms_db_v4';
 
     window.saveData = function() {
       const dbState = {
@@ -460,19 +459,37 @@
           window.cachedDocs = dbState.docs || []; window.cachedCopias = dbState.copias || [];
           window.cachedObsoletos = dbState.obsoletos || []; window.auditTrailLogs = dbState.audit || [];
         } else {
-          throw new Error("Nueva Versión Limpia");
+          throw new Error("Forzar Carga Completa v4");
         }
       } catch(e) {
-        // Datos Iniciales por defecto a prueba de fallos
+        // DATOS INICIALES GxP COMPLETOS (ROLES RESTAURADOS)
         window.cachedAreas = [ { id: 'ar_qa', nombre: 'Aseguramiento de Calidad (QA)' }, { id: 'ar_qc', nombre: 'Control de Calidad (QC)' }, { id: 'ar_prod', nombre: 'Planta de Producción' } ];
         window.cachedProcesos = [ { id: 'pr_gestion', nombre: 'Gestión de Aseguramiento', areaId: 'ar_qa' } ];
-        window.cachedRoles = [ { id: 'rol_admin', nombre: 'QA Manager', desc: 'Admin' }, { id: 'rol_viewer', nombre: 'Viewer', desc: 'Lectura' } ];
-        window.cachedMatrizPermisos = { 'rol_admin': { lectura: true, crearEdicion: true, revision: true, aprobacionFirma: true, administracion: true }, 'rol_viewer': { lectura: true, crearEdicion: false, revision: false, aprobacionFirma: false, administracion: false } };
+        
+        // --- AQUÍ ESTÁ LA CORRECCIÓN DE LA REGRESIÓN: TODOS LOS ROLES VUELVEN A EXISTIR ---
+        window.cachedRoles = [ 
+          { id: 'rol_admin', nombre: 'Administrador (QA Manager)', desc: 'Acceso total y configuración GxP' },
+          { id: 'rol_autor', nombre: 'Creador / Autor', desc: 'Elaboración y edición de documentos' },
+          { id: 'rol_revisor', nombre: 'Revisor Técnico', desc: 'Revisión técnica en flujo documental' },
+          { id: 'rol_aprobador', nombre: 'Aprobador Final', desc: 'Aprobación y firma electrónica (Part 11)' },
+          { id: 'rol_emisor', nombre: 'Control de Documentos', desc: 'Emisión de copias controladas' },
+          { id: 'rol_viewer', nombre: 'Lector / Consulta', desc: 'Solo lectura de documentos vigentes' } 
+        ];
+
+        window.cachedMatrizPermisos = { 
+          'rol_admin': { lectura: true, crearEdicion: true, revision: true, aprobacionFirma: true, administracion: true },
+          'rol_autor': { lectura: true, crearEdicion: true, revision: false, aprobacionFirma: false, administracion: false },
+          'rol_revisor': { lectura: true, crearEdicion: false, revision: true, aprobacionFirma: false, administracion: false },
+          'rol_aprobador': { lectura: true, crearEdicion: false, revision: false, aprobacionFirma: true, administracion: false },
+          'rol_emisor': { lectura: true, crearEdicion: false, revision: false, aprobacionFirma: false, administracion: true },
+          'rol_viewer': { lectura: true, crearEdicion: false, revision: false, aprobacionFirma: false, administracion: false } 
+        };
+
         window.cachedEmpleados = [ { id: 1, nombres: 'Johan S.', apellidos: 'Aguilar', cargo: 'QA Lead', correo: 'j.aguilar@pharmor.com.co', areaId: 'ar_qa', estado: 'Activo' } ];
         window.cachedUsuarios = [ { id: 1, empleadoId: 1, correo: 'j.aguilar@pharmor.com.co', password: '123', rolesIds: ['rol_admin'], areasAsignadas: ['ar_qa', 'ar_qc', 'ar_prod'], estado: 'Activo' } ];
         window.cachedDocs = [ { id: '1', codigo: 'PH-GPD-F0-01', titulo: 'Lista de Chequeo Batch', version: '2.0', estado: 'VIGENTE', fase: 'Aprobado', procesoId: 'pr_gestion', areaId: 'ar_qa', fechaAprob: '2025-10-15', fechaVenc: '2027-10-15', archivo_url: 'https://pdfobject.com/pdf/sample.pdf', motivo_cambio: 'Inicial' } ];
         window.cachedCopias = []; window.cachedObsoletos = [];
-        window.auditTrailLogs = [ { fecha: new Date().toISOString().replace('T', ' ').substring(0, 19), usuario: 'SYSTEM', accion: 'INIT', detalle: 'Base de datos inicializada.' } ];
+        window.auditTrailLogs = [ { fecha: new Date().toISOString().replace('T', ' ').substring(0, 19), usuario: 'SYSTEM', accion: 'INIT', detalle: 'Matriz de Permisos y Roles restaurada exitosamente.' } ];
         window.saveData();
       }
     };
@@ -541,7 +558,7 @@
       if(auditDiv) auditDiv.innerHTML = window.auditTrailLogs.map(l => `[${l.fecha}] <strong>${l.usuario}</strong> [${l.accion}]: ${l.detalle}`).join('<br><hr class="border-slate-100">');
     };
 
-    // FUNCIONES RESTAURADAS
+    // FUNCIONES DOCUMENTALES
     window.exportarExcelAuditoria = function() {
       const vigentes = window.cachedDocs.filter(d => d.estado === 'VIGENTE');
       let htmlTabla = `<table><thead><tr><th>Código</th><th>Versión</th><th>Título del Documento</th><th>Proceso</th><th>Fecha de Aprobación</th><th>Fecha de Vencimiento</th><th>Estado GxP</th></tr></thead><tbody>`;
@@ -676,7 +693,6 @@
       window.saveData(); window.toggleModal('modalArea', false); window.renderAllData();
     };
 
-    // --- EL BOTÓN DE REGISTRAR EMPLEADO AHORA EJECUTA ESTO PERFECTAMENTE ---
     window.abrirModalEmpleado = function() { 
       document.getElementById('modalEmpTitle').innerText = 'Registrar Empleado en Directorio'; 
       document.getElementById('empEditIndex').value = '-1'; 
