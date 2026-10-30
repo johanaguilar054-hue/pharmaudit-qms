@@ -212,7 +212,7 @@
           </table>
         </div>
 
-        <div id="configsub-roles" class="config-subtab-content active space-y-3 text-xs">
+        <div id="configsub-roles" class="config-subtab-content space-y-3 text-xs">
           <h3 class="font-bold text-slate-800">Roles del Sistema</h3>
           <table class="w-full border-collapse text-left">
             <thead><tr class="bg-slate-100 border font-mono"><th class="p-2 border">ID Rol</th><th class="p-2 border">Nombre del Rol</th><th class="p-2 border">Descripción</th></tr></thead>
@@ -228,7 +228,7 @@
           </table>
         </div>
 
-        <div id="configsub-usuarios" class="config-subtab-content space-y-3 text-xs">
+        <div id="configsub-usuarios" class="config-subtab-content active space-y-3 text-xs">
           <div class="flex justify-between items-center">
             <h3 class="font-bold text-slate-800">Gestión de Usuarios GxP</h3>
             <button onclick="window.abrirModalUsuario()" class="bg-slate-800 text-white px-3 py-1.5 rounded font-bold shadow cursor-pointer hover:bg-slate-700 transition">+ Asignar Usuario GxP</button>
@@ -430,13 +430,12 @@
       <div><label class="block mb-1 font-semibold">Estado</label><select id="usrEstadoSelect" class="w-full p-2 border rounded font-bold"><option value="Activo">Activo</option><option value="Inactivo">Inactivo</option></select></div>
       <div class="flex justify-end space-x-2 pt-2 border-t">
         <button onclick="window.toggleModal('modalUsuario', false)" class="px-3 py-1.5 border rounded cursor-pointer">Cancelar</button>
-        <button onclick="window.guardarUsuarioCompleto()" class="px-4 py-1.5 bg-slate-800 text-white rounded font-bold shadow cursor-pointer">Guardar Usuario</button>
+        <button onclick="window.guardarUsuarioCompleto()" class="px-4 py-1.5 bg-slate-800 text-white rounded font-bold shadow cursor-pointer">Guardar Usuario & Notificar</button>
       </div>
     </div>
   </div>
 
   <script>
-    // NUEVA CLAVE v4: RESTAURA TODOS LOS ROLES GxP FALTANTES DE MANERA DEFINITIVA
     const DB_KEY = 'pharmor_eqms_db_v4';
 
     window.saveData = function() {
@@ -459,14 +458,12 @@
           window.cachedDocs = dbState.docs || []; window.cachedCopias = dbState.copias || [];
           window.cachedObsoletos = dbState.obsoletos || []; window.auditTrailLogs = dbState.audit || [];
         } else {
-          throw new Error("Forzar Carga Completa v4");
+          throw new Error("Carga Inicial");
         }
       } catch(e) {
-        // DATOS INICIALES GxP COMPLETOS (ROLES RESTAURADOS)
         window.cachedAreas = [ { id: 'ar_qa', nombre: 'Aseguramiento de Calidad (QA)' }, { id: 'ar_qc', nombre: 'Control de Calidad (QC)' }, { id: 'ar_prod', nombre: 'Planta de Producción' } ];
         window.cachedProcesos = [ { id: 'pr_gestion', nombre: 'Gestión de Aseguramiento', areaId: 'ar_qa' } ];
         
-        // --- AQUÍ ESTÁ LA CORRECCIÓN DE LA REGRESIÓN: TODOS LOS ROLES VUELVEN A EXISTIR ---
         window.cachedRoles = [ 
           { id: 'rol_admin', nombre: 'Administrador (QA Manager)', desc: 'Acceso total y configuración GxP' },
           { id: 'rol_autor', nombre: 'Creador / Autor', desc: 'Elaboración y edición de documentos' },
@@ -713,14 +710,50 @@
       window.saveData(); window.toggleModal('modalEmpleado', false); window.renderAllData();
     };
 
+    // --- NUEVA FUNCIONALIDAD: ENVÍO AUTOMÁTICO DE NOTIFICACIÓN DE CREDENCIALES ---
+    window.enviarNotificacionCredenciales = function(correoDestino, passwordAsignada) {
+      const enlacePagina = window.location.href.split('#')[0];
+      const asunto = encodeURIComponent("🛡️ PharmAudit ERP/QMS - Sus Credenciales de Acceso Asignadas");
+      const cuerpo = encodeURIComponent(
+        `Estimado(a) usuario(a),\n\n` +
+        `Se han asignado sus credenciales de acceso al portal de Gestión de Calidad PharmAudit ERP/QMS (Pharmor).\n\n` +
+        `Detalles de Ingreso:\n` +
+        `• Enlace del Portal: ${enlacePagina}\n` +
+        `• Usuario / Correo: ${correoDestino}\n` +
+        `• Contraseña Temporal: ${passwordAsignada}\n\n` +
+        `Por favor, ingrese al enlace, mantenga sus datos seguros bajo cumplimiento de la normativa 21 CFR Part 11 y cambie su clave si lo requiere.\n\n` +
+        `Atentamente,\n` +
+        `Equipo de Calidad GxP & Administración de Sistemas`
+      );
+
+      const mailtoUrl = `mailto:${correoDestino}?subject=${asunto}&body=${cuerpo}`;
+      
+      const a = document.createElement('a');
+      a.href = mailtoUrl;
+      a.target = '_blank';
+      a.click();
+
+      alert(`✅ Usuario guardado correctamente.\n\nSe ha abierto su gestor de correo predeterminado con el enlace (${enlacePagina}), el usuario (${correoDestino}) y la contraseña para ser notificado inmediatamente.`);
+    };
+
     window.abrirModalUsuario = function() { document.getElementById('modalUsrTitle').innerText = 'Asignar Nuevo Usuario'; document.getElementById('usrEditIndex').value = '-1'; document.getElementById('usrPasswordInput').value = '123'; document.getElementById('usrEstadoSelect').value = 'Activo'; window.poblarCheckboxesModalUsuario(['rol_viewer'], [window.cachedAreas[0].id]); window.toggleModal('modalUsuario', true); };
     window.abrirModalEditarUsuario = function(idx) { const usr = window.cachedUsuarios[idx]; document.getElementById('usrEditIndex').value = idx; document.getElementById('usrEmpSelect').value = usr.empleadoId; document.getElementById('usrCorreoInput').value = usr.correo; document.getElementById('usrPasswordInput').value = usr.password; document.getElementById('usrEstadoSelect').value = usr.estado; window.poblarCheckboxesModalUsuario(usr.rolesIds, usr.areasAsignadas); window.toggleModal('modalUsuario', true); };
     window.guardarUsuarioCompleto = function() {
       const editIdx = parseInt(document.getElementById('usrEditIndex').value);
       const data = { empleadoId: parseInt(document.getElementById('usrEmpSelect').value), correo: document.getElementById('usrCorreoInput').value, password: document.getElementById('usrPasswordInput').value, estado: document.getElementById('usrEstadoSelect').value, rolesIds: Array.from(document.querySelectorAll('input[name="chkRol"]:checked')).map(el => el.value), areasAsignadas: Array.from(document.querySelectorAll('input[name="chkArea"]:checked')).map(el => el.value) };
-      if(editIdx === -1) { window.cachedUsuarios.push({ id: Date.now(), ...data }); window.registrarAuditTrail(window.activeGxpUser.correo, 'CREATE_USER', `Creó usuario: ${data.correo}`); }
-      else { window.cachedUsuarios[editIdx] = { ...window.cachedUsuarios[editIdx], ...data }; window.registrarAuditTrail(window.activeGxpUser.correo, 'UPDATE_USER', `Editó usuario: ${data.correo}`); }
-      window.saveData(); window.toggleModal('modalUsuario', false); window.renderAllData();
+      if(editIdx === -1) { 
+        window.cachedUsuarios.push({ id: Date.now(), ...data }); 
+        window.registrarAuditTrail(window.activeGxpUser.correo, 'CREATE_USER', `Creó usuario: ${data.correo}`); 
+      } else { 
+        window.cachedUsuarios[editIdx] = { ...window.cachedUsuarios[editIdx], ...data }; 
+        window.registrarAuditTrail(window.activeGxpUser.correo, 'UPDATE_USER', `Editó usuario: ${data.correo}`); 
+      }
+      window.saveData(); 
+      window.toggleModal('modalUsuario', false); 
+      window.renderAllData();
+      
+      // Disparar la notificación de credenciales por correo
+      window.enviarNotificacionCredenciales(data.correo, data.password);
     };
 
     window.abrirModalProceso = function() { document.getElementById('modalProcesoTitle').innerText = 'Nuevo Proceso'; document.getElementById('procesoEditIndex').value = '-1'; document.getElementById('inputProcesoNombre').value = ''; window.toggleModal('modalProceso', true); };
