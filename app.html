@@ -436,6 +436,7 @@
   </div>
 
   <script>
+    // Mantenemos la llave V4 intacta para no borrar los datos funcionales que ya cargaste
     const DB_KEY = 'pharmor_eqms_db_v4';
 
     window.saveData = function() {
@@ -533,11 +534,23 @@
       return perms;
     };
     
+    // =========================================================================
+    // BUGFIX LORENA BERNAL: SANITIZACIÓN ROBUSTA DE LOGIN CON .TRIM()
+    // =========================================================================
     window.ejecutarLoginPrincipal = function() {
-      const email = document.getElementById('loginEmail').value.trim(); const pass = document.getElementById('loginPassword').value.trim();
-      const user = window.cachedUsuarios.find(u => u.correo.toLowerCase() === email.toLowerCase() && u.password === pass);
+      // Limpiamos los datos que el usuario ingresa en la pantalla de login
+      const email = document.getElementById('loginEmail').value.trim().toLowerCase(); 
+      const pass = document.getElementById('loginPassword').value.trim();
+      
+      // Limpiamos dinámicamente los datos que estaban guardados en la BD (por si se guardaron con espacios)
+      const user = window.cachedUsuarios.find(u => 
+        (u.correo || '').trim().toLowerCase() === email && 
+        (u.password || '').trim() === pass
+      );
+      
       if (!user) { alert("Credenciales incorrectas."); return; }
       if (user.estado !== 'Activo') { alert("Acceso denegado: Usuario INACTIVO."); return; }
+      
       window.activeGxpUser = user; window.registrarAuditTrail(user.correo, 'LOGIN', 'Inicio de sesión exitoso.');
       document.getElementById('view-login').classList.add('hidden'); document.getElementById('app-portal').classList.remove('hidden');
       const emp = window.cachedEmpleados.find(e => e.id === user.empleadoId);
@@ -702,15 +715,23 @@
     };
 
     window.abrirModalEditarEmpleado = function(idx) { const emp = window.cachedEmpleados[idx]; document.getElementById('empEditIndex').value = idx; document.getElementById('empNombres').value = emp.nombres; document.getElementById('empApellidos').value = emp.apellidos; document.getElementById('empCargo').value = emp.cargo; document.getElementById('empCorreo').value = emp.correo; document.getElementById('empAreaSelect').value = emp.areaId; document.getElementById('empEstadoSelect').value = emp.estado; window.toggleModal('modalEmpleado', true); };
+    
+    // SANITIZAMOS LOS DATOS DEL EMPLEADO
     window.guardarEmpleadoCompleto = function() {
       const editIdx = parseInt(document.getElementById('empEditIndex').value);
-      const data = { nombres: document.getElementById('empNombres').value, apellidos: document.getElementById('empApellidos').value, cargo: document.getElementById('empCargo').value, correo: document.getElementById('empCorreo').value, areaId: document.getElementById('empAreaSelect').value, estado: document.getElementById('empEstadoSelect').value };
+      const data = { 
+        nombres: document.getElementById('empNombres').value.trim(), 
+        apellidos: document.getElementById('empApellidos').value.trim(), 
+        cargo: document.getElementById('empCargo').value.trim(), 
+        correo: document.getElementById('empCorreo').value.trim(), 
+        areaId: document.getElementById('empAreaSelect').value, 
+        estado: document.getElementById('empEstadoSelect').value 
+      };
       if(editIdx === -1) { window.cachedEmpleados.push({ id: Date.now(), ...data }); window.registrarAuditTrail(window.activeGxpUser.correo, 'CREATE_EMP', `Creó empleado: ${data.correo}`); }
       else { window.cachedEmpleados[editIdx] = { ...window.cachedEmpleados[editIdx], ...data }; window.registrarAuditTrail(window.activeGxpUser.correo, 'UPDATE_EMP', `Editó empleado: ${data.correo}`); }
       window.saveData(); window.toggleModal('modalEmpleado', false); window.renderAllData();
     };
 
-    // --- NUEVA FUNCIONALIDAD: ENVÍO AUTOMÁTICO DE NOTIFICACIÓN DE CREDENCIALES ---
     window.enviarNotificacionCredenciales = function(correoDestino, passwordAsignada) {
       const enlacePagina = window.location.href.split('#')[0];
       const asunto = encodeURIComponent("🛡️ PharmAudit ERP/QMS - Sus Credenciales de Acceso Asignadas");
@@ -738,9 +759,18 @@
 
     window.abrirModalUsuario = function() { document.getElementById('modalUsrTitle').innerText = 'Asignar Nuevo Usuario'; document.getElementById('usrEditIndex').value = '-1'; document.getElementById('usrPasswordInput').value = '123'; document.getElementById('usrEstadoSelect').value = 'Activo'; window.poblarCheckboxesModalUsuario(['rol_viewer'], [window.cachedAreas[0].id]); window.toggleModal('modalUsuario', true); };
     window.abrirModalEditarUsuario = function(idx) { const usr = window.cachedUsuarios[idx]; document.getElementById('usrEditIndex').value = idx; document.getElementById('usrEmpSelect').value = usr.empleadoId; document.getElementById('usrCorreoInput').value = usr.correo; document.getElementById('usrPasswordInput').value = usr.password; document.getElementById('usrEstadoSelect').value = usr.estado; window.poblarCheckboxesModalUsuario(usr.rolesIds, usr.areasAsignadas); window.toggleModal('modalUsuario', true); };
+    
+    // SANITIZAMOS LOS DATOS DEL USUARIO
     window.guardarUsuarioCompleto = function() {
       const editIdx = parseInt(document.getElementById('usrEditIndex').value);
-      const data = { empleadoId: parseInt(document.getElementById('usrEmpSelect').value), correo: document.getElementById('usrCorreoInput').value, password: document.getElementById('usrPasswordInput').value, estado: document.getElementById('usrEstadoSelect').value, rolesIds: Array.from(document.querySelectorAll('input[name="chkRol"]:checked')).map(el => el.value), areasAsignadas: Array.from(document.querySelectorAll('input[name="chkArea"]:checked')).map(el => el.value) };
+      const data = { 
+        empleadoId: parseInt(document.getElementById('usrEmpSelect').value), 
+        correo: document.getElementById('usrCorreoInput').value.trim(), 
+        password: document.getElementById('usrPasswordInput').value.trim(), 
+        estado: document.getElementById('usrEstadoSelect').value, 
+        rolesIds: Array.from(document.querySelectorAll('input[name="chkRol"]:checked')).map(el => el.value), 
+        areasAsignadas: Array.from(document.querySelectorAll('input[name="chkArea"]:checked')).map(el => el.value) 
+      };
       if(editIdx === -1) { 
         window.cachedUsuarios.push({ id: Date.now(), ...data }); 
         window.registrarAuditTrail(window.activeGxpUser.correo, 'CREATE_USER', `Creó usuario: ${data.correo}`); 
@@ -752,7 +782,6 @@
       window.toggleModal('modalUsuario', false); 
       window.renderAllData();
       
-      // Disparar la notificación de credenciales por correo
       window.enviarNotificacionCredenciales(data.correo, data.password);
     };
 
