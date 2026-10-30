@@ -5,8 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PharmAudit ERP / QMS - Pharmor</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Supabase para base de datos en la nube -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <!-- PDF-Lib para inyección binaria de marcas de agua en PDFs -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
   
@@ -20,7 +18,6 @@
     .config-subtab-content.active { display: block; }
     .modal-backdrop { display: none; }
     .modal-backdrop.active { display: flex; }
-    .read-only-shield { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 50; background: transparent; }
   </style>
 </head>
 <body class="bg-slate-50 text-slate-800 p-4">
@@ -436,15 +433,16 @@
   </div>
 
   <script>
-    // Llave de respaldo en memoria local
-    const DB_KEY = 'pharmor_eqms_db_v4';
-
     // =========================================================================
-    // NÚCLEO HÍBRIDO DE DATOS: SUPABASE + RESPALDO LOCAL
+    // NÚCLEO ESTRICTO EN LA NUBE (CERO LOCALSTORAGE - 100% SUPABASE REST API)
     // =========================================================================
-    const supabaseUrl = 'https://wmtvlxjzzwwhtybccrpe.supabase.co';
-    const supabaseKey = 'sb_publishable_i4A7rEjukekMlaCKjXWaNA_ze54EVjl';
-    const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+    const SUPABASE_URL = 'https://wmtvlxjzzwwhtybccrpe.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_i4A7rEjukekMlaCKjXWaNA_ze54EVjl';
+    const HEADERS = {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Content-Type': 'application/json'
+    };
 
     window.saveData = async function() {
       const dbState = {
@@ -453,14 +451,21 @@
         obsoletos: window.cachedObsoletos, audit: window.auditTrailLogs
       };
       
-      // 1. SIEMPRE guardar en LocalStorage (Evita que pierdas datos si se cae el internet)
-      localStorage.setItem(DB_KEY, JSON.stringify(dbState));
-
-      // 2. Empujar a la Nube (Supabase)
       try {
-        await supabase.from('erp_state').upsert({ id: 1, app_data: dbState });
+        // Petición REST Nativa (POST / Upsert)
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/erp_state`, {
+          method: 'POST',
+          headers: { ...HEADERS, 'Prefer': 'resolution=merge-duplicates' },
+          body: JSON.stringify({ id: 1, app_data: dbState })
+        });
+        
+        if (!response.ok) {
+           console.error("Fallo al guardar en la nube", response.status);
+           alert("❌ Error de Nube: Los cambios no se guardaron correctamente.");
+        }
       } catch (err) {
-        console.warn("Aviso GxP: La sincronización en la nube falló. Los datos se guardaron localmente.", err);
+        console.error("Error crítico de red al guardar:", err);
+        alert("❌ Error de Conexión: Revisa tu internet, no se pudo guardar en Supabase.");
       }
     };
 
@@ -476,62 +481,43 @@
 
     window.loadData = async function() {
       try {
-        // PASO 1: INTENTAR CARGAR DESDE LA NUBE
-        // Usamos .maybeSingle() para que no se asuste si la tabla está recién creada (0 filas)
-        const { data, error } = await supabase.from('erp_state').select('app_data').eq('id', 1).maybeSingle();
-        if (error) throw error; 
+        // Petición REST Nativa (GET) - Bypass completo a cualquier bloqueo de librerías
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/erp_state?id=eq.1&select=app_data`, {
+          method: 'GET',
+          headers: HEADERS
+        });
+        
+        if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
+        
+        const json = await response.json();
 
-        if (data && data.app_data && Object.keys(data.app_data).length > 0) {
+        if (json && json.length > 0 && json[0].app_data) {
           // EXITO: La nube tiene datos, los cargamos.
-          const dbState = data.app_data;
+          const dbState = json[0].app_data;
           window.cachedAreas = dbState.areas || []; window.cachedProcesos = dbState.procesos || [];
           window.cachedRoles = dbState.roles || []; window.cachedMatrizPermisos = dbState.matriz || {};
           window.cachedEmpleados = dbState.empleados || []; window.cachedUsuarios = dbState.usuarios || [];
           window.cachedDocs = dbState.docs || []; window.cachedCopias = dbState.copias || [];
           window.cachedObsoletos = dbState.obsoletos || []; window.auditTrailLogs = dbState.audit || [];
-          console.log("✅ Conectado y Sincronizado a la Nube global.");
-          window.activarBotonLogin();
-          return; 
+          console.log("✅ Datos descargados de Supabase.");
         } else {
-          // LA NUBE ESTÁ VACÍA (Primera vez que se usa Supabase)
-          console.log("⚠️ Nube inicializada vacía. Subiendo configuración GxP...");
+          // LA NUBE ESTÁ VACÍA (Primera vez) - Creamos el molde inicial
+          console.log("⚠️ Nube vacía. Inicializando Base de Datos GxP...");
+          window.cachedAreas = [ { id: 'ar_qa', nombre: 'Aseguramiento de Calidad (QA)' }, { id: 'ar_qc', nombre: 'Control de Calidad (QC)' }, { id: 'ar_prod', nombre: 'Planta de Producción' } ];
+          window.cachedProcesos = [ { id: 'pr_gestion', nombre: 'Gestión de Aseguramiento', areaId: 'ar_qa' } ];
+          window.cachedRoles = [ { id: 'rol_admin', nombre: 'Administrador', desc: 'Acceso total y configuración GxP' }, { id: 'rol_viewer', nombre: 'Lector / Consulta', desc: 'Solo lectura de documentos vigentes' } ];
+          window.cachedMatrizPermisos = { 'rol_admin': { lectura: true, crearEdicion: true, revision: true, aprobacionFirma: true, administracion: true }, 'rol_viewer': { lectura: true, crearEdicion: false, revision: false, aprobacionFirma: false, administracion: false } };
+          window.cachedEmpleados = [ { id: 1, nombres: 'Johan S.', apellidos: 'Aguilar', cargo: 'QA Lead', correo: 'j.aguilar@pharmor.com.co', areaId: 'ar_qa', estado: 'Activo' } ];
+          window.cachedUsuarios = [ { id: 1, empleadoId: 1, correo: 'j.aguilar@pharmor.com.co', password: '123', rolesIds: ['rol_admin'], areasAsignadas: ['ar_qa', 'ar_qc', 'ar_prod'], estado: 'Activo' } ];
+          window.cachedDocs = []; window.cachedCopias = []; window.cachedObsoletos = []; window.auditTrailLogs = [];
           
-          // Rescatamos lo que tengas en el PC local para no perder a Lorena, o creamos la semilla
-          const dbStr = localStorage.getItem(DB_KEY);
-          if (dbStr) {
-              const dbState = JSON.parse(dbStr);
-              window.cachedAreas = dbState.areas || []; window.cachedProcesos = dbState.procesos || [];
-              window.cachedRoles = dbState.roles || []; window.cachedMatrizPermisos = dbState.matriz || {};
-              window.cachedEmpleados = dbState.empleados || []; window.cachedUsuarios = dbState.usuarios || [];
-              window.cachedDocs = dbState.docs || []; window.cachedCopias = dbState.copias || [];
-              window.cachedObsoletos = dbState.obsoletos || []; window.auditTrailLogs = dbState.audit || [];
-          } else {
-              window.cachedAreas = [ { id: 'ar_qa', nombre: 'Aseguramiento de Calidad (QA)' }, { id: 'ar_qc', nombre: 'Control de Calidad (QC)' }, { id: 'ar_prod', nombre: 'Planta de Producción' } ];
-              window.cachedProcesos = [ { id: 'pr_gestion', nombre: 'Gestión de Aseguramiento', areaId: 'ar_qa' } ];
-              window.cachedRoles = [ { id: 'rol_admin', nombre: 'Administrador', desc: 'Acceso total y configuración GxP' }, { id: 'rol_viewer', nombre: 'Lector / Consulta', desc: 'Solo lectura de documentos vigentes' } ];
-              window.cachedMatrizPermisos = { 'rol_admin': { lectura: true, crearEdicion: true, revision: true, aprobacionFirma: true, administracion: true }, 'rol_viewer': { lectura: true, crearEdicion: false, revision: false, aprobacionFirma: false, administracion: false } };
-              window.cachedEmpleados = [ { id: 1, nombres: 'Johan S.', apellidos: 'Aguilar', cargo: 'QA Lead', correo: 'j.aguilar@pharmor.com.co', areaId: 'ar_qa', estado: 'Activo' } ];
-              window.cachedUsuarios = [ { id: 1, empleadoId: 1, correo: 'j.aguilar@pharmor.com.co', password: '123', rolesIds: ['rol_admin'], areasAsignadas: ['ar_qa', 'ar_qc', 'ar_prod'], estado: 'Activo' } ];
-              window.cachedDocs = []; window.cachedCopias = []; window.cachedObsoletos = []; window.auditTrailLogs = [];
-          }
-          
-          await window.saveData(); // Esto sube los datos a la nube por primera vez
-          window.activarBotonLogin();
-          return;
+          await window.saveData(); // Empujamos esta semilla inicial a la nube
         }
       } catch(e) {
-        console.error("❌ Falla crítica de conexión a Supabase. Activando Modo Offline (LocalStorage)...", e);
-        
-        // PASO 2: RESPALDO LOCAL SOLO COMO EMERGENCIA
-        const dbStr = localStorage.getItem(DB_KEY);
-        if(dbStr) {
-          const dbState = JSON.parse(dbStr);
-          window.cachedAreas = dbState.areas || []; window.cachedProcesos = dbState.procesos || [];
-          window.cachedRoles = dbState.roles || []; window.cachedMatrizPermisos = dbState.matriz || {};
-          window.cachedEmpleados = dbState.empleados || []; window.cachedUsuarios = dbState.usuarios || [];
-          window.cachedDocs = dbState.docs || []; window.cachedCopias = dbState.copias || [];
-          window.cachedObsoletos = dbState.obsoletos || []; window.auditTrailLogs = dbState.audit || [];
-        }
+        console.error("❌ Fallo crítico conectando a la Nube:", e);
+        alert("CRÍTICO: No se pudo conectar a la base de datos en Supabase.\n\nEl sistema ha bloqueado el acceso para evitar corrupción de datos (Cumplimiento ALCOA+).");
+      } finally {
+        // Siempre desbloqueamos el botón, así si hay error, el usuario al menos puede intentarlo y ver el mensaje de error de credenciales.
         window.activarBotonLogin();
       }
     };
@@ -584,6 +570,11 @@
       const email = document.getElementById('loginEmail').value.trim().toLowerCase(); 
       const pass = document.getElementById('loginPassword').value.trim();
       
+      if (!window.cachedUsuarios || window.cachedUsuarios.length === 0) {
+        alert("La base de datos en la nube está vacía o no se cargó correctamente.");
+        return;
+      }
+
       const user = window.cachedUsuarios.find(u => 
         (u.correo || '').trim().toLowerCase() === email && 
         (u.password || '').trim() === pass
@@ -594,7 +585,7 @@
         if (empleadoSinUsuario) {
             alert(`⚠️ ALERTA DEL SISTEMA GxP:\n\nEl correo ${email} pertenece a un Empleado registrado, pero el administrador aún NO le ha asignado una cuenta de "Usuario GxP" para iniciar sesión.\n\nPide al Administrador que vaya a:\nConfiguraciones GxP > 5. Gestión de Usuarios > "+ Asignar Usuario GxP".`);
         } else {
-            alert("Credenciales incorrectas o usuario no registrado.");
+            alert("Credenciales incorrectas o usuario no registrado en la Nube.");
         }
         return; 
       }
@@ -799,7 +790,7 @@
       );
       const mailtoUrl = `mailto:${correoDestino}?subject=${asunto}&body=${cuerpo}`;
       const a = document.createElement('a'); a.href = mailtoUrl; a.target = '_blank'; a.click();
-      alert(`✅ Usuario guardado correctamente.\n\nSe ha abierto su gestor de correo predeterminado con el enlace (${enlacePagina}), el usuario (${correoDestino}) y la contraseña para ser notificado inmediatamente.`);
+      alert(`✅ Usuario guardado correctamente en la Nube.\n\nSe ha abierto tu gestor de correo predeterminado para que le envíes sus datos.`);
     };
 
     window.abrirModalUsuario = function() { document.getElementById('modalUsrTitle').innerText = 'Asignar Nuevo Usuario'; document.getElementById('usrEditIndex').value = '-1'; document.getElementById('usrPasswordInput').value = '123'; document.getElementById('usrEstadoSelect').value = 'Activo'; window.poblarCheckboxesModalUsuario(['rol_viewer'], [window.cachedAreas[0].id]); window.toggleModal('modalUsuario', true); };
