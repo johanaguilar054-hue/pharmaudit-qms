@@ -218,7 +218,7 @@
         </div>
 
         <div id="configsub-matriz" class="config-subtab-content space-y-3 text-xs">
-          <h3 class="font-bold text-slate-800">Matriz de Permisos</h3>
+          <h3 class="font-bold text-slate-800">Matriz de Permisos GxP</h3>
           <table class="w-full border-collapse text-center">
             <thead><tr class="bg-slate-100 border font-mono"><th class="p-2 border text-left">Rol del Sistema</th><th class="p-2 border">Lectura</th><th class="p-2 border">Creación / Edición</th><th class="p-2 border">Revisión</th><th class="p-2 border">Aprobación / Firma</th><th class="p-2 border">Administración</th></tr></thead>
             <tbody id="tablaMatrizConfig" class="divide-y font-mono bg-white"></tbody>
@@ -428,7 +428,17 @@
       'Content-Type': 'application/json'
     };
 
-    // 1. INICIALIZACIÓN DE SEMILLAS EN MEMORIA LOCAL (Garantiza 6 roles GxP)
+    // FUNCIÓN DE CONVERSIÓN DE ARCHIVOS A BASE64 DATA URL (Persistencia Nube GxP)
+    window.readFileAsBase64 = function(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = (e) => reject(e);
+        reader.readAsDataURL(file);
+      });
+    };
+
+    // MATRIZ Y VALORES INICIALES GXP-COMPLIANT
     window.cachedAreas = [ { id: 'ar_qa', nombre: 'Aseguramiento de Calidad (QA)' }, { id: 'ar_qc', nombre: 'Control de Calidad (QC)' }, { id: 'ar_prod', nombre: 'Planta de Producción' } ];
     window.cachedProcesos = [ { id: 'pr_gestion', nombre: 'Gestión de Aseguramiento', areaId: 'ar_qa' } ];
     
@@ -471,7 +481,6 @@
       }
     };
 
-    // ACTIVACIÓN DE BOTÓN INDESTRUCTIBLE
     window.activarBotonLogin = function() {
       const btn = document.getElementById('btnLogin');
       if (btn) {
@@ -496,7 +505,8 @@
             if (dbState.areas) window.cachedAreas = dbState.areas;
             if (dbState.procesos) window.cachedProcesos = dbState.procesos;
             if (dbState.roles && dbState.roles.length >= 6) window.cachedRoles = dbState.roles;
-            if (dbState.matriz) window.cachedMatrizPermisos = dbState.matriz;
+            // Asegurar que la matriz mantenga o aplique las reglas GxP
+            window.cachedMatrizPermisos = dbState.matriz || window.cachedMatrizPermisos;
             if (dbState.empleados) window.cachedEmpleados = dbState.empleados;
             if (dbState.usuarios) window.cachedUsuarios = dbState.usuarios;
             if (dbState.docs) window.cachedDocs = dbState.docs;
@@ -512,7 +522,6 @@
       }
     };
 
-    // Disparar carga de nube y seguro contra congelamientos
     window.loadData();
     setTimeout(window.activarBotonLogin, 1000);
 
@@ -555,12 +564,10 @@
       return perms;
     };
     
-    // INICIO DE SESIÓN CON BYPASS DE SUPERADMINISTRADOR INTACTO
     window.ejecutarLoginPrincipal = function() {
       const email = document.getElementById('loginEmail').value.trim().toLowerCase(); 
       const pass = document.getElementById('loginPassword').value.trim();
       
-      // RECUPERACIÓN / BYPASS MAESTRO (Entra sí o sí con 123)
       if (email === 'j.aguilar@pharmor.com.co' && (pass === '123' || pass === 'admin123')) {
         let usrData = (window.cachedUsuarios || []).find(u => (u.correo || '').trim().toLowerCase() === email);
         if (!usrData) {
@@ -665,7 +672,7 @@
       window.toggleModal('modalVersion', true);
     };
 
-    window.guardarNuevaVersion = function() {
+    window.guardarNuevaVersion = async function() {
       const baseId = document.getElementById('versionDocSelect').value;
       const newTitle = document.getElementById('verNewTitle').value;
       const newVer = document.getElementById('verNewNumber').value;
@@ -676,7 +683,13 @@
       if(docIndex === -1) return;
       const oldDoc = window.cachedDocs[docIndex];
       let fileUrl = oldDoc.archivo_url;
-      if (fileInput.files && fileInput.files[0]) { fileUrl = URL.createObjectURL(fileInput.files[0]); }
+      if (fileInput.files && fileInput.files[0]) {
+        try {
+          fileUrl = await window.readFileAsBase64(fileInput.files[0]);
+        } catch (e) {
+          console.error("Error al leer archivo PDF:", e);
+        }
+      }
       window.cachedObsoletos.unshift({ id: oldDoc.id, codigo: oldDoc.codigo, titulo: oldDoc.titulo, version: oldDoc.version, estado: 'OBSOLETO', motivo_cambio: reason, archivo_url: oldDoc.archivo_url });
       window.cachedDocs.push({ id: `doc_${Date.now()}`, codigo: oldDoc.codigo, titulo: newTitle, version: newVer, estado: 'PROCESO', fase: 'Elaboración', procesoId: oldDoc.procesoId, areaId: oldDoc.areaId, fechaAprob: new Date().toISOString().split('T')[0], fechaVenc: oldDoc.fechaVenc, archivo_url: fileUrl, motivo_cambio: reason });
       window.cachedDocs.splice(docIndex, 1);
@@ -852,10 +865,19 @@
     };
 
     window.abrirModalNuevoDoc = function() { document.getElementById('createDocFechaAprob').value = new Date().toISOString().split('T')[0]; const unAno = new Date(); unAno.setFullYear(unAno.getFullYear() + 2); document.getElementById('createDocFechaVenc').value = unAno.toISOString().split('T')[0]; document.getElementById('createDocFile').value = ''; window.toggleModal('modalDoc', true); };
-    window.guardarNuevoDocumento = function() {
+    
+    window.guardarNuevoDocumento = async function() {
       const fileInput = document.getElementById('createDocFile'); const docCode = document.getElementById('createDocCode').value.toUpperCase(); const procesoId = document.getElementById('createDocProcesoSelect').value; const proc = window.cachedProcesos.find(p=>p.id===procesoId);
       if(!docCode || !proc) { alert("Completa Código y selecciona un proceso."); return; }
-      let fileUrl = 'https://pdfobject.com/pdf/sample.pdf'; if (fileInput.files && fileInput.files[0]) { fileUrl = URL.createObjectURL(fileInput.files[0]); }
+      
+      let fileUrl = 'https://pdfobject.com/pdf/sample.pdf'; 
+      if (fileInput.files && fileInput.files[0]) { 
+        try {
+          fileUrl = await window.readFileAsBase64(fileInput.files[0]);
+        } catch(e) {
+          console.error("Error convirtiendo PDF a Base64:", e);
+        }
+      }
       const doc = { id: `doc_${Date.now()}`, codigo: docCode, titulo: document.getElementById('createDocTitle').value, version: document.getElementById('createDocVer').value, estado: 'PROCESO', fase: 'Elaboración', procesoId: procesoId, areaId: proc.areaId, fechaAprob: document.getElementById('createDocFechaAprob').value, fechaVenc: document.getElementById('createDocFechaVenc').value, archivo_url: fileUrl, motivo_cambio: 'Creación' };
       window.cachedDocs.push(doc); window.registrarAuditTrail(window.activeGxpUser.correo, 'CREATE_DOC', `Creado documento con archivo: ${doc.codigo}`); window.saveData(); window.toggleModal('modalDoc', false); window.renderAllData();
     };
