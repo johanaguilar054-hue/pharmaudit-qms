@@ -66,13 +66,13 @@
     <nav class="bg-slate-800 text-slate-300 rounded-xl p-1 mb-4 flex space-x-1 overflow-x-auto text-xs font-medium">
       <button data-tab="dashboard" onclick="window.switchTab('dashboard', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap bg-cyan-600 text-white font-bold cursor-pointer">📊 Dashboard</button>
       <button data-tab="documentos" onclick="window.switchTab('documentos', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">📑 Gestión Documental</button>
-      <button data-tab="copias" onclick="window.switchTab('copias', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 text-amber-300 font-bold cursor-pointer admin-only">📋 Copias Controladas</button>
+      <button data-tab="copias" onclick="window.switchTab('copias', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 text-amber-300 font-bold cursor-pointer emisor-only">📋 Copias Controladas</button>
       <button data-tab="desviaciones" onclick="window.switchTab('desviaciones', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">⚠️ Desviaciones & NC</button>
       <button data-tab="capa" onclick="window.switchTab('capa', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">☑️ Módulo CAPA</button>
       <button data-tab="metrologia" onclick="window.switchTab('metrologia', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">🛠️ Equipos & Calibración</button>
       <button data-tab="firmas" onclick="window.switchTab('firmas', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">✍️ Firmas Part 11</button>
       <button data-tab="audit" onclick="window.switchTab('audit', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">📜 Audit Trail</button>
-      <button data-tab="admin" onclick="window.switchTab('admin', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 bg-slate-700 text-cyan-300 cursor-pointer admin-only">⚙️ Configuraciones GxP</button>
+      <button data-tab="admin" onclick="window.switchTab('admin', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 bg-slate-700 text-cyan-300 cursor-pointer master-only">⚙️ Configuraciones GxP</button>
     </nav>
 
     <main>
@@ -102,8 +102,8 @@
 
         <div class="flex justify-between items-center flex-wrap gap-2">
           <div class="flex space-x-2">
-            <button type="button" onclick="window.abrirModalNuevoDoc()" class="bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow cursor-pointer">+ Crear Documento</button>
-            <button type="button" onclick="window.abrirModalNuevaVersion()" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow cursor-pointer">🔄 Nueva Versión (CC)</button>
+            <button type="button" id="btnNuevoDoc" onclick="window.abrirModalNuevoDoc()" class="bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow cursor-pointer">+ Crear Documento</button>
+            <button type="button" id="btnNuevaVer" onclick="window.abrirModalNuevaVersion()" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow cursor-pointer">🔄 Nueva Versión (CC)</button>
           </div>
           <div>
             <button type="button" onclick="window.exportarExcelAuditoria()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow cursor-pointer">📊 Exportar a Excel</button>
@@ -439,6 +439,16 @@
       'Content-Type': 'application/json'
     };
 
+    // MATRIZ DE PERMISOS ESTÁNDAR GXP
+    window.MATRIZ_GXP_ESTANDAR = { 
+      'rol_admin': { lectura: true, crearEdicion: true, revision: true, aprobacionFirma: true, administracion: true },
+      'rol_autor': { lectura: true, crearEdicion: true, revision: false, aprobacionFirma: false, administracion: false },
+      'rol_revisor': { lectura: true, crearEdicion: false, revision: true, aprobacionFirma: false, administracion: false },
+      'rol_aprobador': { lectura: true, crearEdicion: false, revision: false, aprobacionFirma: true, administracion: false },
+      'rol_emisor': { lectura: true, crearEdicion: false, revision: false, aprobacionFirma: false, administracion: true },
+      'rol_viewer': { lectura: true, crearEdicion: false, revision: false, aprobacionFirma: false, administracion: false } 
+    };
+
     // CONVERSIÓN DE ARCHIVOS A BASE64 DATA URL (Persistencia Nube GxP)
     window.readFileAsBase64 = function(file) {
       return new Promise((resolve, reject) => {
@@ -449,7 +459,6 @@
       });
     };
 
-    // MATRIZ Y VALORES INICIALES GXP-COMPLIANT
     window.cachedAreas = [ { id: 'ar_qa', nombre: 'Aseguramiento de Calidad (QA)' }, { id: 'ar_qc', nombre: 'Control de Calidad (QC)' }, { id: 'ar_prod', nombre: 'Planta de Producción' } ];
     window.cachedProcesos = [ { id: 'pr_gestion', nombre: 'Gestión de Aseguramiento', areaId: 'ar_qa' } ];
     
@@ -462,14 +471,7 @@
       { id: 'rol_viewer', nombre: 'Lector / Consulta', desc: 'Solo lectura de documentos vigentes' } 
     ];
 
-    window.cachedMatrizPermisos = { 
-      'rol_admin': { lectura: true, crearEdicion: true, revision: true, aprobacionFirma: true, administracion: true },
-      'rol_autor': { lectura: true, crearEdicion: true, revision: false, aprobacionFirma: false, administracion: false },
-      'rol_revisor': { lectura: true, crearEdicion: false, revision: true, aprobacionFirma: false, administracion: false },
-      'rol_aprobador': { lectura: true, crearEdicion: false, revision: false, aprobacionFirma: true, administracion: false },
-      'rol_emisor': { lectura: true, crearEdicion: false, revision: false, aprobacionFirma: false, administracion: true },
-      'rol_viewer': { lectura: true, crearEdicion: false, revision: false, aprobacionFirma: false, administracion: false } 
-    };
+    window.cachedMatrizPermisos = JSON.parse(JSON.stringify(window.MATRIZ_GXP_ESTANDAR));
 
     window.cachedEmpleados = [ { id: 1, nombres: 'Johan S.', apellidos: 'Aguilar', cargo: 'QA Lead', correo: 'j.aguilar@pharmor.com.co', areaId: 'ar_qa', estado: 'Activo' } ];
     window.cachedUsuarios = [ { id: 1, empleadoId: 1, correo: 'j.aguilar@pharmor.com.co', password: '123', rolesIds: ['rol_admin'], areasAsignadas: ['ar_qa', 'ar_qc', 'ar_prod'], estado: 'Activo' } ];
@@ -516,7 +518,15 @@
             if (dbState.areas) window.cachedAreas = dbState.areas;
             if (dbState.procesos) window.cachedProcesos = dbState.procesos;
             if (dbState.roles && dbState.roles.length >= 6) window.cachedRoles = dbState.roles;
-            window.cachedMatrizPermisos = dbState.matriz || window.cachedMatrizPermisos;
+            
+            // SANITACIÓN DE MATRIZ DE PERMISOS: Forzar cumplimiento GxP si Supabase contenía matriz errónea
+            if (dbState.matriz && dbState.matriz['rol_autor'] && dbState.matriz['rol_autor'].crearEdicion) {
+              window.cachedMatrizPermisos = dbState.matriz;
+            } else {
+              window.cachedMatrizPermisos = JSON.parse(JSON.stringify(window.MATRIZ_GXP_ESTANDAR));
+              window.saveData();
+            }
+
             if (dbState.empleados) window.cachedEmpleados = dbState.empleados;
             if (dbState.usuarios) window.cachedUsuarios = dbState.usuarios;
             if (dbState.docs) window.cachedDocs = dbState.docs;
@@ -538,19 +548,46 @@
     window.activeGxpUser = null;
     window.selectedDocId = null;
 
+    // EVALUACIÓN DE ROLES Y AUTORIZACIONES GXP
+    window.esAdminMaster = function(usr) {
+      if (!usr) return false;
+      return (usr.correo || '').trim().toLowerCase() === 'j.aguilar@pharmor.com.co';
+    };
+
+    window.usuarioPuedeEmitirCopias = function(usr) {
+      if (!usr || !usr.rolesIds) return false;
+      return usr.rolesIds.includes('rol_emisor') || usr.rolesIds.includes('rol_admin');
+    };
+
+    window.usuarioPuedeCrearEditar = function(usr) {
+      if (!usr || !usr.rolesIds) return false;
+      return usr.rolesIds.includes('rol_autor') || usr.rolesIds.includes('rol_admin');
+    };
+
     window.toggleModal = function(id, show) { const m = document.getElementById(id); if (m) { show ? m.classList.add('active') : m.classList.remove('active'); } };
+    
     window.switchTab = function(tabId, btnElement) {
+      if (tabId === 'admin' && !window.esAdminMaster(window.activeGxpUser)) {
+        alert("⛔ Acceso Denegado: El módulo de Configuraciones GxP está reservado exclusivamente para el Administrador Master (j.aguilar@pharmor.com.co).");
+        return;
+      }
+      if (tabId === 'copias' && !window.usuarioPuedeEmitirCopias(window.activeGxpUser)) {
+        alert("⛔ Acceso Denegado: Su rol no dispone de permisos para la gestión de Copias Controladas.");
+        return;
+      }
       document.querySelectorAll('.tab-content').forEach(v => v.classList.remove('active'));
       document.querySelectorAll('.nav-btn').forEach(b => { b.classList.remove('bg-cyan-600', 'text-white'); if (!b.classList.contains('bg-slate-700')) b.classList.add('hover:bg-slate-700'); });
       const t = document.getElementById('view-' + tabId); if(t) t.classList.add('active');
       if(btnElement) { btnElement.classList.add('bg-cyan-600', 'text-white'); btnElement.classList.remove('hover:bg-slate-700', 'bg-slate-700', 'text-cyan-300'); }
     };
+
     window.switchDocSubtab = function(tabId, btnElement) {
       document.querySelectorAll('.doc-subtab-content').forEach(v => v.classList.remove('active'));
       document.querySelectorAll('.doc-subtab-btn').forEach(b => { b.classList.remove('bg-cyan-600', 'text-white'); b.classList.add('bg-slate-100', 'text-slate-700'); });
       const t = document.getElementById('subtab-' + tabId); if(t) t.classList.add('active');
       if(btnElement) { btnElement.classList.add('bg-cyan-600', 'text-white'); btnElement.classList.remove('bg-slate-100', 'text-slate-700'); }
     };
+
     window.switchConfigSubtab = function(tabId, btnElement) {
       document.querySelectorAll('.config-subtab-content').forEach(v => v.classList.remove('active'));
       document.querySelectorAll('.config-subtab-btn').forEach(b => { b.classList.remove('bg-slate-800', 'text-white'); b.classList.add('bg-slate-100', 'text-slate-700'); });
@@ -558,22 +595,6 @@
       if(btnElement) { btnElement.classList.add('bg-slate-800', 'text-white'); btnElement.classList.remove('bg-slate-100', 'text-slate-700'); }
     };
 
-    window.obtenerPermisosEfectivos = function(usuario, areaDocumento) {
-      if (!usuario || usuario.estado !== 'Activo') return { lectura: false, crearEdicion: false, revision: false, aprobacionFirma: false, administracion: false };
-      const tieneAccesoArea = usuario.areasAsignadas.includes(areaDocumento) || usuario.rolesIds.includes('rol_admin');
-      if (!tieneAccesoArea) return { lectura: false, crearEdicion: false, revision: false, aprobacionFirma: false, administracion: false };
-      let perms = { lectura: false, crearEdicion: false, revision: false, aprobacionFirma: false, administracion: false };
-      usuario.rolesIds.forEach(rId => {
-        const pRol = window.cachedMatrizPermisos[rId];
-        if (pRol) {
-          if(pRol.lectura) perms.lectura = true; if(pRol.crearEdicion) perms.crearEdicion = true;
-          if(pRol.revision) perms.revision = true; if(pRol.aprobacionFirma) perms.aprobacionFirma = true;
-          if(pRol.administracion) perms.administracion = true;
-        }
-      });
-      return perms;
-    };
-    
     window.ejecutarLoginPrincipal = function() {
       const email = document.getElementById('loginEmail').value.trim().toLowerCase(); 
       const pass = document.getElementById('loginPassword').value.trim();
@@ -595,7 +616,6 @@
         document.getElementById('app-portal').classList.remove('hidden');
         const emp = (window.cachedEmpleados || []).find(e => e.id === usrData.empleadoId);
         document.getElementById('userBadge').innerText = `${emp ? emp.nombres + ' ' + emp.apellidos : usrData.correo}`;
-        document.querySelectorAll('.admin-only').forEach(el => { el.style.display = 'block'; });
         const btnDash = document.querySelector('[data-tab="dashboard"]');
         if (btnDash) window.switchTab('dashboard', btnDash);
         window.renderAllData();
@@ -612,7 +632,7 @@
       if (!usrData) { 
         const empleadoSinUsuario = window.cachedEmpleados.find(e => (e.correo || '').trim().toLowerCase() === email);
         if (empleadoSinUsuario) {
-            alert(`⚠️ ALERTA DEL SISTEMA GxP:\n\nEl correo ${email} pertenece a un Empleado registrado, pero aún no tiene cuenta de "Usuario GxP".\n\nVaya a Configuraciones GxP > 5. Gestión de Usuarios > "+ Asignar Usuario GxP".`);
+            alert(`⚠️ ALERTA DEL SISTEMA GxP:\n\nEl correo ${email} pertenece a un Empleado registrado, pero aún no tiene cuenta de "Usuario GxP".`);
         } else {
             alert("Credenciales incorrectas o usuario no registrado en la Nube.");
         }
@@ -633,7 +653,6 @@
       
       const emp = window.cachedEmpleados.find(e => e.id === usrData.empleadoId);
       document.getElementById('userBadge').innerText = `${emp ? emp.nombres + ' ' + emp.apellidos : usrData.correo}`;
-      document.querySelectorAll('.admin-only').forEach(el => { el.style.display = usrData.rolesIds.includes('rol_admin') ? 'block' : 'none'; });
       
       const btnDash = document.querySelector('[data-tab="dashboard"]'); 
       if (btnDash) window.switchTab('dashboard', btnDash);
@@ -816,6 +835,19 @@
       const enProceso = window.cachedDocs.filter(d => d.estado === 'PROCESO');
       const obsoletos = window.cachedObsoletos;
 
+      const esMaster = window.esAdminMaster(window.activeGxpUser);
+      const puedeEmitir = window.usuarioPuedeEmitirCopias(window.activeGxpUser);
+      const puedeCrear = window.usuarioPuedeCrearEditar(window.activeGxpUser);
+
+      // APLICAR RESTRICCIONES EN NAVEGACIÓN PRINCIPAL
+      document.querySelectorAll('.master-only').forEach(el => { el.style.display = esMaster ? 'inline-block' : 'none'; });
+      document.querySelectorAll('.emisor-only').forEach(el => { el.style.display = puedeEmitir ? 'inline-block' : 'none'; });
+
+      const btnNuevoDoc = document.getElementById('btnNuevoDoc');
+      if(btnNuevoDoc) btnNuevoDoc.style.display = puedeCrear ? 'inline-block' : 'none';
+      const btnNuevaVer = document.getElementById('btnNuevaVer');
+      if(btnNuevaVer) btnNuevaVer.style.display = puedeCrear ? 'inline-block' : 'none';
+
       document.getElementById('cnt-docs').innerText = vigentes.length; 
       document.getElementById('count-vigente').innerText = vigentes.length;
       document.getElementById('count-proceso').innerText = enProceso.length;
@@ -825,19 +857,26 @@
 
       document.getElementById('table-vigente').innerHTML = vigentes.length ? vigentes.map(d => {
         const proc = window.cachedProcesos.find(p => p.id === d.procesoId); const area = window.cachedAreas.find(a => a.id === d.areaId);
+        
+        // Botón de emisión de Copia Controlada estrictamente asignado a Control de Documentos / Admin
+        const btnEmitirHtml = puedeEmitir ? `<button onclick="window.abrirModalEmitir('${d.id}')" class="bg-amber-50 border border-amber-300 text-amber-800 px-2 py-1 rounded font-bold cursor-pointer">🖨️ Copia</button>` : '';
+        const btnEditarHtml = puedeCrear ? `<button onclick="window.abrirModalEditarDoc('${d.id}')" class="bg-cyan-50 border border-cyan-300 px-2 py-1 rounded font-bold text-cyan-800 cursor-pointer">✏️ Editar</button>` : '';
+
         return `<tr class="hover:bg-slate-50"><td class="p-2 border font-mono font-bold text-cyan-700">${d.codigo}</td><td class="p-2 border font-mono">v${d.version}</td><td class="p-2 border font-semibold">${d.titulo}</td><td class="p-2 border text-[11px]">${area ? area.nombre : 'N/A'}<br><span class="text-cyan-800">${proc ? proc.nombre : ''}</span></td><td class="p-2 border font-mono text-[11px]">Aprob: ${d.fechaAprob}<br>Venc: ${d.fechaVenc}</td><td class="p-2 border"><span class="bg-emerald-100 text-emerald-800 px-2 rounded font-bold text-[10px]">VIGENTE</span></td>
         <td class="p-2 border text-center space-x-1 flex justify-center mt-1">
           <button onclick="window.viewDocument('${d.id}')" class="bg-slate-100 border px-2 py-1 rounded font-bold text-slate-700 cursor-pointer">👁️ Ver</button>
-          <button onclick="window.abrirModalEditarDoc('${d.id}')" class="bg-cyan-50 border border-cyan-300 px-2 py-1 rounded font-bold text-cyan-800 cursor-pointer">✏️ Editar</button>
-          <button onclick="window.abrirModalEmitir('${d.id}')" class="bg-amber-50 border border-amber-300 text-amber-800 px-2 py-1 rounded font-bold cursor-pointer admin-only">🖨️ Copia</button>
+          ${btnEditarHtml}
+          ${btnEmitirHtml}
         </td></tr>`;
       }).join('') : `<tr><td colspan="7" class="p-4 text-center text-slate-400">Sin documentos vigentes.</td></tr>`;
 
       document.getElementById('table-proceso').innerHTML = enProceso.length ? enProceso.map(d => {
         const area = window.cachedAreas.find(a => a.id === d.areaId);
+        const btnEditarHtml = puedeCrear ? `<button onclick="window.abrirModalEditarDoc('${d.id}')" class="bg-cyan-50 border border-cyan-300 px-2 py-1 rounded font-bold text-cyan-800 cursor-pointer">✏️ Editar</button>` : '';
+
         return `<tr class="hover:bg-slate-50"><td class="p-2 border font-mono font-bold text-cyan-700">${d.codigo}</td><td class="p-2 border font-mono">v${d.version}</td><td class="p-2 border font-semibold">${d.titulo}</td><td class="p-2 border text-slate-600 text-[11px]">${area ? area.nombre : 'N/A'}</td><td class="p-2 border"><span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-bold text-[10px]">Fase: ${d.fase}</span></td>
         <td class="p-2 border text-center space-x-1">
-          <button onclick="window.abrirModalEditarDoc('${d.id}')" class="bg-cyan-50 border border-cyan-300 px-2 py-1 rounded font-bold text-cyan-800 cursor-pointer">✏️ Editar</button>
+          ${btnEditarHtml}
           <button onclick="window.iniciarFirmaElectronica('${d.id}')" class="bg-cyan-600 text-white px-3 py-1 rounded font-bold cursor-pointer">✍️ Firmar</button>
         </td></tr>`;
       }).join('') : `<tr><td colspan="6" class="p-4 text-center text-slate-400">Sin documentos en proceso.</td></tr>`;
