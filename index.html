@@ -54,7 +54,18 @@
         <span class="text-xs text-slate-400 block font-mono">QMS / GxP ERP Compliance · Pharmor</span>
       </div>
       <div class="flex items-center space-x-3">
-        <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+        <!-- Indicador Visual de Estado Nube GxP -->
+        <div id="cloudStatusBadge" class="flex items-center space-x-1.5 bg-slate-800/80 px-2.5 py-1 rounded-lg border border-slate-700 text-xs font-mono">
+          <span id="cloudLed" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span id="cloudStatusText" class="text-emerald-400 font-semibold">Conectado</span>
+        </div>
+
+        <!-- Botón de Sincronización Manual -->
+        <button type="button" id="btnSyncCloud" onclick="window.sincronizarConNube()" title="Actualizar datos en tiempo real desde Supabase" class="bg-cyan-700 hover:bg-cyan-600 text-white px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer flex items-center space-x-1 border border-cyan-500/40">
+          <span>🔄</span>
+          <span>Sincronizar Nube</span>
+        </button>
+
         <span id="userBadge" class="text-xs font-mono text-emerald-400 bg-emerald-950 px-3 py-1 rounded-full border border-emerald-500/30"></span>
         <button type="button" onclick="window.location.reload()" class="bg-rose-600 hover:bg-rose-700 text-white px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer">
           🚪 Salir
@@ -477,20 +488,55 @@
     window.cachedUsuarios = [ { id: 1, empleadoId: 1, correo: 'j.aguilar@pharmor.com.co', password: '123', rolesIds: ['rol_admin'], areasAsignadas: ['ar_qa', 'ar_qc', 'ar_prod'], estado: 'Activo' } ];
     window.cachedDocs = []; window.cachedCopias = []; window.cachedObsoletos = []; window.auditTrailLogs = [];
 
+    // CONTROL VISUAL DEL ESTADO DE LA NUBE (ALCOA+)
+    window.actualizarEstadoNube = function(estado, mensaje) {
+      const led = document.getElementById('cloudLed');
+      const txt = document.getElementById('cloudStatusText');
+      if (!led || !txt) return;
+
+      if (estado === 'guardando') {
+        led.className = 'w-2 h-2 rounded-full bg-amber-400 animate-ping';
+        txt.className = 'text-amber-400 font-semibold';
+        txt.innerText = mensaje || 'Guardando...';
+      } else if (estado === 'sincronizando') {
+        led.className = 'w-2 h-2 rounded-full bg-cyan-400 animate-spin';
+        txt.className = 'text-cyan-400 font-semibold';
+        txt.innerText = mensaje || 'Sincronizando...';
+      } else if (estado === 'error') {
+        led.className = 'w-2 h-2 rounded-full bg-rose-500';
+        txt.className = 'text-rose-400 font-semibold';
+        txt.innerText = mensaje || 'Error Nube';
+      } else {
+        // Estado Conectado / Sincronizado por defecto
+        led.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
+        txt.className = 'text-emerald-400 font-semibold';
+        txt.innerText = mensaje || 'Conectado';
+      }
+    };
+
+    // PERSISTENCIA ASÍNCRONA CON FEEDBACK VISUAL
     window.saveData = async function() {
+      window.actualizarEstadoNube('guardando', 'Guardando...');
       const dbState = {
         areas: window.cachedAreas, procesos: window.cachedProcesos, roles: window.cachedRoles, matriz: window.cachedMatrizPermisos, 
         empleados: window.cachedEmpleados, usuarios: window.cachedUsuarios, docs: window.cachedDocs, copias: window.cachedCopias,
         obsoletos: window.cachedObsoletos, audit: window.auditTrailLogs
       };
       try {
-        await fetch(`${SUPABASE_URL}/rest/v1/erp_state`, {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/erp_state`, {
           method: 'POST',
           headers: { ...HEADERS, 'Prefer': 'resolution=merge-duplicates' },
           body: JSON.stringify({ id: 1, app_data: dbState })
         });
+        if (res.ok) {
+          window.actualizarEstadoNube('conectado', 'Guardado');
+          setTimeout(() => window.actualizarEstadoNube('conectado', 'Conectado'), 2000);
+        } else {
+          window.actualizarEstadoNube('error', 'Fallo al guardar');
+        }
       } catch (err) {
         console.error("Error al guardar en la nube:", err);
+        window.actualizarEstadoNube('error', 'Sin conexión');
       }
     };
 
@@ -501,6 +547,24 @@
         btn.disabled = false;
         btn.classList.remove('bg-slate-400', 'cursor-not-allowed');
         btn.classList.add('bg-cyan-600', 'hover:bg-cyan-700', 'cursor-pointer');
+      }
+    };
+
+    // SINCRONIZACIÓN MANUAL CON FEEDBACK VISUAL
+    window.sincronizarConNube = async function() {
+      const btn = document.getElementById('btnSyncCloud');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<span>⏳</span> <span>Cargando...</span>`;
+      }
+      window.actualizarEstadoNube('sincronizando', 'Sincronizando...');
+      await window.loadData();
+      window.renderAllData();
+      window.actualizarEstadoNube('conectado', 'Sincronizado');
+      setTimeout(() => window.actualizarEstadoNube('conectado', 'Conectado'), 2000);
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = `<span>🔄</span> <span>Sincronizar Nube</span>`;
       }
     };
 
@@ -814,7 +878,10 @@
       window.cachedDocs.push({ id: `doc_${Date.now()}`, codigo: oldDoc.codigo, titulo: newTitle, version: newVer, estado: 'PROCESO', fase: 'Elaboración', procesoId: oldDoc.procesoId, areaId: oldDoc.areaId, fechaAprob: new Date().toISOString().split('T')[0], fechaVenc: oldDoc.fechaVenc, archivo_url: fileUrl, motivo_cambio: reason });
       window.cachedDocs.splice(docIndex, 1);
       window.registrarAuditTrail(window.activeGxpUser.correo, 'NEW_VERSION', `Nueva versión v${newVer} de ${oldDoc.codigo}`);
-      window.saveData(); alert(`Versión v${newVer} en flujo. La versión anterior es Obsoleta.`); window.toggleModal('modalVersion', false); window.renderAllData();
+      await window.saveData(); 
+      alert(`Versión v${newVer} en flujo. La versión anterior es Obsoleta.`); 
+      window.toggleModal('modalVersion', false); 
+      window.renderAllData();
     };
 
     window.sugerirCorreoEmpleado = function() {
@@ -911,13 +978,13 @@
 
     window.abrirModalArea = function() { document.getElementById('modalAreaTitle').innerText = 'Nueva Área'; document.getElementById('areaEditIndex').value = '-1'; document.getElementById('inputAreaId').value = `ar_${Date.now()}`; document.getElementById('inputAreaNombre').value = ''; window.toggleModal('modalArea', true); };
     window.abrirModalEditarArea = function(idx) { const ar = window.cachedAreas[idx]; document.getElementById('modalAreaTitle').innerText = `Editar Área`; document.getElementById('areaEditIndex').value = idx; document.getElementById('inputAreaId').value = ar.id; document.getElementById('inputAreaNombre').value = ar.nombre; window.toggleModal('modalArea', true); };
-    window.guardarAreaCompleta = function() {
+    window.guardarAreaCompleta = async function() {
       const editIdx = parseInt(document.getElementById('areaEditIndex').value);
       const newId = document.getElementById('inputAreaId').value.trim(); const nom = document.getElementById('inputAreaNombre').value.trim();
       if(!newId || !nom) { alert("Complete ID y Nombre."); return; }
       if(editIdx === -1) { if(window.cachedAreas.find(a => a.id === newId)) { alert("ID duplicado."); return; } window.cachedAreas.push({ id: newId, nombre: nom }); window.registrarAuditTrail(window.activeGxpUser.correo, 'CREATE_AREA', `Creó área: ${nom}`); } 
       else { const oldId = window.cachedAreas[editIdx].id; window.cachedAreas[editIdx].nombre = nom; if(oldId !== newId) { window.cachedAreas[editIdx].id = newId; window.cachedProcesos.forEach(p => { if(p.areaId === oldId) p.areaId = newId; }); window.cachedEmpleados.forEach(e => { if(e.areaId === oldId) e.areaId = newId; }); window.cachedUsuarios.forEach(u => { const idx = u.areasAsignadas.indexOf(oldId); if(idx > -1) u.areasAsignadas[idx] = newId; }); window.cachedDocs.forEach(d => { if(d.areaId === oldId) d.areaId = newId; }); } window.registrarAuditTrail(window.activeGxpUser.correo, 'UPDATE_AREA', `Actualizó área: ${newId}`); }
-      window.saveData(); window.toggleModal('modalArea', false); window.renderAllData();
+      await window.saveData(); window.toggleModal('modalArea', false); window.renderAllData();
     };
 
     window.abrirModalEmpleado = function() { 
@@ -933,7 +1000,7 @@
 
     window.abrirModalEditarEmpleado = function(idx) { const emp = window.cachedEmpleados[idx]; document.getElementById('empEditIndex').value = idx; document.getElementById('empNombres').value = emp.nombres; document.getElementById('empApellidos').value = emp.apellidos; document.getElementById('empCargo').value = emp.cargo; document.getElementById('empCorreo').value = emp.correo; document.getElementById('empAreaSelect').value = emp.areaId; document.getElementById('empEstadoSelect').value = emp.estado; window.toggleModal('modalEmpleado', true); };
     
-    window.guardarEmpleadoCompleto = function() {
+    window.guardarEmpleadoCompleto = async function() {
       const editIdx = parseInt(document.getElementById('empEditIndex').value);
       const data = { 
         nombres: document.getElementById('empNombres').value.trim(), 
@@ -945,7 +1012,7 @@
       };
       if(editIdx === -1) { window.cachedEmpleados.push({ id: Date.now(), ...data }); window.registrarAuditTrail(window.activeGxpUser.correo, 'CREATE_EMP', `Creó empleado: ${data.correo}`); }
       else { window.cachedEmpleados[editIdx] = { ...window.cachedEmpleados[editIdx], ...data }; window.registrarAuditTrail(window.activeGxpUser.correo, 'UPDATE_EMP', `Editó empleado: ${data.correo}`); }
-      window.saveData(); window.toggleModal('modalEmpleado', false); window.renderAllData();
+      await window.saveData(); window.toggleModal('modalEmpleado', false); window.renderAllData();
     };
 
     window.enviarNotificacionCredenciales = function(correoDestino, passwordAsignada) {
@@ -970,7 +1037,7 @@
     window.abrirModalUsuario = function() { document.getElementById('modalUsrTitle').innerText = 'Asignar Nuevo Usuario'; document.getElementById('usrEditIndex').value = '-1'; document.getElementById('usrPasswordInput').value = '123'; document.getElementById('usrEstadoSelect').value = 'Activo'; window.poblarCheckboxesModalUsuario(['rol_viewer'], [window.cachedAreas[0].id]); window.toggleModal('modalUsuario', true); };
     window.abrirModalEditarUsuario = function(idx) { const usr = window.cachedUsuarios[idx]; document.getElementById('usrEditIndex').value = idx; document.getElementById('usrEmpSelect').value = usr.empleadoId; document.getElementById('usrCorreoInput').value = usr.correo; document.getElementById('usrPasswordInput').value = usr.password; document.getElementById('usrEstadoSelect').value = usr.estado; window.poblarCheckboxesModalUsuario(usr.rolesIds, usr.areasAsignadas); window.toggleModal('modalUsuario', true); };
     
-    window.guardarUsuarioCompleto = function() {
+    window.guardarUsuarioCompleto = async function() {
       const editIdx = parseInt(document.getElementById('usrEditIndex').value);
       const data = { 
         empleadoId: parseInt(document.getElementById('usrEmpSelect').value), 
@@ -987,24 +1054,24 @@
         window.cachedUsuarios[editIdx] = { ...window.cachedUsuarios[editIdx], ...data }; 
         window.registrarAuditTrail(window.activeGxpUser.correo, 'UPDATE_USER', `Editó usuario: ${data.correo}`); 
       }
-      window.saveData(); window.toggleModal('modalUsuario', false); window.renderAllData();
+      await window.saveData(); window.toggleModal('modalUsuario', false); window.renderAllData();
       window.enviarNotificacionCredenciales(data.correo, data.password);
     };
 
     window.abrirModalProceso = function() { document.getElementById('modalProcesoTitle').innerText = 'Nuevo Proceso'; document.getElementById('procesoEditIndex').value = '-1'; document.getElementById('inputProcesoNombre').value = ''; window.toggleModal('modalProceso', true); };
     window.abrirModalEditarProceso = function(idx) { const pr = window.cachedProcesos[idx]; document.getElementById('procesoEditIndex').value = idx; document.getElementById('inputProcesoNombre').value = pr.nombre; document.getElementById('selectProcesoArea').value = pr.areaId; window.toggleModal('modalProceso', true); };
-    window.guardarProcesoCompleto = function() {
+    window.guardarProcesoCompleto = async function() {
       const editIdx = parseInt(document.getElementById('procesoEditIndex').value);
       const data = { nombre: document.getElementById('inputProcesoNombre').value, areaId: document.getElementById('selectProcesoArea').value };
       if(editIdx === -1) { window.cachedProcesos.push({ id: 'pr_'+Date.now(), ...data }); window.registrarAuditTrail(window.activeGxpUser.correo, 'CREATE_PROC', `Creó proceso: ${data.nombre}`); }
       else { window.cachedProcesos[editIdx] = { ...window.cachedProcesos[editIdx], ...data }; window.registrarAuditTrail(window.activeGxpUser.correo, 'UPDATE_PROC', `Editó proceso: ${data.nombre}`); }
-      window.saveData(); window.toggleModal('modalProceso', false); window.renderAllData();
+      await window.saveData(); window.toggleModal('modalProceso', false); window.renderAllData();
     };
 
     window.abrirModalEditarDoc = function(docId) { const doc = window.cachedDocs.find(x => x.id === docId); if(!doc) return; document.getElementById('editMetaId').value = docId; document.getElementById('editMetaTitle').value = doc.titulo; document.getElementById('editMetaCode').value = doc.codigo; document.getElementById('editMetaVer').value = doc.version; window.toggleModal('modalEditarDocMeta', true); };
-    window.guardarEdicionMetaDoc = function() {
+    window.guardarEdicionMetaDoc = async function() {
       const docId = document.getElementById('editMetaId').value; const doc = window.cachedDocs.find(x => x.id === docId);
-      if(doc) { doc.titulo = document.getElementById('editMetaTitle').value; doc.codigo = document.getElementById('editMetaCode').value; doc.version = document.getElementById('editMetaVer').value; window.registrarAuditTrail(window.activeGxpUser.correo, 'EDIT_DOC', `Editó metadatos de ${doc.codigo}`); window.saveData(); window.renderAllData(); }
+      if(doc) { doc.titulo = document.getElementById('editMetaTitle').value; doc.codigo = document.getElementById('editMetaCode').value; doc.version = document.getElementById('editMetaVer').value; window.registrarAuditTrail(window.activeGxpUser.correo, 'EDIT_DOC', `Editó metadatos de ${doc.codigo}`); await window.saveData(); window.renderAllData(); }
       window.toggleModal('modalEditarDocMeta', false);
     };
 
@@ -1023,17 +1090,24 @@
         }
       }
       const doc = { id: `doc_${Date.now()}`, codigo: docCode, titulo: document.getElementById('createDocTitle').value, version: document.getElementById('createDocVer').value, estado: 'PROCESO', fase: 'Elaboración', procesoId: procesoId, areaId: proc.areaId, fechaAprob: document.getElementById('createDocFechaAprob').value, fechaVenc: document.getElementById('createDocFechaVenc').value, archivo_url: fileUrl, motivo_cambio: 'Creación' };
-      window.cachedDocs.push(doc); window.registrarAuditTrail(window.activeGxpUser.correo, 'CREATE_DOC', `Creado documento con archivo: ${doc.codigo}`); window.saveData(); window.toggleModal('modalDoc', false); window.renderAllData();
+      window.cachedDocs.push(doc); 
+      window.registrarAuditTrail(window.activeGxpUser.correo, 'CREATE_DOC', `Creado documento con archivo: ${doc.codigo}`); 
+      await window.saveData(); 
+      window.toggleModal('modalDoc', false); 
+      window.renderAllData();
     };
 
     window.iniciarFirmaElectronica = function(docId) { const doc = window.cachedDocs.find(x => x.id === docId); if(!doc) return; document.getElementById('firmaDocId').value = docId; document.getElementById('firmaUserEmail').value = window.activeGxpUser.correo; document.getElementById('firmaUserPassword').value = ''; window.toggleModal('modalFirmaPart11', true); };
-    window.procesarFirmaElectronica = function() {
+    window.procesarFirmaElectronica = async function() {
       const doc = window.cachedDocs.find(x => x.id === document.getElementById('firmaDocId').value);
       const email = document.getElementById('firmaUserEmail').value.trim(); const pass = document.getElementById('firmaUserPassword').value.trim();
       const user = window.cachedUsuarios.find(u => u.correo.toLowerCase() === email.toLowerCase() && u.password === pass);
       if(!user) { alert("Credenciales inválidas."); return; }
       if(doc.fase === 'Elaboración') doc.fase = 'Revisión'; else if(doc.fase === 'Revisión') doc.fase = 'Aprobación'; else if(doc.fase === 'Aprobación') { doc.fase = 'Aprobado'; doc.estado = 'VIGENTE'; }
-      window.registrarAuditTrail(user.correo, 'FIRM', `Firma aplicada sobre ${doc.codigo}. Nuevo estado: ${doc.estado}`); window.saveData(); window.toggleModal('modalFirmaPart11', false); window.renderAllData();
+      window.registrarAuditTrail(user.correo, 'FIRM', `Firma aplicada sobre ${doc.codigo}. Nuevo estado: ${doc.estado}`); 
+      await window.saveData(); 
+      window.toggleModal('modalFirmaPart11', false); 
+      window.renderAllData();
     };
 
     window.viewDocument = async function(docId) {
@@ -1070,7 +1144,11 @@
         pages.forEach(page => { const { width, height } = page.getSize(); page.drawText('COPIA CONTROLADA', { x: width / 2 - 220, y: height / 2 + 40, size: 50, color: rgb(0.8, 0, 0), rotate: degrees(-30), opacity: 0.3 }); page.drawText(`VIGENTE - Destino: ${area} (${custodio}) - Emisión: ${new Date().toLocaleDateString()}`, { x: 40, y: 25, size: 9, color: rgb(0.5, 0, 0) }); });
         const pdfBytesModified = await pdfDoc.save(); const blob = new Blob([pdfBytesModified], { type: 'application/pdf' });
         window.cachedCopias.unshift({ codigo: `COP-${doc.codigo}-C0${window.cachedCopias.length + 1}`, doc: `${doc.codigo} v${doc.version}`, area: area, custodio: custodio });
-        window.registrarAuditTrail(window.activeGxpUser.correo, 'EMIT_COPY', `Copia Controlada de ${doc.codigo} a ${area}`); window.saveData(); window.open(URL.createObjectURL(blob), '_blank'); window.toggleModal('modalEmitirCopia', false); window.renderAllData();
+        window.registrarAuditTrail(window.activeGxpUser.correo, 'EMIT_COPY', `Copia Controlada de ${doc.codigo} a ${area}`); 
+        await window.saveData(); 
+        window.open(URL.createObjectURL(blob), '_blank'); 
+        window.toggleModal('modalEmitirCopia', false); 
+        window.renderAllData();
       } catch (err) { console.error(err); alert("Error al inyectar el PDF."); } finally { btn.innerText = "Generar e Imprimir"; btn.disabled = false; }
     };
 
