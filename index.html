@@ -163,8 +163,19 @@
       <div id="view-capa" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4"><h2 class="font-bold text-sm">Planes CAPA</h2></div>
       <div id="view-metrologia" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4"><h2 class="font-bold text-sm">Equipos & Metrología</h2></div>
       <div id="view-firmas" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4"><h2 class="font-bold text-sm">Firmas Electrónicas (21 CFR Part 11)</h2></div>
+      
+      <!-- AUDIT TRAIL -->
       <div id="view-audit" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-        <h2 class="font-bold text-sm mb-3">Audit Trail Inalterable (ALCOA+)</h2>
+        <div class="flex justify-between items-center mb-3 pb-2 border-b border-slate-100">
+          <div>
+            <h2 class="font-bold text-sm text-slate-800">📜 Audit Trail Inalterable (ALCOA+)</h2>
+            <p class="text-[11px] text-slate-500">Registro histórico de eventos y firmas electrónicas</p>
+          </div>
+          <button type="button" onclick="window.exportarAuditTrailPDF()" class="bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow transition cursor-pointer flex items-center space-x-1">
+            <span>📄</span>
+            <span>Exportar PDF Oficial GxP</span>
+          </button>
+        </div>
         <div id="list-auds" class="space-y-1 font-mono text-[11px] text-slate-600 max-h-96 overflow-y-auto"></div>
       </div>
 
@@ -428,7 +439,7 @@
       'Content-Type': 'application/json'
     };
 
-    // FUNCIÓN DE CONVERSIÓN DE ARCHIVOS A BASE64 DATA URL (Persistencia Nube GxP)
+    // CONVERSIÓN DE ARCHIVOS A BASE64 DATA URL (Persistencia Nube GxP)
     window.readFileAsBase64 = function(file) {
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -505,7 +516,6 @@
             if (dbState.areas) window.cachedAreas = dbState.areas;
             if (dbState.procesos) window.cachedProcesos = dbState.procesos;
             if (dbState.roles && dbState.roles.length >= 6) window.cachedRoles = dbState.roles;
-            // Asegurar que la matriz mantenga o aplique las reglas GxP
             window.cachedMatrizPermisos = dbState.matriz || window.cachedMatrizPermisos;
             if (dbState.empleados) window.cachedEmpleados = dbState.empleados;
             if (dbState.usuarios) window.cachedUsuarios = dbState.usuarios;
@@ -652,6 +662,97 @@
       document.body.appendChild(a); a.click(); document.body.removeChild(a);
     };
 
+    window.exportarAuditTrailPDF = function() {
+      if (!window.auditTrailLogs || window.auditTrailLogs.length === 0) {
+        alert("No hay registros en el Audit Trail para exportar.");
+        return;
+      }
+
+      const fechaEmision = new Date().toISOString().replace('T', ' ').substring(0, 19);
+      const usuarioEmisor = window.activeGxpUser ? window.activeGxpUser.correo : 'Administrador del Sistema';
+
+      const filasHTML = window.auditTrailLogs.map(log => `
+        <tr>
+          <td style="padding: 6px; border: 1px solid #cbd5e1; font-family: monospace; white-space: nowrap;">${log.fecha}</td>
+          <td style="padding: 6px; border: 1px solid #cbd5e1; font-weight: bold; color: #0f172a;">${log.usuario}</td>
+          <td style="padding: 6px; border: 1px solid #cbd5e1; font-family: monospace; color: #0369a1; font-weight: bold;">${log.accion}</td>
+          <td style="padding: 6px; border: 1px solid #cbd5e1; color: #334155;">${log.detalle}</td>
+        </tr>
+      `).join('');
+
+      const contenidoVentana = `
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+          <meta charset="UTF-8">
+          <title>Audit_Trail_Report_${new Date().toISOString().split('T')[0]}</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 15px; font-size: 11px; color: #1e293b; }
+            .header { border-bottom: 2px solid #0284c7; padding-bottom: 8px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: flex-start; }
+            .title { font-size: 15px; font-weight: bold; color: #0f172a; }
+            .subtitle { font-size: 10px; color: #64748b; font-family: monospace; }
+            .meta-table { width: 100%; margin-bottom: 12px; border-collapse: collapse; font-size: 10px; }
+            .meta-table td { padding: 5px 8px; background: #f8fafc; border: 1px solid #e2e8f0; }
+            .data-table { width: 100%; border-collapse: collapse; text-align: left; }
+            .data-table th { background: #0f172a; color: #ffffff; padding: 6px; border: 1px solid #0f172a; font-size: 10px; text-transform: uppercase; }
+            .footer { margin-top: 25px; border-top: 1px solid #cbd5e1; padding-top: 8px; font-size: 9px; color: #64748b; text-align: center; font-family: monospace; }
+            @media print {
+              @page { size: A4 landscape; margin: 10mm; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div>
+              <div class="title">🛡️ PharmAudit - Informe Oficial de Audit Trail</div>
+              <div class="subtitle">Cumplimiento Normativo FDA 21 CFR Part 11 / EU Annex 11 / GAMP 5</div>
+            </div>
+            <div style="text-align: right;" class="subtitle">
+              <strong>Organización:</strong> Pharmor S.A.S.<br>
+              <strong>Clasificación:</strong> REGISTRO OFICIAL GxP
+            </div>
+          </div>
+
+          <table class="meta-table">
+            <tr>
+              <td><strong>Fecha y Hora de Emisión:</strong> ${fechaEmision} UTC</td>
+              <td><strong>Emitido por:</strong> ${usuarioEmisor}</td>
+              <td><strong>Total Registros:</strong> ${window.auditTrailLogs.length} eventos</td>
+            </tr>
+          </table>
+
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width: 140px;">Fecha / Hora</th>
+                <th style="width: 180px;">Usuario Responsable</th>
+                <th style="width: 120px;">Acción GxP</th>
+                <th>Detalle del Evento / Traza Inalterable</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filasHTML}
+            </tbody>
+          </table>
+
+          <div class="footer">
+            Este documento constituye un registro inalterable generado automáticamente por el eQMS PharmAudit. La integridad y trazabilidad de los datos están garantizadas bajo el estándar ALCOA+.
+          </div>
+
+          <script>
+            window.onload = function() {
+              window.print();
+            };
+          <\/script>
+        </body>
+        </html>
+      `;
+
+      const ventana = window.open('', '_blank');
+      ventana.document.write(contenidoVentana);
+      ventana.document.close();
+    };
+
     window.cargarDatosVersionBase = function() {
       const baseId = document.getElementById('versionDocSelect').value;
       const doc = window.cachedDocs.find(x => x.id === baseId);
@@ -720,6 +821,7 @@
       document.getElementById('count-proceso').innerText = enProceso.length;
       document.getElementById('cnt-copias').innerText = window.cachedCopias.length;
       document.getElementById('count-obsoleto').innerText = obsoletos.length;
+      document.getElementById('cnt-audit').innerText = window.auditTrailLogs.length;
 
       document.getElementById('table-vigente').innerHTML = vigentes.length ? vigentes.map(d => {
         const proc = window.cachedProcesos.find(p => p.id === d.procesoId); const area = window.cachedAreas.find(a => a.id === d.areaId);
@@ -747,6 +849,9 @@
       document.getElementById('list-copias-body').innerHTML = window.cachedCopias.length ? window.cachedCopias.map(c => `
         <tr class="hover:bg-slate-50"><td class="p-2 border font-bold text-amber-900">${c.codigo}</td><td class="p-2 border">${c.doc}</td><td class="p-2 border">${c.area}</td><td class="p-2 border">${c.custodio}</td><td class="p-2 border"><span class="bg-emerald-100 text-emerald-800 px-2 rounded text-[10px] font-bold">ACTIVA</span></td></tr>
       `).join('') : `<tr><td colspan="5" class="p-4 text-center text-slate-400">Sin copias emitidas.</td></tr>`;
+
+      const auditDiv = document.getElementById('list-auds');
+      if(auditDiv) auditDiv.innerHTML = window.auditTrailLogs.map(l => `[${l.fecha}] <strong>${l.usuario}</strong> [${l.accion}]: ${l.detalle}`).join('<br><hr class="border-slate-100">');
 
       window.renderConfigTablas();
     };
