@@ -145,7 +145,7 @@
           <table class="w-full border-collapse text-left text-xs">
             <thead>
               <tr class="bg-slate-100 text-slate-700 border-b">
-                <th class="p-2 border font-bold text-center w-12">#</th><th class="p-2 border font-bold">Código</th><th class="p-2 border font-bold">Versión</th><th class="p-2 border font-bold">Título</th><th class="p-2 border font-bold">Área / Proceso</th><th class="p-2 border font-bold">Workflow</th><th class="p-2 border font-bold text-center">Acciones y Firma Part 11</th>
+                <th class="p-2 border font-bold text-center w-12">#</th><th class="p-2 border font-bold">Código</th><th class="p-2 border font-bold">Versión</th><th class="p-2 border font-bold">Título</th><th class="p-2 border font-bold">Área / Proceso</th><th class="p-2 border font-bold">Fase / Workflow GxP</th><th class="p-2 border font-bold text-center">Acciones y Firma Part 11</th>
               </tr>
             </thead>
             <tbody id="table-proceso" class="divide-y divide-slate-100"></tbody>
@@ -975,16 +975,25 @@
         const area = window.cachedAreas.find(a => a.id === d.areaId);
         const btnEditarHtml = puedeCrear ? `<button onclick="window.abrirModalEditarDoc('${d.id}')" class="bg-cyan-50 border border-cyan-300 px-2 py-1 rounded font-bold text-cyan-800 cursor-pointer">✏️ Editar</button>` : '';
 
+        // ESCALONAMIENTO VISUAL CLARO SEGÚN LA FASE GXP ACTUAL
+        let badgeFaseColor = 'bg-amber-100 text-amber-800 border-amber-300';
+        if (d.fase === 'Revisión') badgeFaseColor = 'bg-blue-100 text-blue-800 border-blue-300';
+        if (d.fase === 'Aprobación') badgeFaseColor = 'bg-purple-100 text-purple-800 border-purple-300';
+
         return `<tr class="hover:bg-slate-50">
           <td class="p-2 border text-center font-mono font-bold text-slate-500">${idx + 1}</td>
           <td class="p-2 border font-mono font-bold text-cyan-700">${d.codigo}</td>
           <td class="p-2 border font-mono">v${d.version}</td>
           <td class="p-2 border font-semibold">${d.titulo}</td>
           <td class="p-2 border text-slate-600 text-[11px]">${area ? area.nombre : 'N/A'}</td>
-          <td class="p-2 border"><span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-bold text-[10px]">Fase: ${d.fase}</span></td>
+          <td class="p-2 border">
+            <span class="${badgeFaseColor} px-2.5 py-1 rounded-full border font-bold text-[10px] inline-block shadow-xs">
+              📌 Fase: ${d.fase}
+            </span>
+          </td>
           <td class="p-2 border text-center space-x-1">
             ${btnEditarHtml}
-            <button onclick="window.iniciarFirmaElectronica('${d.id}')" class="bg-cyan-600 text-white px-3 py-1 rounded font-bold cursor-pointer">✍️ Firmar</button>
+            <button onclick="window.iniciarFirmaElectronica('${d.id}')" class="bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-1 rounded font-bold cursor-pointer shadow-sm">✍️ Firmar (${d.fase})</button>
           </td>
         </tr>`;
       }).join('') : `<tr><td colspan="7" class="p-4 text-center text-slate-400">Sin documentos en proceso.</td></tr>`;
