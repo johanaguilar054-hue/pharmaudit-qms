@@ -434,7 +434,7 @@
 
   <script>
     // =========================================================================
-    // NÚCLEO NATIVO REST API SUPABASE (100% NUBE - SIN BLOQUEOS)
+    // NÚCLEO NATIVO REST API SUPABASE (100% NUBE)
     // =========================================================================
     const SUPABASE_URL = 'https://wmtvlxjzzwwhtybccrpe.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_i4A7rEjukekMlaCKjXWaNA_ze54EVjl';
@@ -491,7 +491,6 @@
           window.cachedAreas = dbState.areas || []; 
           window.cachedProcesos = dbState.procesos || [];
           
-          // RESTAURACIÓN COMPLETA DE LOS 6 ROLES GxP Y MATRIZ ORIGINALES
           window.cachedRoles = dbState.roles || [ 
             { id: 'rol_admin', nombre: 'Administrador (QA Manager)', desc: 'Acceso total y configuración GxP' },
             { id: 'rol_autor', nombre: 'Creador / Autor', desc: 'Elaboración y edición de documentos' },
@@ -516,7 +515,24 @@
           window.cachedCopias = dbState.copias || [];
           window.cachedObsoletos = dbState.obsoletos || []; 
           window.auditTrailLogs = dbState.audit || [];
-          console.log("✅ Datos descargados de Supabase correctamente.");
+          
+          // =========================================================================
+          // AUTO-RECUPERACIÓN DE ADMIN (Evita que el creador se quede por fuera)
+          // =========================================================================
+          const adminEmail = 'j.aguilar@pharmor.com.co';
+          const hasAdminUser = window.cachedUsuarios.find(u => u.correo === adminEmail);
+          
+          if (!hasAdminUser) {
+              console.warn("Restaurando cuenta de administrador maestro en la nube...");
+              // Limpiar duplicados huérfanos si existen
+              window.cachedEmpleados = window.cachedEmpleados.filter(e => e.correo !== adminEmail);
+              
+              window.cachedEmpleados.push({ id: 1, nombres: 'Johan S.', apellidos: 'Aguilar', cargo: 'QA Lead', correo: adminEmail, areaId: 'ar_qa', estado: 'Activo' });
+              window.cachedUsuarios.push({ id: 1, empleadoId: 1, correo: adminEmail, password: '123', rolesIds: ['rol_admin'], areasAsignadas: ['ar_qa', 'ar_qc', 'ar_prod'], estado: 'Activo' });
+              
+              await window.saveData(); // Enviar a Supabase para reparar la base de datos
+          }
+          console.log("✅ Datos listos y verificados en Supabase.");
         } else {
           console.log("⚠️ Nube vacía. Inicializando Base de Datos GxP con estructura completa...");
           window.cachedAreas = [ { id: 'ar_qa', nombre: 'Aseguramiento de Calidad (QA)' }, { id: 'ar_qc', nombre: 'Control de Calidad (QC)' }, { id: 'ar_prod', nombre: 'Planta de Producción' } ];
@@ -596,6 +612,9 @@
       return perms;
     };
     
+    // =========================================================================
+    // LÓGICA DE LOGIN REPARADA (Diferencia errores correctamente)
+    // =========================================================================
     window.ejecutarLoginPrincipal = function() {
       const email = document.getElementById('loginEmail').value.trim().toLowerCase(); 
       const pass = document.getElementById('loginPassword').value.trim();
@@ -605,12 +624,11 @@
         return;
       }
 
-      const user = window.cachedUsuarios.find(u => 
-        (u.correo || '').trim().toLowerCase() === email && 
-        (u.password || '').trim() === pass
-      );
+      // 1. Buscar si el usuario existe en la lista de accesos GxP
+      const usrData = window.cachedUsuarios.find(u => (u.correo || '').trim().toLowerCase() === email);
       
-      if (!user) { 
+      if (!usrData) { 
+        // Si no es un usuario GxP, revisamos si al menos es un empleado
         const empleadoSinUsuario = window.cachedEmpleados.find(e => (e.correo || '').trim().toLowerCase() === email);
         if (empleadoSinUsuario) {
             alert(`⚠️ ALERTA DEL SISTEMA GxP:\n\nEl correo ${email} pertenece a un Empleado registrado, pero el administrador aún NO le ha asignado una cuenta de "Usuario GxP" para iniciar sesión.\n\nPide al Administrador que vaya a:\nConfiguraciones GxP > 5. Gestión de Usuarios > "+ Asignar Usuario GxP".`);
@@ -620,14 +638,22 @@
         return; 
       }
 
-      if (user.estado !== 'Activo') { alert("Acceso denegado: Usuario INACTIVO."); return; }
+      // 2. Si el usuario existe, comprobar si la contraseña es correcta
+      if ((usrData.password || '').trim() !== pass) {
+          alert("❌ Contraseña incorrecta. Por favor, inténtelo de nuevo.");
+          return;
+      }
+
+      // 3. Comprobar si está activo
+      if (usrData.estado !== 'Activo') { alert("Acceso denegado: Usuario INACTIVO."); return; }
       
-      window.activeGxpUser = user; window.registrarAuditTrail(user.correo, 'LOGIN', 'Inicio de sesión exitoso.');
+      // LOGUEO EXITOSO
+      window.activeGxpUser = usrData; window.registrarAuditTrail(usrData.correo, 'LOGIN', 'Inicio de sesión exitoso.');
       document.getElementById('view-login').classList.add('hidden'); document.getElementById('app-portal').classList.remove('hidden');
       
-      const emp = window.cachedEmpleados.find(e => e.id === user.empleadoId);
-      document.getElementById('userBadge').innerText = `${emp ? emp.nombres + ' ' + emp.apellidos : user.correo}`;
-      document.querySelectorAll('.admin-only').forEach(el => { el.style.display = user.rolesIds.includes('rol_admin') ? 'block' : 'none'; });
+      const emp = window.cachedEmpleados.find(e => e.id === usrData.empleadoId);
+      document.getElementById('userBadge').innerText = `${emp ? emp.nombres + ' ' + emp.apellidos : usrData.correo}`;
+      document.querySelectorAll('.admin-only').forEach(el => { el.style.display = usrData.rolesIds.includes('rol_admin') ? 'block' : 'none'; });
       
       const btnDash = document.querySelector('[data-tab="dashboard"]'); if (btnDash) window.switchTab('dashboard', btnDash);
       window.renderAllData();
