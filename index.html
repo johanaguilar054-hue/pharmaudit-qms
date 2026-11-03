@@ -1214,47 +1214,48 @@
         const existingPdfBytes = await fetch(doc.archivo_url).then(res => res.arrayBuffer());
         const { PDFDocument, rgb, degrees } = PDFLib;
         
-        // Crear un documento PDF vacío que actuará como contenedor maestro de todas las copias
+        // 1. Crear documento maestro vacío donde se unirán todas las copias
         const mergedPdf = await PDFDocument.create();
+        
+        // 2. Cargar el PDF original UNA SOLA VEZ (Más eficiente para múltiples páginas)
+        const srcPdf = await PDFDocument.load(existingPdfBytes);
+        const srcIndices = srcPdf.getPageIndices(); // Obtiene [0, 1, 2...] según cantidad de páginas
 
         for (let i = 1; i <= cantidad; i++) {
-          // Cargar una copia fresca del documento base en cada iteración
-          const pdfDoc = await PDFDocument.load(existingPdfBytes); 
-          const pages = pdfDoc.getPages(); 
-          
-          // Generar ID único para esta copia específica (ej: COP-PH-GPD-F0-01-C001)
+          // Generar ID único para esta copia (Ej: C001, C002)
           const indexCopiaGlobal = window.cachedCopias.length + 1;
           const copiaIdFormato = `COP-${doc.codigo}-C${String(indexCopiaGlobal).padStart(3, '0')}`;
 
-          pages.forEach(page => { 
+          // 3. Copiar TODAS las páginas del PDF original al documento maestro
+          const copiedPages = await mergedPdf.copyPages(srcPdf, srcIndices);
+          
+          // 4. Iterar sobre CADA PÁGINA copiada para añadirla y estamparla
+          copiedPages.forEach(page => { 
+            mergedPdf.addPage(page); // Se añade al PDF final
             const { width, height } = page.getSize(); 
-            // Sello diagonal de control
+            
+            // Sello diagonal de control en cada página
             page.drawText('COPIA CONTROLADA', { 
               x: width / 2 - 220, y: height / 2 + 40, size: 50, color: rgb(0.8, 0, 0), rotate: degrees(-30), opacity: 0.3 
             }); 
-            // Leyenda dinámica en el pie/cabecera con el correlativo individual
+            
+            // Leyenda GxP de trazabilidad en el pie/cabecera de CADA página
             page.drawText(`VIGENTE - Destino: ${area} (${custodio}) - Emisión: ${new Date().toLocaleDateString()} - ID: ${copiaIdFormato} (${i}/${cantidad})`, { 
               x: 40, y: 25, size: 9, color: rgb(0.5, 0, 0) 
             }); 
           });
 
-          // Copiar las páginas ya selladas de esta iteración al documento maestro consolidado
-          const copiedPages = await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
-          copiedPages.forEach(p => mergedPdf.addPage(p));
-
-          // Registrar en la base de datos de copias controladas activas
+          // 5. Registrar la copia en Base de Datos y en el Audit Trail
           window.cachedCopias.unshift({ 
             codigo: copiaIdFormato, 
             doc: `${doc.codigo} v${doc.version}`, 
             area: area, 
             custodio: custodio 
           });
-          
-          // Registrar en el Audit Trail cada copia de forma individual
           window.registrarAuditTrail(window.activeGxpUser.correo, 'EMIT_COPY', `Copia Controlada [${copiaIdFormato}] de ${doc.codigo} a ${area} (${i}/${cantidad})`); 
         }
 
-        // Guardar y renderizar el bloque completo
+        // 6. Guardar y renderizar el bloque completo
         const pdfBytesModified = await mergedPdf.save(); 
         const blob = new Blob([pdfBytesModified], { type: 'application/pdf' });
         
@@ -1264,8 +1265,8 @@
         window.renderAllData();
 
       } catch (err) { 
-        console.error(err); 
-        alert("Error al inyectar el PDF múltiple."); 
+        console.error("Error GxP en inyección:", err); 
+        alert("Error al inyectar el PDF múltiple. Revisa la consola."); 
       } finally { 
         btn.innerText = "Generar e Imprimir"; 
         btn.disabled = false; 
