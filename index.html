@@ -292,9 +292,12 @@
     <div class="bg-white rounded-xl max-w-md w-full p-5 border shadow-2xl space-y-3 text-xs">
       <div class="border-b pb-2"><h3 class="font-bold text-sm text-amber-900">🖨️ Emitir Copia Controlada Oficial</h3></div>
       <div><label class="block font-semibold mb-1">Área Destinataria</label><select id="copiaAreaSelect" class="w-full p-2 border rounded bg-slate-50"></select></div>
-      <div><label class="block font-semibold mb-1">Custodio Responsable</label><input type="text" id="copiaCustodioInput" class="w-full p-2 border rounded bg-slate-50"></div>
-      <div class="flex justify-end space-x-2 pt-2 border-t">
-        <button type="button" onclick="window.toggleModal('modalEmitirCopia', false)" class="px-3 py-1 border rounded cursor-pointer">Cancelar</button>
+      <div class="grid grid-cols-2 gap-3">
+        <div><label class="block font-semibold mb-1">Custodio Responsable</label><input type="text" id="copiaCustodioInput" class="w-full p-2 border rounded bg-slate-50"></div>
+        <div><label class="block font-semibold mb-1">Cantidad de Copias</label><input type="number" id="copiaCantidadInput" min="1" max="50" value="1" class="w-full p-2 border rounded bg-amber-50 font-bold"></div>
+      </div>
+      <div class="flex justify-end space-x-2 pt-3 border-t">
+        <button type="button" onclick="window.toggleModal('modalEmitirCopia', false)" class="px-3 py-1.5 border rounded cursor-pointer">Cancelar</button>
         <button type="button" id="btn-confirmar-emitir" onclick="window.ejecutarInyeccionPDF()" class="px-4 py-1.5 bg-amber-600 text-white rounded font-bold cursor-pointer">Generar e Imprimir</button>
       </div>
     </div>
@@ -1189,24 +1192,84 @@
       } catch (error) { console.error(error); viewerArea.innerHTML = `<iframe src="${doc.archivo_url}" class="w-full h-full border-0"></iframe>`; }
     };
 
-    window.abrirModalEmitir = function(docId) { window.selectedDocId = docId; window.toggleModal('modalEmitirCopia', true); };
+    window.abrirModalEmitir = function(docId) { 
+      window.selectedDocId = docId; 
+      document.getElementById('copiaCantidadInput').value = '1';
+      window.toggleModal('modalEmitirCopia', true); 
+    };
+
     window.ejecutarInyeccionPDF = async function() {
       const doc = window.cachedDocs.find(x => x.id === window.selectedDocId);
-      const area = document.getElementById('copiaAreaSelect').value; const custodio = document.getElementById('copiaCustodioInput').value;
+      const area = document.getElementById('copiaAreaSelect').value; 
+      const custodio = document.getElementById('copiaCustodioInput').value;
+      const cantidad = parseInt(document.getElementById('copiaCantidadInput').value) || 1;
+
       if (!doc || !doc.archivo_url) { alert("Sin PDF adjunto."); return; }
-      const btn = document.getElementById('btn-confirmar-emitir'); btn.innerText = "Inyectando Marca Controlada..."; btn.disabled = true;
+      
+      const btn = document.getElementById('btn-confirmar-emitir'); 
+      btn.innerText = "Inyectando Marcas Controladas..."; 
+      btn.disabled = true;
+
       try {
         const existingPdfBytes = await fetch(doc.archivo_url).then(res => res.arrayBuffer());
-        const pdfDoc = await PDFLib.PDFDocument.load(existingPdfBytes); const pages = pdfDoc.getPages(); const { rgb, degrees } = PDFLib;
-        pages.forEach(page => { const { width, height } = page.getSize(); page.drawText('COPIA CONTROLADA', { x: width / 2 - 220, y: height / 2 + 40, size: 50, color: rgb(0.8, 0, 0), rotate: degrees(-30), opacity: 0.3 }); page.drawText(`VIGENTE - Destino: ${area} (${custodio}) - Emisión: ${new Date().toLocaleDateString()}`, { x: 40, y: 25, size: 9, color: rgb(0.5, 0, 0) }); });
-        const pdfBytesModified = await pdfDoc.save(); const blob = new Blob([pdfBytesModified], { type: 'application/pdf' });
-        window.cachedCopias.unshift({ codigo: `COP-${doc.codigo}-C0${window.cachedCopias.length + 1}`, doc: `${doc.codigo} v${doc.version}`, area: area, custodio: custodio });
-        window.registrarAuditTrail(window.activeGxpUser.correo, 'EMIT_COPY', `Copia Controlada de ${doc.codigo} a ${area}`); 
+        const { PDFDocument, rgb, degrees } = PDFLib;
+        
+        // Crear un documento PDF vacío que actuará como contenedor maestro de todas las copias
+        const mergedPdf = await PDFDocument.create();
+
+        for (let i = 1; i <= cantidad; i++) {
+          // Cargar una copia fresca del documento base en cada iteración
+          const pdfDoc = await PDFDocument.load(existingPdfBytes); 
+          const pages = pdfDoc.getPages(); 
+          
+          // Generar ID único para esta copia específica (ej: COP-PH-GPD-F0-01-C001)
+          const indexCopiaGlobal = window.cachedCopias.length + 1;
+          const copiaIdFormato = `COP-${doc.codigo}-C${String(indexCopiaGlobal).padStart(3, '0')}`;
+
+          pages.forEach(page => { 
+            const { width, height } = page.getSize(); 
+            // Sello diagonal de control
+            page.drawText('COPIA CONTROLADA', { 
+              x: width / 2 - 220, y: height / 2 + 40, size: 50, color: rgb(0.8, 0, 0), rotate: degrees(-30), opacity: 0.3 
+            }); 
+            // Leyenda dinámica en el pie/cabecera con el correlativo individual
+            page.drawText(`VIGENTE - Destino: ${area} (${custodio}) - Emisión: ${new Date().toLocaleDateString()} - ID: ${copiaIdFormato} (${i}/${cantidad})`, { 
+              x: 40, y: 25, size: 9, color: rgb(0.5, 0, 0) 
+            }); 
+          });
+
+          // Copiar las páginas ya selladas de esta iteración al documento maestro consolidado
+          const copiedPages = await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
+          copiedPages.forEach(p => mergedPdf.addPage(p));
+
+          // Registrar en la base de datos de copias controladas activas
+          window.cachedCopias.unshift({ 
+            codigo: copiaIdFormato, 
+            doc: `${doc.codigo} v${doc.version}`, 
+            area: area, 
+            custodio: custodio 
+          });
+          
+          // Registrar en el Audit Trail cada copia de forma individual
+          window.registrarAuditTrail(window.activeGxpUser.correo, 'EMIT_COPY', `Copia Controlada [${copiaIdFormato}] de ${doc.codigo} a ${area} (${i}/${cantidad})`); 
+        }
+
+        // Guardar y renderizar el bloque completo
+        const pdfBytesModified = await mergedPdf.save(); 
+        const blob = new Blob([pdfBytesModified], { type: 'application/pdf' });
+        
         await window.saveData(); 
         window.open(URL.createObjectURL(blob), '_blank'); 
         window.toggleModal('modalEmitirCopia', false); 
         window.renderAllData();
-      } catch (err) { console.error(err); alert("Error al inyectar el PDF."); } finally { btn.innerText = "Generar e Imprimir"; btn.disabled = false; }
+
+      } catch (err) { 
+        console.error(err); 
+        alert("Error al inyectar el PDF múltiple."); 
+      } finally { 
+        btn.innerText = "Generar e Imprimir"; 
+        btn.disabled = false; 
+      }
     };
 
     document.addEventListener('DOMContentLoaded', () => { document.getElementById('loginPassword').addEventListener('keypress', function (e) { if (e.key === 'Enter') window.ejecutarLoginPrincipal(); }); document.getElementById('loginEmail').addEventListener('keypress', function (e) { if (e.key === 'Enter') document.getElementById('loginPassword').focus(); }); });
