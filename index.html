@@ -77,15 +77,15 @@
           <!-- Lista Desplegable (Oculta por defecto) -->
           <div id="userDropdown" class="hidden absolute right-0 mt-2 w-56 bg-white rounded-md shadow-xl border border-slate-200 z-50 text-xs font-medium text-slate-600">
             <div class="py-1">
-              <a href="#" class="block px-4 py-2 hover:bg-slate-50 flex items-center space-x-2"><span>👤</span><span>Actualización de datos</span></a>
-              <a href="#" class="block px-4 py-2 hover:bg-slate-50 flex items-center space-x-2"><span>💼</span><span>Ver perfil de cargo</span></a>
-              <a href="#" class="block px-4 py-2 hover:bg-slate-50 flex items-center space-x-2"><span>🇺🇸</span><span>Translate to english</span></a>
-              <a href="#" class="block px-4 py-2 hover:bg-slate-50 flex items-center space-x-2"><span>🔒</span><span>Contraseña y Autenticación</span></a>
-              <a href="#" class="block px-4 py-2 hover:bg-slate-50 flex items-center space-x-2"><span>🔔</span><span>Notificaciones</span></a>
+              <a href="#" onclick="window.abrirModalUpdateData(); window.toggleUserMenu(); return false;" class="block px-4 py-2 hover:bg-slate-50 flex items-center space-x-2"><span>👤</span><span>Actualización de datos</span></a>
+              <a href="#" onclick="window.abrirModalProfile(); window.toggleUserMenu(); return false;" class="block px-4 py-2 hover:bg-slate-50 flex items-center space-x-2"><span>💼</span><span>Ver perfil de cargo</span></a>
+              <a href="#" onclick="window.translateToEnglish(); window.toggleUserMenu(); return false;" class="block px-4 py-2 hover:bg-slate-50 flex items-center space-x-2"><span>🇺🇸</span><span>Translate to english</span></a>
+              <a href="#" onclick="window.abrirModalPassword(); window.toggleUserMenu(); return false;" class="block px-4 py-2 hover:bg-slate-50 flex items-center space-x-2"><span>🔒</span><span>Contraseña y Autenticación</span></a>
+              <a href="#" onclick="window.abrirModalNotifications(); window.toggleUserMenu(); return false;" class="block px-4 py-2 hover:bg-slate-50 flex items-center space-x-2"><span>🔔</span><span>Notificaciones</span></a>
               <div class="border-t border-slate-100 my-1"></div>
               <button onclick="window.location.reload()" class="w-full text-left px-4 py-2 hover:bg-rose-50 text-rose-600 flex items-center space-x-2 cursor-pointer font-bold"><span>🚪</span><span>Cerrar sesión</span></button>
               <div class="border-t border-slate-100 my-1"></div>
-              <a href="#" class="block px-4 py-2 hover:bg-slate-50 flex items-center space-x-2 text-slate-400"><span>ℹ️</span><span>Acerca de...</span></a>
+              <a href="#" onclick="window.abrirModalAbout(); window.toggleUserMenu(); return false;" class="block px-4 py-2 hover:bg-slate-50 flex items-center space-x-2 text-slate-400"><span>ℹ️</span><span>Acerca de...</span></a>
             </div>
           </div>
         </div>
@@ -296,7 +296,7 @@
     </main>
   </div>
 
-  <!-- MODALES -->
+  <!-- MODALES EXISTENTES -->
   <div id="modalExportPdf" class="modal-backdrop fixed inset-0 bg-slate-900/80 backdrop-blur-sm items-center justify-center p-4 z-50">
     <div class="bg-white rounded-xl max-w-5xl w-full p-4 border shadow-2xl space-y-3 flex flex-col h-[90vh]">
       <div class="border-b pb-2 flex justify-between items-center shrink-0">
@@ -472,6 +472,83 @@
     </div>
   </div>
 
+  <!-- NUEVOS MODALES DEL MENÚ DE USUARIO -->
+  <div id="modalUpdateData" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl max-w-sm w-full p-5 border shadow-xl space-y-3 text-xs">
+      <div class="border-b pb-2"><h3 class="font-bold text-sm text-slate-800">👤 Actualización de datos</h3></div>
+      <div><label class="block mb-1 font-semibold">Nombres</label><input type="text" id="myNombres" class="w-full p-2 border rounded" /></div>
+      <div><label class="block mb-1 font-semibold">Apellidos</label><input type="text" id="myApellidos" class="w-full p-2 border rounded" /></div>
+      <div class="flex justify-end space-x-2 pt-2 border-t">
+        <button onclick="window.toggleModal('modalUpdateData', false)" class="px-3 py-1.5 border rounded cursor-pointer">Cancelar</button>
+        <button onclick="window.guardarUpdateData()" class="px-4 py-1.5 bg-cyan-600 text-white rounded font-bold shadow cursor-pointer">Guardar Datos</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modalProfile" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl max-w-sm w-full p-5 border shadow-xl space-y-4 text-xs">
+      <div class="border-b pb-2"><h3 class="font-bold text-sm text-slate-800">💼 Perfil de Cargo y Accesos</h3></div>
+      <div class="space-y-2 text-slate-700 bg-slate-50 p-3 rounded-lg border">
+        <p><strong>Empleado:</strong> <span id="profName"></span></p>
+        <p><strong>Cargo Oficial:</strong> <span id="profCargo"></span></p>
+        <p><strong>Área Principal:</strong> <span id="profArea"></span></p>
+        <p><strong>Correo (Login):</strong> <span id="profEmail" class="font-mono text-cyan-700"></span></p>
+      </div>
+      <div>
+        <strong class="block mb-1">Roles GxP Asignados:</strong>
+        <div id="profRoles" class="flex flex-wrap gap-1"></div>
+      </div>
+      <div class="flex justify-end pt-2 border-t">
+        <button onclick="window.toggleModal('modalProfile', false)" class="px-4 py-1.5 bg-slate-800 text-white rounded font-bold cursor-pointer">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modalPassword" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl max-w-sm w-full p-5 border shadow-xl space-y-3 text-xs">
+      <div class="border-b pb-2"><h3 class="font-bold text-sm text-slate-800">🔒 Cambiar Contraseña</h3></div>
+      <div><label class="block mb-1 font-semibold">Contraseña Actual</label><input type="password" id="myPassOld" class="w-full p-2 border rounded font-mono" /></div>
+      <div><label class="block mb-1 font-semibold">Nueva Contraseña</label><input type="password" id="myPassNew" class="w-full p-2 border rounded font-mono" /></div>
+      <div><label class="block mb-1 font-semibold">Confirmar Nueva Contraseña</label><input type="password" id="myPassConfirm" class="w-full p-2 border rounded font-mono" /></div>
+      <div class="flex justify-end space-x-2 pt-2 border-t">
+        <button onclick="window.toggleModal('modalPassword', false)" class="px-3 py-1.5 border rounded cursor-pointer">Cancelar</button>
+        <button onclick="window.guardarPassword()" class="px-4 py-1.5 bg-slate-800 text-white rounded font-bold shadow cursor-pointer">Actualizar Clave</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modalNotifications" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl max-w-sm w-full p-5 border shadow-xl space-y-3 text-xs">
+      <div class="border-b pb-2 flex justify-between items-center"><h3 class="font-bold text-sm text-slate-800">🔔 Notificaciones</h3><span class="bg-cyan-100 text-cyan-800 px-2 rounded-full font-bold text-[10px]">0</span></div>
+      <div class="py-4 text-center text-slate-500 italic bg-slate-50 rounded-lg border border-slate-200">
+        ✅ El sistema GxP está conectado.<br>No tienes notificaciones pendientes.
+      </div>
+      <div class="flex justify-end pt-2 border-t">
+        <button onclick="window.toggleModal('modalNotifications', false)" class="px-4 py-1.5 bg-slate-800 text-white rounded font-bold cursor-pointer">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modalAbout" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl max-w-sm w-full p-5 border shadow-xl space-y-3 text-xs text-center">
+      <div class="text-3xl font-extrabold text-slate-900 tracking-tight mt-2">🛡️ PharmAudit</div>
+      <p class="text-slate-500 font-mono mb-2">v1.0.0 (Release Build)</p>
+      <div class="bg-slate-50 p-3 rounded text-left space-y-2 border text-slate-700">
+        <p><strong>Licencia:</strong> Pharmor S.A.S.</p>
+        <p><strong>Módulo:</strong> eQMS & Document Control ERP</p>
+        <p><strong>Cumplimiento Normativo:</strong></p>
+        <ul class="list-disc pl-5">
+          <li>FDA 21 CFR Part 11 (Firmas y Audit Trail)</li>
+          <li>ISPE GAMP 5 (Integridad de Datos)</li>
+          <li>EU-GMP Annex 11</li>
+        </ul>
+      </div>
+      <div class="flex justify-center pt-3">
+        <button onclick="window.toggleModal('modalAbout', false)" class="px-6 py-1.5 bg-slate-800 text-white rounded-lg font-bold cursor-pointer">Aceptar</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     const SUPABASE_URL = 'https://wmtvlxjzzwwhtybccrpe.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_i4A7rEjukekMlaCKjXWaNA_ze54EVjl';
@@ -538,7 +615,6 @@
         txt.className = 'text-rose-400 font-semibold';
         txt.innerText = mensaje || 'Error Nube';
       } else {
-        // Estado Conectado / Sincronizado por defecto
         led.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
         txt.className = 'text-emerald-400 font-semibold';
         txt.innerText = mensaje || 'Conectado';
@@ -614,7 +690,6 @@
             if (dbState.procesos) window.cachedProcesos = dbState.procesos;
             if (dbState.roles && dbState.roles.length >= 6) window.cachedRoles = dbState.roles;
             
-            // SANITACIÓN DE MATRIZ DE PERMISOS: Forzar cumplimiento GxP si Supabase contenía matriz errónea
             if (dbState.matriz && dbState.matriz['rol_autor'] && dbState.matriz['rol_autor'].crearEdicion) {
               window.cachedMatrizPermisos = dbState.matriz;
             } else {
@@ -997,7 +1072,6 @@
         const area = window.cachedAreas.find(a => a.id === d.areaId);
         const btnEditarHtml = puedeCrear ? `<button onclick="window.abrirModalEditarDoc('${d.id}')" class="bg-cyan-50 border border-cyan-300 px-2 py-1 rounded font-bold text-cyan-800 cursor-pointer">✏️ Editar</button>` : '';
 
-        // ESCALONAMIENTO VISUAL CLARO SEGÚN LA FASE GXP ACTUAL
         let badgeFaseColor = 'bg-amber-100 text-amber-800 border-amber-300';
         if (d.fase === 'Revisión') badgeFaseColor = 'bg-blue-100 text-blue-800 border-blue-300';
         if (d.fase === 'Aprobación') badgeFaseColor = 'bg-purple-100 text-purple-800 border-purple-300';
@@ -1233,48 +1307,26 @@
         const existingPdfBytes = await fetch(doc.archivo_url).then(res => res.arrayBuffer());
         const { PDFDocument, rgb, degrees } = PDFLib;
         
-        // 1. Crear documento maestro vacío donde se unirán todas las copias
         const mergedPdf = await PDFDocument.create();
-        
-        // 2. Cargar el PDF original UNA SOLA VEZ (Más eficiente para múltiples páginas)
         const srcPdf = await PDFDocument.load(existingPdfBytes);
-        const srcIndices = srcPdf.getPageIndices(); // Obtiene [0, 1, 2...] según cantidad de páginas
+        const srcIndices = srcPdf.getPageIndices(); 
 
         for (let i = 1; i <= cantidad; i++) {
-          // Generar ID único para esta copia (Ej: C001, C002)
           const indexCopiaGlobal = window.cachedCopias.length + 1;
           const copiaIdFormato = `COP-${doc.codigo}-C${String(indexCopiaGlobal).padStart(3, '0')}`;
-
-          // 3. Copiar TODAS las páginas del PDF original al documento maestro
           const copiedPages = await mergedPdf.copyPages(srcPdf, srcIndices);
           
-          // 4. Iterar sobre CADA PÁGINA copiada para añadirla y estamparla
           copiedPages.forEach(page => { 
-            mergedPdf.addPage(page); // Se añade al PDF final
+            mergedPdf.addPage(page); 
             const { width, height } = page.getSize(); 
-            
-            // Sello diagonal de control en cada página
-            page.drawText('COPIA CONTROLADA', { 
-              x: width / 2 - 220, y: height / 2 + 40, size: 50, color: rgb(0.8, 0, 0), rotate: degrees(-30), opacity: 0.3 
-            }); 
-            
-            // Leyenda GxP de trazabilidad en el pie/cabecera de CADA página
-            page.drawText(`VIGENTE - Destino: ${area} (${custodio}) - Emisión: ${new Date().toLocaleDateString()} - ID: ${copiaIdFormato} (${i}/${cantidad})`, { 
-              x: 40, y: 25, size: 9, color: rgb(0.5, 0, 0) 
-            }); 
+            page.drawText('COPIA CONTROLADA', { x: width / 2 - 220, y: height / 2 + 40, size: 50, color: rgb(0.8, 0, 0), rotate: degrees(-30), opacity: 0.3 }); 
+            page.drawText(`VIGENTE - Destino: ${area} (${custodio}) - Emisión: ${new Date().toLocaleDateString()} - ID: ${copiaIdFormato} (${i}/${cantidad})`, { x: 40, y: 25, size: 9, color: rgb(0.5, 0, 0) }); 
           });
 
-          // 5. Registrar la copia en Base de Datos y en el Audit Trail
-          window.cachedCopias.unshift({ 
-            codigo: copiaIdFormato, 
-            doc: `${doc.codigo} v${doc.version}`, 
-            area: area, 
-            custodio: custodio 
-          });
+          window.cachedCopias.unshift({ codigo: copiaIdFormato, doc: `${doc.codigo} v${doc.version}`, area: area, custodio: custodio });
           window.registrarAuditTrail(window.activeGxpUser.correo, 'EMIT_COPY', `Copia Controlada [${copiaIdFormato}] de ${doc.codigo} a ${area} (${i}/${cantidad})`); 
         }
 
-        // 6. Guardar y renderizar el bloque completo
         const pdfBytesModified = await mergedPdf.save(); 
         const blob = new Blob([pdfBytesModified], { type: 'application/pdf' });
         
@@ -1292,13 +1344,12 @@
       }
     };
 
-    // CONTROL DEL MENÚ DE USUARIO DESPLEGABLE
+    // FUNCIONES DEL NUEVO MENÚ DE USUARIO
     window.toggleUserMenu = function() {
       const menu = document.getElementById('userDropdown');
       if(menu) menu.classList.toggle('hidden');
     };
 
-    // Cerrar el menú automáticamente si se hace clic afuera de él
     document.addEventListener('click', function(event) {
       const menu = document.getElementById('userDropdown');
       const btn = menu ? menu.previousElementSibling : null;
@@ -1306,6 +1357,91 @@
         menu.classList.add('hidden');
       }
     });
+
+    window.abrirModalUpdateData = function() {
+      if(!window.activeGxpUser) return;
+      const emp = window.cachedEmpleados.find(e => e.id === window.activeGxpUser.empleadoId);
+      if(emp) {
+        document.getElementById('myNombres').value = emp.nombres;
+        document.getElementById('myApellidos').value = emp.apellidos;
+        window.toggleModal('modalUpdateData', true);
+      }
+    };
+
+    window.guardarUpdateData = async function() {
+      const emp = window.cachedEmpleados.find(e => e.id === window.activeGxpUser.empleadoId);
+      if(emp) {
+        emp.nombres = document.getElementById('myNombres').value.trim();
+        emp.apellidos = document.getElementById('myApellidos').value.trim();
+        document.getElementById('userBadge').innerText = `${emp.nombres} ${emp.apellidos}`;
+        window.registrarAuditTrail(window.activeGxpUser.correo, 'UPDATE_PROFILE', 'El usuario actualizó sus datos personales básicos.');
+        await window.saveData();
+        window.toggleModal('modalUpdateData', false);
+        window.renderAllData();
+      }
+    };
+
+    window.abrirModalProfile = function() {
+      if(!window.activeGxpUser) return;
+      const emp = window.cachedEmpleados.find(e => e.id === window.activeGxpUser.empleadoId);
+      const area = window.cachedAreas.find(a => a.id === emp.areaId);
+      
+      document.getElementById('profName').innerText = emp ? `${emp.nombres} ${emp.apellidos}` : 'N/A';
+      document.getElementById('profCargo').innerText = emp ? emp.cargo : 'N/A';
+      document.getElementById('profArea').innerText = area ? area.nombre : 'N/A';
+      document.getElementById('profEmail').innerText = window.activeGxpUser.correo;
+      
+      const rolesHTML = window.activeGxpUser.rolesIds.map(rolId => {
+        const rolObj = window.cachedRoles.find(r => r.id === rolId);
+        return `<span class="bg-cyan-100 text-cyan-800 px-2 py-0.5 rounded text-[11px] font-bold border border-cyan-200">${rolObj ? rolObj.nombre : rolId}</span>`;
+      }).join('');
+      document.getElementById('profRoles').innerHTML = rolesHTML;
+
+      window.toggleModal('modalProfile', true);
+    };
+
+    window.translateToEnglish = function() {
+      alert("⚠️ El módulo de internacionalización (i18n) está programado para la siguiente fase de validación del sistema.\n\nPara mantener la integridad de los datos GxP, los cambios de idioma requieren una validación OQ (Operational Qualification) independiente.");
+    };
+
+    window.abrirModalPassword = function() {
+      document.getElementById('myPassOld').value = '';
+      document.getElementById('myPassNew').value = '';
+      document.getElementById('myPassConfirm').value = '';
+      window.toggleModal('modalPassword', true);
+    };
+
+    window.guardarPassword = async function() {
+      const oldP = document.getElementById('myPassOld').value;
+      const newP = document.getElementById('myPassNew').value;
+      const confP = document.getElementById('myPassConfirm').value;
+      
+      if(oldP !== window.activeGxpUser.password) {
+        alert("La contraseña actual es incorrecta.");
+        return;
+      }
+      if(newP.length < 3) {
+        alert("La nueva contraseña es demasiado corta.");
+        return;
+      }
+      if(newP !== confP) {
+        alert("Las contraseñas nuevas no coinciden.");
+        return;
+      }
+
+      window.activeGxpUser.password = newP;
+      // Actualizar también en el array principal
+      const usrIdx = window.cachedUsuarios.findIndex(u => u.correo === window.activeGxpUser.correo);
+      if(usrIdx > -1) window.cachedUsuarios[usrIdx].password = newP;
+
+      window.registrarAuditTrail(window.activeGxpUser.correo, 'CHANGE_PASSWORD', 'El usuario actualizó su credencial de acceso 21 CFR Part 11.');
+      await window.saveData();
+      alert("Contraseña actualizada con éxito.");
+      window.toggleModal('modalPassword', false);
+    };
+
+    window.abrirModalNotifications = function() { window.toggleModal('modalNotifications', true); };
+    window.abrirModalAbout = function() { window.toggleModal('modalAbout', true); };
 
     document.addEventListener('DOMContentLoaded', () => { document.getElementById('loginPassword').addEventListener('keypress', function (e) { if (e.key === 'Enter') window.ejecutarLoginPrincipal(); }); document.getElementById('loginEmail').addEventListener('keypress', function (e) { if (e.key === 'Enter') document.getElementById('loginPassword').focus(); }); });
   </script>
