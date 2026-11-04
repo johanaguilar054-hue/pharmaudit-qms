@@ -881,8 +881,34 @@
       await window.saveData(); window.toggleModal('modalEmpleado', false); window.renderAllData();
     };
 
-    window.abrirModalUsuario = function() { document.getElementById('modalUsrTitle').innerText = 'Asignar Nuevo Usuario'; document.getElementById('usrEditIndex').value = '-1'; document.getElementById('usrPasswordInput').value = '123'; document.getElementById('usrEstadoSelect').value = 'Activo'; window.poblarCheckboxesModalUsuario(['rol_viewer'], [window.cachedAreas[0].id]); window.toggleModal('modalUsuario', true); };
-    window.abrirModalEditarUsuario = function(idx) { const usr = window.cachedUsuarios[idx]; document.getElementById('usrEditIndex').value = idx; document.getElementById('usrEmpSelect').value = usr.empleadoId; document.getElementById('usrCorreoInput').value = usr.correo; document.getElementById('usrPasswordInput').value = usr.password; document.getElementById('usrEstadoSelect').value = usr.estado; window.poblarCheckboxesModalUsuario(usr.rolesIds, usr.areasAsignadas); window.toggleModal('modalUsuario', true); };
+    // CORRECCIÓN ORDEN DEL MODAL USUARIOS
+    window.abrirModalUsuario = function() { 
+      document.getElementById('modalUsrTitle').innerText = 'Asignar Nuevo Usuario'; 
+      document.getElementById('usrEditIndex').value = '-1'; 
+      document.getElementById('usrPasswordInput').value = '123'; 
+      document.getElementById('usrEstadoSelect').value = 'Activo'; 
+      window.poblarCheckboxesModalUsuario(['rol_viewer'], [window.cachedAreas[0] ? window.cachedAreas[0].id : '']); 
+      window.toggleModal('modalUsuario', true); 
+    };
+
+    window.abrirModalEditarUsuario = function(idx) { 
+      const usr = window.cachedUsuarios[idx]; 
+      document.getElementById('usrEditIndex').value = idx; 
+      window.poblarCheckboxesModalUsuario(usr.rolesIds, usr.areasAsignadas, usr.empleadoId); 
+      document.getElementById('usrCorreoInput').value = usr.correo; 
+      document.getElementById('usrPasswordInput').value = usr.password; 
+      document.getElementById('usrEstadoSelect').value = usr.estado; 
+      window.toggleModal('modalUsuario', true); 
+    };
+
+    window.poblarCheckboxesModalUsuario = function(rolesSeleccionados = [], areasSeleccionadas = [], empId = null) {
+      document.getElementById('usrEmpSelect').innerHTML = window.cachedEmpleados.map(e => `<option value="${e.id}">${e.nombres} ${e.apellidos} (${e.correo})</option>`).join('');
+      if(empId) document.getElementById('usrEmpSelect').value = empId; // Mantiene seleccionado al empleado correcto
+      document.getElementById('contenedorRolesCheckboxes').innerHTML = window.cachedRoles.map(r => `<label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" name="chkRol" value="${r.id}" ${rolesSeleccionados.includes(r.id)?'checked':''} class="rounded"> <span>${r.nombre}</span></label>`).join('');
+      document.getElementById('contenedorAreasCheckboxes').innerHTML = window.cachedAreas.map(a => `<label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" name="chkArea" value="${a.id}" ${areasSeleccionadas.includes(a.id)?'checked':''} class="rounded"> <span>${a.nombre}</span></label>`).join('');
+      window.sugerirCorreoEmpleado();
+    };
+
     window.guardarUsuarioCompleto = async function() {
       const editIdx = parseInt(document.getElementById('usrEditIndex').value);
       const data = { empleadoId: parseInt(document.getElementById('usrEmpSelect').value), correo: document.getElementById('usrCorreoInput').value.trim(), password: document.getElementById('usrPasswordInput').value.trim(), estado: document.getElementById('usrEstadoSelect').value, rolesIds: Array.from(document.querySelectorAll('input[name="chkRol"]:checked')).map(el => el.value), areasAsignadas: Array.from(document.querySelectorAll('input[name="chkArea"]:checked')).map(el => el.value) };
@@ -891,12 +917,10 @@
       await window.saveData(); window.toggleModal('modalUsuario', false); window.renderAllData(); alert("✅ Usuario guardado correctamente en la Nube.");
     };
 
-    window.sugerirCorreoEmpleado = function() { const empId = parseInt(document.getElementById('usrEmpSelect').value); const emp = window.cachedEmpleados.find(e => e.id === empId); if(emp) { document.getElementById('usrCorreoInput').value = emp.correo; } };
-    window.poblarCheckboxesModalUsuario = function(rolesSeleccionados = [], areasSeleccionadas = []) {
-      document.getElementById('usrEmpSelect').innerHTML = window.cachedEmpleados.map(e => `<option value="${e.id}">${e.nombres} ${e.apellidos} (${e.correo})</option>`).join('');
-      document.getElementById('contenedorRolesCheckboxes').innerHTML = window.cachedRoles.map(r => `<label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" name="chkRol" value="${r.id}" ${rolesSeleccionados.includes(r.id)?'checked':''} class="rounded"> <span>${r.nombre}</span></label>`).join('');
-      document.getElementById('contenedorAreasCheckboxes').innerHTML = window.cachedAreas.map(a => `<label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" name="chkArea" value="${a.id}" ${areasSeleccionadas.includes(a.id)?'checked':''} class="rounded"> <span>${a.nombre}</span></label>`).join('');
-      window.sugerirCorreoEmpleado();
+    window.sugerirCorreoEmpleado = function() { 
+      const empId = parseInt(document.getElementById('usrEmpSelect').value); 
+      const emp = window.cachedEmpleados.find(e => e.id === empId); 
+      if(emp) { document.getElementById('usrCorreoInput').value = emp.correo; } 
     };
 
     window.abrirModalProceso = function() { document.getElementById('modalProcesoTitle').innerText = 'Nuevo Proceso'; document.getElementById('procesoEditIndex').value = '-1'; document.getElementById('inputProcesoNombre').value = ''; window.toggleModal('modalProceso', true); };
@@ -926,7 +950,7 @@
       window.cachedDocs.push(doc); window.registrarAuditTrail(window.activeGxpUser.correo, 'CREATE_DOC', `Creado documento con archivo: ${doc.codigo}`); await window.saveData(); window.toggleModal('modalDoc', false); window.renderAllData();
     };
 
-    // --- NUEVA LÓGICA DE FIRMAS CON VALIDACIÓN ESTRICTA ---
+    // CORRECCIÓN VALIDACIÓN DE ÁREA EN FIRMA ELECTRÓNICA
     window.iniciarFirmaElectronica = function(docId) { 
       const doc = window.cachedDocs.find(x => x.id === docId); 
       if(!doc) return; 
@@ -947,7 +971,12 @@
 
       const isAdmin = user.rolesIds.includes('rol_admin');
 
-      // 1. Fase de Elaboración -> Pasa a Revisión
+      // Validar que el usuario pertenezca al área del documento (Ej: Producción)
+      if (!isAdmin && (!user.areasAsignadas || !user.areasAsignadas.includes(doc.areaId))) {
+          alert("⛔ Control GxP: Acceso Denegado. Su perfil no está autorizado para firmar o aprobar documentos pertenecientes a esta área.");
+          return;
+      }
+
       if(doc.fase === 'Elaboración') {
         if(!user.rolesIds.includes('rol_autor') && !isAdmin) {
           alert("⛔ Control GxP: No tienes el rol de 'Autor' asignado para firmar este documento.");
@@ -955,7 +984,6 @@
         }
         doc.fase = 'Revisión';
       } 
-      // 2. Fase de Revisión -> Pasa a Aprobación
       else if(doc.fase === 'Revisión') {
         if(!user.rolesIds.includes('rol_revisor') && !isAdmin) {
           alert("⛔ Control GxP: No tienes el rol de 'Revisor Técnico' asignado para firmar esta fase.");
@@ -967,7 +995,6 @@
         }
         doc.fase = 'Aprobación';
       } 
-      // 3. Fase de Aprobación -> Pasa a VIGENTE
       else if(doc.fase === 'Aprobación') {
         if(!user.rolesIds.includes('rol_aprobador') && !isAdmin) {
           alert("⛔ Control GxP: No tienes el rol de 'Aprobador Final' asignado para emitir el documento vigente.");
@@ -981,12 +1008,11 @@
         doc.estado = 'VIGENTE';
       }
 
-      window.registrarAuditTrail(user.correo, 'FIRM_PART11', `Firma aplicada sobre ${doc.codigo} (Fase: ${doc.estado || doc.fase}). Roles validados correctamente.`); 
+      window.registrarAuditTrail(user.correo, 'FIRM_PART11', `Firma aplicada sobre ${doc.codigo} (Fase: ${doc.estado || doc.fase}). Área validada correctamente.`); 
       await window.saveData(); 
       window.toggleModal('modalFirmaPart11', false); 
       window.renderAllData();
     };
-    // ------------------------------------------------------
 
     window.viewDocument = async function(docId) {
       let doc = window.cachedDocs.find(x => x.id === docId) || window.cachedObsoletos.find(x => x.id === docId);
