@@ -6,6 +6,7 @@
   <title>PharmAudit ERP / QMS - Pharmor</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   
   <style>
     body { margin: 0; padding: 0; background-color: #f8fafc; font-family: ui-sans-serif, system-ui, sans-serif; }
@@ -908,15 +909,15 @@
   <div id="modalAbout" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
     <div class="bg-white rounded-xl max-w-sm w-full p-5 border shadow-xl space-y-3 text-xs text-center">
       <div class="text-3xl font-extrabold text-slate-900 tracking-tight mt-2">🛡️ PharmAudit</div>
-      <p class="text-slate-500 font-mono mb-2">v1.1.0 (Module Equipments Release)</p>
+      <p class="text-slate-500 font-mono mb-2">v1.2.0 (QR Compliance & Verification Release)</p>
       <div class="bg-slate-50 p-3 rounded text-left space-y-2 border text-slate-700">
         <p><strong>Licencia:</strong> Pharmor S.A.S.</p>
-        <p><strong>Módulo:</strong> eQMS, Document Control &amp; Metrology ERP</p>
+        <p><strong>Módulo:</strong> eQMS, Document Control, QR Verification &amp; Metrology ERP</p>
         <p><strong>Cumplimiento Normativo:</strong></p>
         <ul class="list-disc pl-5">
           <li>FDA 21 CFR Part 11 (Firmas y Audit Trail)</li>
           <li>ISPE GAMP 5 (Integridad de Datos ALCOA+)</li>
-          <li>EU-GMP Annex 11</li>
+          <li>EU-GMP Annex 11 &amp; ISO 17025</li>
         </ul>
       </div>
       <div class="flex justify-center pt-3">
@@ -949,6 +950,35 @@
         reader.onload = () => resolve(reader.result);
         reader.onerror = (e) => reject(e);
         reader.readAsDataURL(file);
+      });
+    };
+
+    // FUNCIÓN HELPER: GENERACIÓN DE QR EN BASE64
+    window.generarQRCodeBase64 = function(texto) {
+      return new Promise((resolve) => {
+        const container = document.createElement('div');
+        container.style.display = 'none';
+        document.body.appendChild(container);
+        
+        const qrcode = new QRCode(container, {
+          text: texto,
+          width: 150,
+          height: 150,
+          correctLevel: QRCode.CorrectLevel.H
+        });
+
+        setTimeout(() => {
+          const img = container.querySelector('img');
+          const canvas = container.querySelector('canvas');
+          let dataUrl = '';
+          if (img && img.src) {
+            dataUrl = img.src;
+          } else if (canvas) {
+            dataUrl = canvas.toDataURL('image/png');
+          }
+          document.body.removeChild(container);
+          resolve(dataUrl);
+        }, 100);
       });
     };
 
@@ -1611,6 +1641,13 @@
       
       let html = `
         <div class="bg-slate-50 p-3 rounded-lg border space-y-2">
+          <div class="flex justify-between items-center mb-2">
+            <span class="font-bold text-xs text-slate-800">Detalles del Activo</span>
+            <button onclick="window.imprimirEtiquetaEquipoQR('${eq.id}')" class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-1 rounded font-bold cursor-pointer text-xs flex items-center space-x-1 shadow-sm">
+              <span>🏷️</span>
+              <span>Imprimir Etiqueta QR</span>
+            </button>
+          </div>
           <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-slate-700">
             <p><strong>Fabricante:</strong> ${eq.fabricante || 'N/A'}</p>
             <p><strong>Modelo:</strong> ${eq.modelo || 'N/A'}</p>
@@ -1643,6 +1680,39 @@
 
       document.getElementById('histEqBody').innerHTML = html;
       window.toggleModal('modalVerEquipoHistorial', true);
+    };
+
+    window.imprimirEtiquetaEquipoQR = async function(eqId) {
+      const eq = window.cachedEquipos.find(e => e.id === eqId);
+      if (!eq) return;
+
+      const urlEquipo = `${window.location.origin}${window.location.pathname}?equipoId=${eq.id}`;
+      const qrBase64 = await window.generarQRCodeBase64(urlEquipo);
+
+      const ventana = window.open('', '_blank', 'width=400,height=400');
+      ventana.document.write(`
+        <html>
+          <head>
+            <title>Etiqueta GxP - ${eq.tag}</title>
+            <style>
+              body { font-family: sans-serif; text-align: center; margin: 10px; padding: 10px; border: 2px solid #0f172a; border-radius: 8px; }
+              h2 { margin: 2px; font-size: 16px; color: #0f172a; }
+              p { margin: 2px; font-size: 11px; }
+              .tag { font-family: monospace; font-weight: bold; font-size: 14px; color: #0e7490; }
+              img { margin-top: 5px; width: 110px; height: 110px; }
+            </style>
+          </head>
+          <body>
+            <h2>🛡️ PharmAudit Metrología</h2>
+            <div class="tag">${eq.tag}</div>
+            <p><strong>${eq.nombre}</strong></p>
+            <img src="${qrBase64}" />
+            <p>Próxima Calib: <strong>${eq.fechaProximaCal || 'N/A'}</strong></p>
+            <script>setTimeout(() => { window.print(); window.close(); }, 500);<\/script>
+          </body>
+        </html>
+      `);
+      ventana.document.close();
     };
 
     window.abrirModalNuevaCalibracion = function(eqId = null) {
@@ -2060,11 +2130,13 @@
     };
 
     window.abrirModalEmitir = function(docId) { window.selectedDocId = docId; document.getElementById('copiaCantidadInput').value = '1'; window.toggleModal('modalEmitirCopia', true); };
+    
+    // INYECCIÓN DE PDF CON MARCA DE AGUA Y QR CONTROLADO
     window.ejecutarInyeccionPDF = async function() {
       const doc = window.cachedDocs.find(x => x.id === window.selectedDocId);
       const area = document.getElementById('copiaAreaSelect').value; const custodio = document.getElementById('copiaCustodioInput').value; const cantidad = parseInt(document.getElementById('copiaCantidadInput').value) || 1;
       if (!doc || !doc.archivo_url) { alert("Sin PDF adjunto."); return; }
-      const btn = document.getElementById('btn-confirmar-emitir'); btn.innerText = "Inyectando Marcas Controladas..."; btn.disabled = true;
+      const btn = document.getElementById('btn-confirmar-emitir'); btn.innerText = "Generando QR y Marcas..."; btn.disabled = true;
       try {
         const existingPdfBytes = await fetch(doc.archivo_url).then(res => res.arrayBuffer());
         const { PDFDocument, rgb, degrees } = PDFLib;
@@ -2072,14 +2144,25 @@
         for (let i = 1; i <= cantidad; i++) {
           const indexCopiaGlobal = window.cachedCopias.length + 1;
           const copiaIdFormato = `COP-${doc.codigo}-C${String(indexCopiaGlobal).padStart(3, '0')}`;
+          
+          const urlValidacion = `${window.location.origin}${window.location.pathname}?validarDoc=${doc.codigo}&copia=${copiaIdFormato}`;
+          const qrDataUrl = await window.generarQRCodeBase64(urlValidacion);
+          const qrImageEmbed = await mergedPdf.embedPng(qrDataUrl);
+
           const copiedPages = await mergedPdf.copyPages(srcPdf, srcIndices);
-          copiedPages.forEach(page => { mergedPdf.addPage(page); const { width, height } = page.getSize(); page.drawText('COPIA CONTROLADA', { x: width / 2 - 220, y: height / 2 + 40, size: 50, color: rgb(0.8, 0, 0), rotate: degrees(-30), opacity: 0.3 }); page.drawText(`VIGENTE - Destino: ${area} (${custodio}) - Emisión: ${new Date().toLocaleDateString()} - ID: ${copiaIdFormato} (${i}/${cantidad})`, { x: 40, y: 25, size: 9, color: rgb(0.5, 0, 0) }); });
+          copiedPages.forEach(page => { 
+            mergedPdf.addPage(page); 
+            const { width, height } = page.getSize(); 
+            page.drawText('COPIA CONTROLADA', { x: width / 2 - 220, y: height / 2 + 40, size: 50, color: rgb(0.8, 0, 0), rotate: degrees(-30), opacity: 0.25 }); 
+            page.drawText(`VIGENTE - Destino: ${area} (${custodio}) - Emisión: ${new Date().toLocaleDateString()} - ID: ${copiaIdFormato} (${i}/${cantidad})`, { x: 100, y: 25, size: 8, color: rgb(0.5, 0, 0) }); 
+            page.drawImage(qrImageEmbed, { x: 25, y: 15, width: 65, height: 65 });
+          });
           window.cachedCopias.unshift({ codigo: copiaIdFormato, doc: `${doc.codigo} v${doc.version}`, area: area, custodio: custodio });
-          window.registrarAuditTrail(window.activeGxpUser.correo, 'EMIT_COPY', `Copia Controlada [${copiaIdFormato}] de ${doc.codigo} a ${area} (${i}/${cantidad})`); 
+          window.registrarAuditTrail(window.activeGxpUser.correo, 'EMIT_COPY', `Copia Controlada con QR [${copiaIdFormato}] de ${doc.codigo} a ${area} (${i}/${cantidad})`); 
         }
         const pdfBytesModified = await mergedPdf.save(); const blob = new Blob([pdfBytesModified], { type: 'application/pdf' });
         await window.saveData(); window.open(URL.createObjectURL(blob), '_blank'); window.toggleModal('modalEmitirCopia', false); window.renderAllData();
-      } catch (err) { console.error("Error GxP en inyección:", err); alert("Error al inyectar el PDF múltiple. Revisa la consola."); } finally { btn.innerText = "Generar e Imprimir"; btn.disabled = false; }
+      } catch (err) { console.error("Error GxP en inyección de QR:", err); alert("Error al generar las copias con QR."); } finally { btn.innerText = "Generar e Imprimir"; btn.disabled = false; }
     };
 
     window.toggleUserMenu = function() { const menu = document.getElementById('userDropdown'); if(menu) menu.classList.toggle('hidden'); };
@@ -2142,7 +2225,36 @@
 
     window.abrirModalAbout = function() { window.toggleModal('modalAbout', true); };
 
-    document.addEventListener('DOMContentLoaded', () => { document.getElementById('loginPassword').addEventListener('keypress', function (e) { if (e.key === 'Enter') window.ejecutarLoginPrincipal(); }); document.getElementById('loginEmail').addEventListener('keypress', function (e) { if (e.key === 'Enter') document.getElementById('loginPassword').focus(); }); });
+    document.addEventListener('DOMContentLoaded', () => { 
+      document.getElementById('loginPassword').addEventListener('keypress', function (e) { if (e.key === 'Enter') window.ejecutarLoginPrincipal(); }); 
+      document.getElementById('loginEmail').addEventListener('keypress', function (e) { if (e.key === 'Enter') document.getElementById('loginPassword').focus(); }); 
+
+      // LÓGICA DE ROUTER Y AUTO-VALIDACIÓN POR ESCANEO DE QR
+      const urlParams = new URLSearchParams(window.location.search);
+      const validarDocCode = urlParams.get('validarDoc');
+      const copiaId = urlParams.get('copia');
+      const eqIdScan = urlParams.get('equipoId');
+
+      if (validarDocCode) {
+        setTimeout(() => {
+          const doc = (window.cachedDocs || []).find(d => d.codigo === validarDocCode && d.estado === 'VIGENTE');
+          if (doc) {
+            alert(`🟢 VERIFICACIÓN GxP EXITOSA\n\nEl documento ${doc.codigo} (Versión ${doc.version}) se encuentra actualmente VIGENTE.\nCopia verificada: ${copiaId || 'N/A'}`);
+          } else {
+            alert(`🚨 ALERTA CRÍTICA GxP - DOCUMENTO NO VIGENTE\n\nEl documento ${validarDocCode} asociado a la copia ${copiaId || 'N/A'} es OBSOLETO o NO EXISTE.\n\nFavor retirar esta copia impresa del área de trabajo inmediatamente.`);
+          }
+        }, 1200);
+      } else if (eqIdScan) {
+        setTimeout(() => {
+          const eq = (window.cachedEquipos || []).find(e => e.id === eqIdScan);
+          if (eq) {
+            window.verHistorialEquipo(eq.id);
+          } else {
+            alert(`🚨 ALERTA GxP - EQUIPO NO ENCONTRADO\n\nEl ID de equipo ${eqIdScan} no existe en la base de datos de metrología.`);
+          }
+        }, 1200);
+      }
+    });
   </script>
 </body>
 </html>
