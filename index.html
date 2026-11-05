@@ -69,7 +69,7 @@
         <div class="relative inline-block text-left">
           <button type="button" onclick="window.toggleUserMenu()" class="flex items-center space-x-2 bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg border border-slate-600 transition cursor-pointer focus:outline-none relative">
             <span id="userBadge" class="text-xs font-bold text-white"></span>
-            <div class="w-6 h-6 rounded-full bg-slate-300 overflow-hidden flex items-center justify-center text-slate-700 text-xs">👤</div>
+            <div id="userAvatarCircle" class="w-6 h-6 rounded-full bg-slate-300 overflow-hidden flex items-center justify-center text-slate-700 text-xs">👤</div>
             <span class="text-xs text-slate-400">▼</span>
             <span id="bellIndicatorTop" class="absolute -top-1 -right-1 bg-rose-500 w-3 h-3 rounded-full border-2 border-slate-800 hidden animate-pulse"></span>
           </button>
@@ -390,7 +390,6 @@
     </div>
   </div>
 
-  <!-- ACTUALIZACIÓN: OPCIONES DE FIRMA COMPLETAS -->
   <div id="modalFirmaPart11" class="modal-backdrop fixed inset-0 bg-slate-900/70 backdrop-blur-sm items-center justify-center p-4 z-50">
     <div class="bg-white rounded-xl max-w-md w-full p-5 border shadow-2xl space-y-4 text-xs">
       <div class="border-b pb-2"><h3 class="font-bold text-sm text-cyan-900">✍️ Firma Electrónica Obligatoria</h3></div>
@@ -475,15 +474,20 @@
       <div><label class="block mb-1 font-semibold">Estado</label><select id="usrEstadoSelect" class="w-full p-2 border rounded font-bold"><option value="Activo">Activo</option><option value="Inactivo">Inactivo</option></select></div>
       <div class="flex justify-end space-x-2 pt-2 border-t">
         <button onclick="window.toggleModal('modalUsuario', false)" class="px-3 py-1.5 border rounded cursor-pointer">Cancelar</button>
+        <!-- ACTUALIZACIÓN: Funcionalidad Mailto integrada -->
         <button onclick="window.guardarUsuarioCompleto()" class="px-4 py-1.5 bg-slate-800 text-white rounded font-bold shadow cursor-pointer">Guardar Usuario & Notificar</button>
       </div>
     </div>
   </div>
 
-  <!-- MODALES DE USUARIO Y NOTIFICACIONES -->
   <div id="modalUpdateData" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
     <div class="bg-white rounded-xl max-w-sm w-full p-5 border shadow-xl space-y-3 text-xs">
       <div class="border-b pb-2"><h3 class="font-bold text-sm text-slate-800">👤 Actualización de datos</h3></div>
+      <!-- ACTUALIZACIÓN: Campo para foto de perfil -->
+      <div>
+        <label class="block mb-1 font-semibold">Foto de Perfil</label>
+        <input type="file" id="myAvatar" accept="image/*" class="w-full p-1.5 border rounded bg-slate-50" />
+      </div>
       <div><label class="block mb-1 font-semibold">Nombres</label><input type="text" id="myNombres" class="w-full p-2 border rounded" /></div>
       <div><label class="block mb-1 font-semibold">Apellidos</label><input type="text" id="myApellidos" class="w-full p-2 border rounded" /></div>
       <div class="flex justify-end space-x-2 pt-2 border-t">
@@ -600,9 +604,22 @@
     ];
 
     window.cachedMatrizPermisos = JSON.parse(JSON.stringify(window.MATRIZ_GXP_ESTANDAR));
-    window.cachedEmpleados = [ { id: 1, nombres: 'Johan S.', apellidos: 'Aguilar', cargo: 'QA Lead', correo: 'j.aguilar@pharmor.com.co', areaId: 'ar_qa', estado: 'Activo' } ];
+    window.cachedEmpleados = [ { id: 1, nombres: 'Johan S.', apellidos: 'Aguilar', cargo: 'QA Lead', correo: 'j.aguilar@pharmor.com.co', areaId: 'ar_qa', estado: 'Activo', avatar: null } ];
     window.cachedUsuarios = [ { id: 1, empleadoId: 1, correo: 'j.aguilar@pharmor.com.co', password: '123', rolesIds: ['rol_admin'], areasAsignadas: ['ar_qa', 'ar_qc', 'ar_prod'], estado: 'Activo' } ];
     window.cachedDocs = []; window.cachedCopias = []; window.cachedObsoletos = []; window.auditTrailLogs = [];
+
+    // ACTUALIZACIÓN: Render de Avatar en el UI
+    window.actualizarAvatarUI = function(emp) {
+      document.getElementById('userBadge').innerText = `${emp ? emp.nombres + ' ' + emp.apellidos : ''}`; 
+      const avatarContainer = document.getElementById('userAvatarCircle');
+      if(avatarContainer) {
+          if (emp && emp.avatar) {
+              avatarContainer.innerHTML = `<img src="${emp.avatar}" class="w-full h-full object-cover" />`;
+          } else {
+              avatarContainer.innerHTML = `👤`;
+          }
+      }
+    };
 
     window.actualizarEstadoNube = function(estado, mensaje) {
       const led = document.getElementById('cloudLed');
@@ -648,6 +665,12 @@
       window.actualizarEstadoNube('sincronizando', 'Sincronizando...');
       await window.loadData();
       window.renderAllData();
+      
+      if(window.activeGxpUser) {
+         const emp = window.cachedEmpleados.find(e => e.id === window.activeGxpUser.empleadoId);
+         window.actualizarAvatarUI(emp);
+      }
+      
       window.actualizarEstadoNube('conectado', 'Sincronizado');
       setTimeout(() => window.actualizarEstadoNube('conectado', 'Conectado'), 2000);
       if (btn) { btn.disabled = false; btn.innerHTML = `<span>🔄</span> <span>Sincronizar Nube</span>`; }
@@ -718,8 +741,10 @@
         if (!usrData) { usrData = { id: 1, empleadoId: 1, correo: 'j.aguilar@pharmor.com.co', password: pass, rolesIds: ['rol_admin'], areasAsignadas: ['ar_qa', 'ar_qc', 'ar_prod'], estado: 'Activo' }; window.cachedUsuarios.push(usrData); } else { usrData.password = pass; usrData.estado = 'Activo'; if (!usrData.rolesIds.includes('rol_admin')) usrData.rolesIds.push('rol_admin'); }
         window.saveData(); window.activeGxpUser = usrData; window.registrarAuditTrail(usrData.correo, 'LOGIN_MASTER', 'Inicio de sesión exitoso por súper-administrador.');
         document.getElementById('view-login').classList.add('hidden'); document.getElementById('app-portal').classList.remove('hidden');
-        const emp = (window.cachedEmpleados || []).find(e => e.id === usrData.empleadoId);
-        document.getElementById('userBadge').innerText = `${emp ? emp.nombres + ' ' + emp.apellidos : usrData.correo}`;
+        
+        const emp = (window.cachedEmpleados || []).find(e => e.id === usrData.empleadoId) || { nombres: usrData.correo, apellidos: '' };
+        window.actualizarAvatarUI(emp);
+
         const btnDash = document.querySelector('[data-tab="dashboard"]'); if (btnDash) window.switchTab('dashboard', btnDash);
         window.renderAllData(); return;
       }
@@ -732,8 +757,10 @@
       
       window.activeGxpUser = usrData; window.registrarAuditTrail(usrData.correo, 'LOGIN', 'Inicio de sesión exitoso.');
       document.getElementById('view-login').classList.add('hidden'); document.getElementById('app-portal').classList.remove('hidden');
+      
       const emp = window.cachedEmpleados.find(e => e.id === usrData.empleadoId);
-      document.getElementById('userBadge').innerText = `${emp ? emp.nombres + ' ' + emp.apellidos : usrData.correo}`;
+      window.actualizarAvatarUI(emp);
+
       const btnDash = document.querySelector('[data-tab="dashboard"]'); if (btnDash) window.switchTab('dashboard', btnDash);
       window.renderAllData();
     };
@@ -757,7 +784,6 @@
 
     window.exportarAuditTrailPDF = function() { /* Función intacta */ };
 
-    // ACTUALIZACIÓN: NOTIFICACIONES 4 FASES
     window.obtenerNotificacionesPendientes = function() {
       let notificaciones = [];
       if(!window.activeGxpUser) return notificaciones;
@@ -839,12 +865,11 @@
         return `<tr class="hover:bg-slate-50"><td class="p-2 border text-center font-mono font-bold text-slate-500">${idx + 1}</td><td class="p-2 border font-mono font-bold text-cyan-700">${d.codigo}</td><td class="p-2 border font-mono">v${d.version}</td><td class="p-2 border font-semibold">${d.titulo}</td><td class="p-2 border text-[11px]">${area ? area.nombre : 'N/A'}<br><span class="text-cyan-800">${proc ? proc.nombre : ''}</span></td><td class="p-2 border font-mono text-[11px]">Aprob: ${d.fechaAprob}<br>Venc: ${d.fechaVenc}</td><td class="p-2 border"><span class="bg-emerald-100 text-emerald-800 px-2 rounded font-bold text-[10px]">VIGENTE</span></td><td class="p-2 border text-center space-x-1 flex justify-center mt-1"><button onclick="window.viewDocument('${d.id}')" class="bg-slate-100 border px-2 py-1 rounded font-bold text-slate-700 cursor-pointer">👁️ Ver</button>${btnEditarHtml}${btnEmitirHtml}</td></tr>`;
       }).join('') : `<tr><td colspan="8" class="p-4 text-center text-slate-400">Sin documentos vigentes o que coincidan con el filtro.</td></tr>`;
 
-      // ACTUALIZACIÓN DE BADGES 4 FASES
       document.getElementById('table-proceso').innerHTML = enProceso.length ? enProceso.map((d, idx) => {
         const area = window.cachedAreas.find(a => a.id === d.areaId);
         const btnEditarHtml = puedeCrear ? `<button onclick="window.abrirModalEditarDoc('${d.id}')" class="bg-cyan-50 border border-cyan-300 px-2 py-1 rounded font-bold text-cyan-800 cursor-pointer">✏️ Editar</button>` : '';
         
-        let badgeFaseColor = 'bg-amber-100 text-amber-800 border-amber-300'; // Elaboración
+        let badgeFaseColor = 'bg-amber-100 text-amber-800 border-amber-300';
         if (d.fase === 'Revisión') badgeFaseColor = 'bg-blue-100 text-blue-800 border-blue-300';
         if (d.fase === 'Aprobación') badgeFaseColor = 'bg-purple-100 text-purple-800 border-purple-300';
         if (d.fase === 'Autorización Final') badgeFaseColor = 'bg-indigo-100 text-indigo-800 border-indigo-300';
@@ -888,7 +913,7 @@
     window.guardarEmpleadoCompleto = async function() {
       const editIdx = parseInt(document.getElementById('empEditIndex').value);
       const data = { nombres: document.getElementById('empNombres').value.trim(), apellidos: document.getElementById('empApellidos').value.trim(), cargo: document.getElementById('empCargo').value.trim(), correo: document.getElementById('empCorreo').value.trim(), areaId: document.getElementById('empAreaSelect').value, estado: document.getElementById('empEstadoSelect').value };
-      if(editIdx === -1) { window.cachedEmpleados.push({ id: Date.now(), ...data }); window.registrarAuditTrail(window.activeGxpUser.correo, 'CREATE_EMP', `Creó empleado: ${data.correo}`); }
+      if(editIdx === -1) { window.cachedEmpleados.push({ id: Date.now(), avatar: null, ...data }); window.registrarAuditTrail(window.activeGxpUser.correo, 'CREATE_EMP', `Creó empleado: ${data.correo}`); }
       else { window.cachedEmpleados[editIdx] = { ...window.cachedEmpleados[editIdx], ...data }; window.registrarAuditTrail(window.activeGxpUser.correo, 'UPDATE_EMP', `Editó empleado: ${data.correo}`); }
       await window.saveData(); window.toggleModal('modalEmpleado', false); window.renderAllData();
     };
@@ -920,12 +945,34 @@
       window.sugerirCorreoEmpleado();
     };
 
+    // ACTUALIZACIÓN: Funcionalidad Mailto para Notificación de Creación
     window.guardarUsuarioCompleto = async function() {
       const editIdx = parseInt(document.getElementById('usrEditIndex').value);
       const data = { empleadoId: parseInt(document.getElementById('usrEmpSelect').value), correo: document.getElementById('usrCorreoInput').value.trim(), password: document.getElementById('usrPasswordInput').value.trim(), estado: document.getElementById('usrEstadoSelect').value, rolesIds: Array.from(document.querySelectorAll('input[name="chkRol"]:checked')).map(el => el.value), areasAsignadas: Array.from(document.querySelectorAll('input[name="chkArea"]:checked')).map(el => el.value) };
-      if(editIdx === -1) { window.cachedUsuarios.push({ id: Date.now(), ...data }); window.registrarAuditTrail(window.activeGxpUser.correo, 'CREATE_USER', `Creó usuario: ${data.correo}`); } 
-      else { window.cachedUsuarios[editIdx] = { ...window.cachedUsuarios[editIdx], ...data }; window.registrarAuditTrail(window.activeGxpUser.correo, 'UPDATE_USER', `Editó usuario: ${data.correo}`); }
-      await window.saveData(); window.toggleModal('modalUsuario', false); window.renderAllData(); alert("✅ Usuario guardado correctamente en la Nube.");
+      
+      let isNew = false;
+      if(editIdx === -1) { 
+        isNew = true;
+        window.cachedUsuarios.push({ id: Date.now(), ...data }); 
+        window.registrarAuditTrail(window.activeGxpUser.correo, 'CREATE_USER', `Creó usuario: ${data.correo}`); 
+      } else { 
+        window.cachedUsuarios[editIdx] = { ...window.cachedUsuarios[editIdx], ...data }; 
+        window.registrarAuditTrail(window.activeGxpUser.correo, 'UPDATE_USER', `Editó usuario: ${data.correo}`); 
+      }
+      
+      await window.saveData(); 
+      window.toggleModal('modalUsuario', false); 
+      window.renderAllData(); 
+      
+      // Disparador Mailto
+      const btnMailto = confirm("✅ Usuario guardado correctamente en la Nube.\n\n¿Deseas abrir tu cliente de correo para enviar la notificación de acceso a este usuario?");
+      if(btnMailto) {
+          const selectEmp = document.getElementById('usrEmpSelect');
+          const empName = selectEmp.options[selectEmp.selectedIndex].text.split('(')[0].trim();
+          const subject = encodeURIComponent("🛡️ Credenciales de Acceso - PharmAudit ERP");
+          const body = encodeURIComponent(`Hola ${empName},\n\nSe ha configurado tu acceso oficial al portal de Calidad GxP (PharmAudit).\n\nUsuario: ${data.correo}\nContraseña Temporal: ${data.password}\n\nPor favor, ingresa y cambia tu contraseña inmediatamente para garantizar el cumplimiento de la política de seguridad (21 CFR Part 11).\n\nAtentamente,\nAdministrador del Sistema.`);
+          window.location.href = `mailto:${data.correo}?subject=${subject}&body=${body}`;
+      }
     };
 
     window.sugerirCorreoEmpleado = function() { 
@@ -961,7 +1008,6 @@
       window.cachedDocs.push(doc); window.registrarAuditTrail(window.activeGxpUser.correo, 'CREATE_DOC', `Creado documento con archivo: ${doc.codigo}`); await window.saveData(); window.toggleModal('modalDoc', false); window.renderAllData();
     };
 
-    // ACTUALIZACIÓN LÓGICA DE FIRMAS (4 FASES Y EXCLUSIVIDAD DE QA)
     window.iniciarFirmaElectronica = function(docId) { 
       const doc = window.cachedDocs.find(x => x.id === docId); 
       if(!doc) return; 
@@ -986,7 +1032,6 @@
       const isAdmin = user.rolesIds.includes('rol_admin');
       const isQA = user.areasAsignadas && user.areasAsignadas.includes('ar_qa');
 
-      // Validar que el usuario pertenezca al área del documento (Ej: Producción) - Excepto Admin o QA en la última fase
       if (!isAdmin && doc.fase !== 'Autorización Final' && (!user.areasAsignadas || !user.areasAsignadas.includes(doc.areaId))) {
           alert("⛔ Control GxP: Acceso Denegado. Su perfil no está autorizado para firmar documentos de esta área.");
           return;
@@ -1068,12 +1113,37 @@
     window.abrirModalUpdateData = function() {
       if(!window.activeGxpUser) return;
       const emp = window.cachedEmpleados.find(e => e.id === window.activeGxpUser.empleadoId);
-      if(emp) { document.getElementById('myNombres').value = emp.nombres; document.getElementById('myApellidos').value = emp.apellidos; window.toggleModal('modalUpdateData', true); }
+      if(emp) { 
+        document.getElementById('myAvatar').value = ''; 
+        document.getElementById('myNombres').value = emp.nombres; 
+        document.getElementById('myApellidos').value = emp.apellidos; 
+        window.toggleModal('modalUpdateData', true); 
+      }
     };
 
+    // ACTUALIZACIÓN: Guardado de Foto en Base64
     window.guardarUpdateData = async function() {
       const emp = window.cachedEmpleados.find(e => e.id === window.activeGxpUser.empleadoId);
-      if(emp) { emp.nombres = document.getElementById('myNombres').value.trim(); emp.apellidos = document.getElementById('myApellidos').value.trim(); document.getElementById('userBadge').innerText = `${emp.nombres} ${emp.apellidos}`; window.registrarAuditTrail(window.activeGxpUser.correo, 'UPDATE_PROFILE', 'El usuario actualizó sus datos personales básicos.'); await window.saveData(); window.toggleModal('modalUpdateData', false); window.renderAllData(); }
+      if(emp) { 
+        emp.nombres = document.getElementById('myNombres').value.trim(); 
+        emp.apellidos = document.getElementById('myApellidos').value.trim(); 
+        
+        const avatarFile = document.getElementById('myAvatar').files[0];
+        if (avatarFile) {
+            try {
+                emp.avatar = await window.readFileAsBase64(avatarFile);
+            } catch(e) { 
+                console.error("Error al cargar imagen de avatar:", e); 
+            }
+        }
+
+        window.actualizarAvatarUI(emp);
+
+        window.registrarAuditTrail(window.activeGxpUser.correo, 'UPDATE_PROFILE', 'El usuario actualizó sus datos personales y/o foto de perfil.'); 
+        await window.saveData(); 
+        window.toggleModal('modalUpdateData', false); 
+        window.renderAllData(); 
+      }
     };
 
     window.abrirModalProfile = function() {
