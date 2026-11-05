@@ -390,6 +390,7 @@
     </div>
   </div>
 
+  <!-- ACTUALIZACIÓN: OPCIONES DE FIRMA COMPLETAS -->
   <div id="modalFirmaPart11" class="modal-backdrop fixed inset-0 bg-slate-900/70 backdrop-blur-sm items-center justify-center p-4 z-50">
     <div class="bg-white rounded-xl max-w-md w-full p-5 border shadow-2xl space-y-4 text-xs">
       <div class="border-b pb-2"><h3 class="font-bold text-sm text-cyan-900">✍️ Firma Electrónica Obligatoria</h3></div>
@@ -400,8 +401,11 @@
         <div>
           <label class="block font-semibold mb-1">Significado de la Firma</label>
           <select id="firmaSignificado" class="w-full p-2 border rounded bg-slate-50 font-semibold text-cyan-900">
-            <option value="Aprobación Técnica">Aprobación Técnica</option>
-            <option value="Autorización Final">Autorización Final de Versión Vigente</option>
+            <option value="">-- Seleccione su intención --</option>
+            <option value="Creación / Edición">Creación / Edición</option>
+            <option value="Revisión Técnica">Revisión Técnica</option>
+            <option value="Aprobación">Aprobación</option>
+            <option value="Autorización Final de Versión Vigente">Autorización Final de Versión Vigente</option>
           </select>
         </div>
       </div>
@@ -590,7 +594,7 @@
       { id: 'rol_admin', nombre: 'Administrador (QA Manager)', desc: 'Acceso total y configuración GxP' },
       { id: 'rol_autor', nombre: 'Creador / Autor', desc: 'Elaboración y edición de documentos' },
       { id: 'rol_revisor', nombre: 'Revisor Técnico', desc: 'Revisión técnica en flujo documental' },
-      { id: 'rol_aprobador', nombre: 'Aprobador Final', desc: 'Aprobación y firma electrónica (Part 11)' },
+      { id: 'rol_aprobador', nombre: 'Aprobador Final', desc: 'Aprobación de área (Part 11)' },
       { id: 'rol_emisor', nombre: 'Control de Documentos', desc: 'Emisión de copias controladas' },
       { id: 'rol_viewer', nombre: 'Lector / Consulta', desc: 'Solo lectura de documentos vigentes' } 
     ];
@@ -753,6 +757,7 @@
 
     window.exportarAuditTrailPDF = function() { /* Función intacta */ };
 
+    // ACTUALIZACIÓN: NOTIFICACIONES 4 FASES
     window.obtenerNotificacionesPendientes = function() {
       let notificaciones = [];
       if(!window.activeGxpUser) return notificaciones;
@@ -763,13 +768,14 @@
 
       window.cachedDocs.forEach(doc => {
         if (doc.estado === 'PROCESO') {
-          if (misAreas.includes(doc.areaId) || esAdmin) {
-            if (doc.fase === 'Revisión' && (misRoles.includes('rol_revisor') || esAdmin)) {
-              notificaciones.push({ icon: '📝', texto: `Revisión técnica pendiente para <b>${doc.codigo}</b> - ${doc.titulo}` });
-            }
-            else if (doc.fase === 'Aprobación' && (misRoles.includes('rol_aprobador') || esAdmin)) {
-              notificaciones.push({ icon: '✍️', texto: `Firma de autorización pendiente para <b>${doc.codigo}</b> - ${doc.titulo}` });
-            }
+          if (doc.fase === 'Revisión' && (misAreas.includes(doc.areaId) || esAdmin) && (misRoles.includes('rol_revisor') || esAdmin)) {
+            notificaciones.push({ icon: '📝', texto: `Revisión técnica pendiente para <b>${doc.codigo}</b>` });
+          }
+          else if (doc.fase === 'Aprobación' && (misAreas.includes(doc.areaId) || esAdmin) && (misRoles.includes('rol_aprobador') || esAdmin)) {
+            notificaciones.push({ icon: '✍️', texto: `Aprobación pendiente para <b>${doc.codigo}</b>` });
+          }
+          else if (doc.fase === 'Autorización Final' && (misAreas.includes('ar_qa') || esAdmin)) {
+            notificaciones.push({ icon: '✅', texto: `Verificar divulgación y Autorizar <b>${doc.codigo}</b>` });
           }
         }
       });
@@ -833,10 +839,16 @@
         return `<tr class="hover:bg-slate-50"><td class="p-2 border text-center font-mono font-bold text-slate-500">${idx + 1}</td><td class="p-2 border font-mono font-bold text-cyan-700">${d.codigo}</td><td class="p-2 border font-mono">v${d.version}</td><td class="p-2 border font-semibold">${d.titulo}</td><td class="p-2 border text-[11px]">${area ? area.nombre : 'N/A'}<br><span class="text-cyan-800">${proc ? proc.nombre : ''}</span></td><td class="p-2 border font-mono text-[11px]">Aprob: ${d.fechaAprob}<br>Venc: ${d.fechaVenc}</td><td class="p-2 border"><span class="bg-emerald-100 text-emerald-800 px-2 rounded font-bold text-[10px]">VIGENTE</span></td><td class="p-2 border text-center space-x-1 flex justify-center mt-1"><button onclick="window.viewDocument('${d.id}')" class="bg-slate-100 border px-2 py-1 rounded font-bold text-slate-700 cursor-pointer">👁️ Ver</button>${btnEditarHtml}${btnEmitirHtml}</td></tr>`;
       }).join('') : `<tr><td colspan="8" class="p-4 text-center text-slate-400">Sin documentos vigentes o que coincidan con el filtro.</td></tr>`;
 
+      // ACTUALIZACIÓN DE BADGES 4 FASES
       document.getElementById('table-proceso').innerHTML = enProceso.length ? enProceso.map((d, idx) => {
         const area = window.cachedAreas.find(a => a.id === d.areaId);
         const btnEditarHtml = puedeCrear ? `<button onclick="window.abrirModalEditarDoc('${d.id}')" class="bg-cyan-50 border border-cyan-300 px-2 py-1 rounded font-bold text-cyan-800 cursor-pointer">✏️ Editar</button>` : '';
-        let badgeFaseColor = 'bg-amber-100 text-amber-800 border-amber-300'; if (d.fase === 'Revisión') badgeFaseColor = 'bg-blue-100 text-blue-800 border-blue-300'; if (d.fase === 'Aprobación') badgeFaseColor = 'bg-purple-100 text-purple-800 border-purple-300';
+        
+        let badgeFaseColor = 'bg-amber-100 text-amber-800 border-amber-300'; // Elaboración
+        if (d.fase === 'Revisión') badgeFaseColor = 'bg-blue-100 text-blue-800 border-blue-300';
+        if (d.fase === 'Aprobación') badgeFaseColor = 'bg-purple-100 text-purple-800 border-purple-300';
+        if (d.fase === 'Autorización Final') badgeFaseColor = 'bg-indigo-100 text-indigo-800 border-indigo-300';
+        
         return `<tr class="hover:bg-slate-50"><td class="p-2 border text-center font-mono font-bold text-slate-500">${idx + 1}</td><td class="p-2 border font-mono font-bold text-cyan-700">${d.codigo}</td><td class="p-2 border font-mono">v${d.version}</td><td class="p-2 border font-semibold">${d.titulo}</td><td class="p-2 border text-slate-600 text-[11px]">${area ? area.nombre : 'N/A'}</td><td class="p-2 border"><span class="${badgeFaseColor} px-2.5 py-1 rounded-full border font-bold text-[10px] inline-block shadow-xs">📌 Fase: ${d.fase}</span></td><td class="p-2 border text-center space-x-1">${btnEditarHtml}<button onclick="window.iniciarFirmaElectronica('${d.id}')" class="bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-1 rounded font-bold cursor-pointer shadow-sm">✍️ Firmar (${d.fase})</button></td></tr>`;
       }).join('') : `<tr><td colspan="7" class="p-4 text-center text-slate-400">Sin documentos en proceso.</td></tr>`;
 
@@ -881,7 +893,6 @@
       await window.saveData(); window.toggleModal('modalEmpleado', false); window.renderAllData();
     };
 
-    // CORRECCIÓN ORDEN DEL MODAL USUARIOS
     window.abrirModalUsuario = function() { 
       document.getElementById('modalUsrTitle').innerText = 'Asignar Nuevo Usuario'; 
       document.getElementById('usrEditIndex').value = '-1'; 
@@ -903,7 +914,7 @@
 
     window.poblarCheckboxesModalUsuario = function(rolesSeleccionados = [], areasSeleccionadas = [], empId = null) {
       document.getElementById('usrEmpSelect').innerHTML = window.cachedEmpleados.map(e => `<option value="${e.id}">${e.nombres} ${e.apellidos} (${e.correo})</option>`).join('');
-      if(empId) document.getElementById('usrEmpSelect').value = empId; // Mantiene seleccionado al empleado correcto
+      if(empId) document.getElementById('usrEmpSelect').value = empId; 
       document.getElementById('contenedorRolesCheckboxes').innerHTML = window.cachedRoles.map(r => `<label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" name="chkRol" value="${r.id}" ${rolesSeleccionados.includes(r.id)?'checked':''} class="rounded"> <span>${r.nombre}</span></label>`).join('');
       document.getElementById('contenedorAreasCheckboxes').innerHTML = window.cachedAreas.map(a => `<label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" name="chkArea" value="${a.id}" ${areasSeleccionadas.includes(a.id)?'checked':''} class="rounded"> <span>${a.nombre}</span></label>`).join('');
       window.sugerirCorreoEmpleado();
@@ -950,13 +961,14 @@
       window.cachedDocs.push(doc); window.registrarAuditTrail(window.activeGxpUser.correo, 'CREATE_DOC', `Creado documento con archivo: ${doc.codigo}`); await window.saveData(); window.toggleModal('modalDoc', false); window.renderAllData();
     };
 
-    // CORRECCIÓN VALIDACIÓN DE ÁREA EN FIRMA ELECTRÓNICA
+    // ACTUALIZACIÓN LÓGICA DE FIRMAS (4 FASES Y EXCLUSIVIDAD DE QA)
     window.iniciarFirmaElectronica = function(docId) { 
       const doc = window.cachedDocs.find(x => x.id === docId); 
       if(!doc) return; 
       document.getElementById('firmaDocId').value = docId; 
       document.getElementById('firmaUserEmail').value = window.activeGxpUser.correo; 
       document.getElementById('firmaUserPassword').value = ''; 
+      document.getElementById('firmaSignificado').value = '';
       window.toggleModal('modalFirmaPart11', true); 
     };
 
@@ -966,49 +978,43 @@
       const pass = document.getElementById('firmaUserPassword').value.trim();
       const significado = document.getElementById('firmaSignificado').value;
 
+      if (!significado) { alert("⛔ Control GxP: Es obligatorio seleccionar la intención o el significado de la firma."); return; }
+
       const user = window.cachedUsuarios.find(u => u.correo.toLowerCase() === email.toLowerCase() && u.password === pass);
       if(!user) { alert("⛔ Credenciales inválidas."); return; }
 
       const isAdmin = user.rolesIds.includes('rol_admin');
+      const isQA = user.areasAsignadas && user.areasAsignadas.includes('ar_qa');
 
-      // Validar que el usuario pertenezca al área del documento (Ej: Producción)
-      if (!isAdmin && (!user.areasAsignadas || !user.areasAsignadas.includes(doc.areaId))) {
-          alert("⛔ Control GxP: Acceso Denegado. Su perfil no está autorizado para firmar o aprobar documentos pertenecientes a esta área.");
+      // Validar que el usuario pertenezca al área del documento (Ej: Producción) - Excepto Admin o QA en la última fase
+      if (!isAdmin && doc.fase !== 'Autorización Final' && (!user.areasAsignadas || !user.areasAsignadas.includes(doc.areaId))) {
+          alert("⛔ Control GxP: Acceso Denegado. Su perfil no está autorizado para firmar documentos de esta área.");
           return;
       }
 
       if(doc.fase === 'Elaboración') {
-        if(!user.rolesIds.includes('rol_autor') && !isAdmin) {
-          alert("⛔ Control GxP: No tienes el rol de 'Autor' asignado para firmar este documento.");
-          return;
-        }
+        if(!user.rolesIds.includes('rol_autor') && !isAdmin) { alert("⛔ Control GxP: No tienes el rol de 'Autor' asignado para firmar este documento."); return; }
+        if(significado !== 'Creación / Edición') { alert("⛔ Control GxP: El significado de la firma para esta fase debe ser 'Creación / Edición'."); return; }
         doc.fase = 'Revisión';
       } 
       else if(doc.fase === 'Revisión') {
-        if(!user.rolesIds.includes('rol_revisor') && !isAdmin) {
-          alert("⛔ Control GxP: No tienes el rol de 'Revisor Técnico' asignado para firmar esta fase.");
-          return;
-        }
-        if(significado !== 'Aprobación Técnica') {
-          alert("⛔ Control GxP: El significado de la firma para esta fase debe ser 'Aprobación Técnica'.");
-          return;
-        }
+        if(!user.rolesIds.includes('rol_revisor') && !isAdmin) { alert("⛔ Control GxP: No tienes el rol de 'Revisor Técnico' asignado."); return; }
+        if(significado !== 'Revisión Técnica') { alert("⛔ Control GxP: El significado de la firma debe ser 'Revisión Técnica'."); return; }
         doc.fase = 'Aprobación';
       } 
       else if(doc.fase === 'Aprobación') {
-        if(!user.rolesIds.includes('rol_aprobador') && !isAdmin) {
-          alert("⛔ Control GxP: No tienes el rol de 'Aprobador Final' asignado para emitir el documento vigente.");
-          return;
-        }
-        if(significado !== 'Autorización Final de Versión Vigente') {
-          alert("⛔ Control GxP: El significado de la firma debe ser 'Autorización Final de Versión Vigente'.");
-          return;
-        }
+        if(!user.rolesIds.includes('rol_aprobador') && !isAdmin) { alert("⛔ Control GxP: No tienes el rol de 'Aprobador Final' asignado."); return; }
+        if(significado !== 'Aprobación') { alert("⛔ Control GxP: El significado de la firma debe ser 'Aprobación'."); return; }
+        doc.fase = 'Autorización Final';
+      }
+      else if(doc.fase === 'Autorización Final') {
+        if(!isQA && !isAdmin) { alert("⛔ Control GxP: Solo el área de Aseguramiento de Calidad (QA) puede dar la Autorización Final tras verificar la divulgación."); return; }
+        if(significado !== 'Autorización Final de Versión Vigente') { alert("⛔ Control GxP: El significado de la firma debe ser 'Autorización Final de Versión Vigente'."); return; }
         doc.fase = 'Aprobado'; 
         doc.estado = 'VIGENTE';
       }
 
-      window.registrarAuditTrail(user.correo, 'FIRM_PART11', `Firma aplicada sobre ${doc.codigo} (Fase: ${doc.estado || doc.fase}). Área validada correctamente.`); 
+      window.registrarAuditTrail(user.correo, 'FIRM_PART11', `Firma aplicada sobre ${doc.codigo} (Fase lograda: ${doc.estado || doc.fase}).`); 
       await window.saveData(); 
       window.toggleModal('modalFirmaPart11', false); 
       window.renderAllData();
