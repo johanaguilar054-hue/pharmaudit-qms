@@ -31,6 +31,13 @@
         <div class="text-3xl font-extrabold text-slate-900 tracking-tight">🛡️ PharmAudit</div>
         <p class="text-xs text-slate-500 mt-1 font-mono">Portal de Gestión de Calidad GxP · Pharmor (GAMP 5)</p>
       </div>
+
+      <!-- Alerta de Escaneo QR detectado sin Sesión -->
+      <div id="loginScanNotice" class="hidden p-3 bg-amber-50 border border-amber-300 rounded-xl text-amber-900 text-xs text-center space-y-1">
+        <div class="font-bold">🔑 Escaneo de QR de Equipo Detectado</div>
+        <p class="text-[11px] text-amber-800">Inicie sesión para acceder de forma segura a la Hoja de Vida del equipo.</p>
+      </div>
+
       <div class="space-y-3">
         <div>
           <label class="block text-xs font-semibold text-slate-700 mb-1">Correo Corporativo / Usuario</label>
@@ -61,19 +68,18 @@
         <span class="text-xs text-slate-400 block font-mono">QMS / GxP ERP Compliance · Pharmor</span>
       </div>
       <div class="flex items-center space-x-3">
-        <!-- Indicador Visual de Estado Nube GxP -->
+        <!-- Indicador Nube GxP -->
         <div id="cloudStatusBadge" class="flex items-center space-x-1.5 bg-slate-800/80 px-2.5 py-1 rounded-lg border border-slate-700 text-xs font-mono">
           <span id="cloudLed" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
           <span id="cloudStatusText" class="text-emerald-400 font-semibold">Conectado</span>
         </div>
 
-        <!-- Botón de Sincronización Manual -->
         <button type="button" id="btnSyncCloud" onclick="window.sincronizarConNube()" title="Actualizar datos en tiempo real desde Supabase" class="bg-cyan-700 hover:bg-cyan-600 text-white px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer flex items-center space-x-1 border border-cyan-500/40">
           <span>🔄</span>
           <span>Sincronizar Nube</span>
         </button>
 
-        <!-- Menú de Usuario Desplegable -->
+        <!-- Menú de Usuario -->
         <div class="relative inline-block text-left">
           <button type="button" onclick="window.toggleUserMenu()" class="flex items-center space-x-2 bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg border border-slate-600 transition cursor-pointer focus:outline-none relative">
             <span id="userBadge" class="text-xs font-bold text-white"></span>
@@ -82,7 +88,6 @@
             <span id="bellIndicatorTop" class="absolute -top-1 -right-1 bg-rose-500 w-3 h-3 rounded-full border-2 border-slate-800 hidden animate-pulse"></span>
           </button>
           
-          <!-- Lista Desplegable -->
           <div id="userDropdown" class="hidden absolute right-0 mt-2 w-56 bg-white rounded-md shadow-xl border border-slate-200 z-50 text-xs font-medium text-slate-600">
             <div class="py-1">
               <a href="#" onclick="window.abrirModalUpdateData(); window.toggleUserMenu(); return false;" class="block px-4 py-2 hover:bg-slate-50 flex items-center space-x-2"><span>👤</span><span>Actualización de datos</span></a>
@@ -105,7 +110,7 @@
       </div>
     </header>
 
-    <!-- NAVEGACIÓN -->
+    <!-- NAVEGACIÓN PRINCIPAL -->
     <nav class="bg-slate-800 text-slate-300 rounded-xl p-1 mb-4 flex space-x-1 overflow-x-auto text-xs font-medium">
       <button data-tab="dashboard" onclick="window.switchTab('dashboard', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap bg-cyan-600 text-white font-bold cursor-pointer">📊 Dashboard</button>
       <button data-tab="documentos" onclick="window.switchTab('documentos', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">📑 Gestión Documental</button>
@@ -321,7 +326,7 @@
                   <th class="p-2 border">Tipo</th>
                   <th class="p-2 border">Fechas (Prog / Ejec)</th>
                   <th class="p-2 border">Responsable / Técnico</th>
-                  <th class="p-2 border">Detalles / Repuestos</th>
+                  <th class="p-2 border">Detalles / Evidencia</th>
                   <th class="p-2 border text-center">Estado</th>
                 </tr>
               </thead>
@@ -759,7 +764,7 @@
     </div>
   </div>
 
-  <!-- MODAL: REGISTRAR MANTENIMIENTO -->
+  <!-- MODAL: REGISTRAR MANTENIMIENTO CON SUBIDA DE FOTOS -->
   <div id="modalMantenimiento" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
     <div class="bg-white rounded-xl max-w-lg w-full p-5 border shadow-2xl space-y-4 text-xs max-h-[90vh] overflow-y-auto">
       <div class="border-b pb-2 flex justify-between items-center">
@@ -799,10 +804,31 @@
         </div>
         <div><label class="block font-semibold mb-1">Repuestos Utilizados</label><input type="text" id="mntRepuestos" placeholder="Filtros, empacaduras, fusibles..." class="w-full p-2 border rounded" /></div>
         <div><label class="block font-semibold mb-1">Observaciones Técnicas</label><textarea id="mntObs" rows="2" class="w-full p-2 border rounded bg-slate-50"></textarea></div>
+        
+        <!-- SUBIDA DE FOTOS DE REGISTRO TÉCNICO -->
+        <div class="border-t pt-2 bg-purple-50/50 p-2.5 rounded-lg border border-purple-200">
+          <label class="block font-bold text-purple-900 mb-1">📷 Evidencia Fotográfica (Subir Fotos &lt; 1MB c/u)</label>
+          <input type="file" id="mntFotosFile" accept="image/*" multiple class="w-full p-1.5 border rounded bg-white font-mono text-[11px]" />
+          <p class="text-[10px] text-purple-700 mt-1">Puede seleccionar múltiples fotos del mantenimiento ejecutado.</p>
+        </div>
       </div>
       <div class="flex justify-end space-x-2 pt-3 border-t">
         <button type="button" onclick="window.toggleModal('modalMantenimiento', false)" class="px-3 py-1.5 border rounded cursor-pointer">Cancelar</button>
         <button type="button" onclick="window.guardarMantenimientoCompleto()" class="px-4 py-1.5 bg-purple-700 text-white rounded font-bold shadow cursor-pointer">Guardar Registro Mantenimiento</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: GALERÍA DE FOTOS DE MANTENIMIENTO -->
+  <div id="modalGaleriaFotos" class="modal-backdrop fixed inset-0 bg-slate-900/80 backdrop-blur-sm items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl max-w-2xl w-full p-4 border shadow-2xl space-y-3 flex flex-col max-h-[85vh]">
+      <div class="border-b pb-2 flex justify-between items-center shrink-0">
+        <h3 class="font-bold text-sm text-slate-800" id="galeriaTitle">📷 Evidencia Fotográfica de Mantenimiento</h3>
+        <button type="button" onclick="window.toggleModal('modalGaleriaFotos', false)" class="text-slate-400 font-bold text-xl px-2 cursor-pointer">✕</button>
+      </div>
+      <div id="galeriaBody" class="grid grid-cols-1 md:grid-cols-2 gap-3 overflow-y-auto p-2"></div>
+      <div class="flex justify-end pt-2 border-t">
+        <button onclick="window.toggleModal('modalGaleriaFotos', false)" class="px-4 py-1.5 bg-slate-800 text-white rounded font-bold text-xs cursor-pointer">Cerrar Galería</button>
       </div>
     </div>
   </div>
@@ -909,7 +935,7 @@
   <div id="modalAbout" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
     <div class="bg-white rounded-xl max-w-sm w-full p-5 border shadow-xl space-y-3 text-xs text-center">
       <div class="text-3xl font-extrabold text-slate-900 tracking-tight mt-2">🛡️ PharmAudit</div>
-      <p class="text-slate-500 font-mono mb-2">v1.2.0 (QR Compliance & Verification Release)</p>
+      <p class="text-slate-500 font-mono mb-2">v1.3.0 (Authenticated QR &amp; Maintenance Photos)</p>
       <div class="bg-slate-50 p-3 rounded text-left space-y-2 border text-slate-700">
         <p><strong>Licencia:</strong> Pharmor S.A.S.</p>
         <p><strong>Módulo:</strong> eQMS, Document Control, QR Verification &amp; Metrology ERP</p>
@@ -943,6 +969,8 @@
       'rol_emisor': { lectura: true, crearEdicion: false, revision: false, aprobacionFirma: false, administracion: true },
       'rol_viewer': { lectura: true, crearEdicion: false, revision: false, aprobacionFirma: false, administracion: false } 
     };
+
+    window.pendingScanEquipoId = null;
 
     window.readFileAsBase64 = function(file) {
       return new Promise((resolve, reject) => {
@@ -1007,7 +1035,7 @@
       { id: 'CAL-001', equipoId: 'EQ-001', fecha: '2026-05-10', realizadaPor: 'Metrología Externa S.A.S.', asFound: 'Dentro de especificación', asLeft: 'Calibrado y ajustado', estandares: 'Pesas Patrón E2 Cert #9988', resultado: 'Conforme', certificadoUrl: null, observaciones: 'Calibración semestral ejecutada sin desviaciones.', proximaFecha: '2026-11-10', firmadaPor: 'j.aguilar@pharmor.com.co' }
     ];
     window.cachedMantenimientos = [
-      { id: 'MNT-001', equipoId: 'EQ-001', tipo: 'Preventivo', estado: 'Completado', fechaProgramada: '2026-01-15', fechaEjecucion: '2026-01-15', realizadoPor: 'Servicio Técnico Sartorius', tiempoParo: 2, causaFalla: '', repuestos: 'Filtro de aire, celda de peso', observaciones: 'Mantenimiento preventivo anual verificado.' }
+      { id: 'MNT-001', equipoId: 'EQ-001', tipo: 'Preventivo', estado: 'Completado', fechaProgramada: '2026-01-15', fechaEjecucion: '2026-01-15', realizadoPor: 'Servicio Técnico Sartorius', tiempoParo: 2, causaFalla: '', repuestos: 'Filtro de aire, celda de peso', observaciones: 'Mantenimiento preventivo anual verificado.', fotosUrls: [] }
     ];
 
     window.togglePasswordVisibility = function(inputId, iconId) {
@@ -1174,34 +1202,43 @@
     window.ejecutarLoginPrincipal = function() {
       const email = document.getElementById('loginEmail').value.trim().toLowerCase(); 
       const pass = document.getElementById('loginPassword').value.trim();
+      let usrData = null;
       
       if (email === 'j.aguilar@pharmor.com.co' && (pass === '123' || pass === 'admin123')) {
-        let usrData = (window.cachedUsuarios || []).find(u => (u.correo || '').trim().toLowerCase() === email);
+        usrData = (window.cachedUsuarios || []).find(u => (u.correo || '').trim().toLowerCase() === email);
         if (!usrData) { usrData = { id: 1, empleadoId: 1, correo: 'j.aguilar@pharmor.com.co', password: pass, rolesIds: ['rol_admin'], areasAsignadas: ['ar_qa', 'ar_qc', 'ar_prod'], estado: 'Activo' }; window.cachedUsuarios.push(usrData); } else { usrData.password = pass; usrData.estado = 'Activo'; if (!usrData.rolesIds.includes('rol_admin')) usrData.rolesIds.push('rol_admin'); }
-        window.saveData(); window.activeGxpUser = usrData; window.registrarAuditTrail(usrData.correo, 'LOGIN_MASTER', 'Inicio de sesión exitoso por súper-administrador.');
-        document.getElementById('view-login').classList.add('hidden'); document.getElementById('app-portal').classList.remove('hidden');
-        
-        const emp = (window.cachedEmpleados || []).find(e => e.id === usrData.empleadoId) || { nombres: usrData.correo, apellidos: '' };
-        window.actualizarAvatarUI(emp);
-
-        const btnDash = document.querySelector('[data-tab="dashboard"]'); if (btnDash) window.switchTab('dashboard', btnDash);
-        window.renderAllData(); return;
+      } else {
+        if (!window.cachedUsuarios || window.cachedUsuarios.length === 0) { alert("Base de datos no disponible."); return; }
+        usrData = window.cachedUsuarios.find(u => (u.correo || '').trim().toLowerCase() === email);
+        if (!usrData) { const empleadoSinUsuario = window.cachedEmpleados.find(e => (e.correo || '').trim().toLowerCase() === email); if (empleadoSinUsuario) { alert(`⚠️ ALERTA DEL SISTEMA GxP:\n\nEl correo ${email} pertenece a un Empleado registrado, pero aún no tiene cuenta de "Usuario GxP".`); } else { alert("Credenciales incorrectas o usuario no registrado en la Nube."); } return; }
+        if ((usrData.password || '').trim() !== pass) { alert("❌ Contraseña incorrecta. Por favor, inténtelo de nuevo."); return; }
+        if (usrData.estado !== 'Activo') { alert("Acceso denegado: Usuario INACTIVO."); return; }
       }
 
-      if (!window.cachedUsuarios || window.cachedUsuarios.length === 0) { alert("Base de datos no disponible."); return; }
-      const usrData = window.cachedUsuarios.find(u => (u.correo || '').trim().toLowerCase() === email);
-      if (!usrData) { const empleadoSinUsuario = window.cachedEmpleados.find(e => (e.correo || '').trim().toLowerCase() === email); if (empleadoSinUsuario) { alert(`⚠️ ALERTA DEL SISTEMA GxP:\n\nEl correo ${email} pertenece a un Empleado registrado, pero aún no tiene cuenta de "Usuario GxP".`); } else { alert("Credenciales incorrectas o usuario no registrado en la Nube."); } return; }
-      if ((usrData.password || '').trim() !== pass) { alert("❌ Contraseña incorrecta. Por favor, inténtelo de nuevo."); return; }
-      if (usrData.estado !== 'Activo') { alert("Acceso denegado: Usuario INACTIVO."); return; }
+      window.saveData(); 
+      window.activeGxpUser = usrData; 
+      window.registrarAuditTrail(usrData.correo, 'LOGIN', 'Inicio de sesión exitoso.');
       
-      window.activeGxpUser = usrData; window.registrarAuditTrail(usrData.correo, 'LOGIN', 'Inicio de sesión exitoso.');
-      document.getElementById('view-login').classList.add('hidden'); document.getElementById('app-portal').classList.remove('hidden');
+      document.getElementById('view-login').classList.add('hidden'); 
+      document.getElementById('app-portal').classList.remove('hidden');
       
-      const emp = window.cachedEmpleados.find(e => e.id === usrData.empleadoId);
+      const emp = (window.cachedEmpleados || []).find(e => e.id === usrData.empleadoId) || { nombres: usrData.correo, apellidos: '' };
       window.actualizarAvatarUI(emp);
-
-      const btnDash = document.querySelector('[data-tab="dashboard"]'); if (btnDash) window.switchTab('dashboard', btnDash);
       window.renderAllData();
+
+      // Redirección si se inició sesión desde un escaneo QR de equipo
+      if (window.pendingScanEquipoId) {
+        const eqToOpen = window.pendingScanEquipoId;
+        window.pendingScanEquipoId = null;
+        setTimeout(() => {
+          const btnMetro = document.querySelector('[data-tab="metrologia"]');
+          if (btnMetro) window.switchTab('metrologia', btnMetro);
+          window.verHistorialEquipo(eqToOpen);
+        }, 300);
+      } else {
+        const btnDash = document.querySelector('[data-tab="dashboard"]'); 
+        if (btnDash) window.switchTab('dashboard', btnDash);
+      }
     };
 
     window.registrarAuditTrail = function(user, accion, detalle) {
@@ -1479,7 +1516,11 @@
       // Render Mantenimientos
       document.getElementById('table-mantenimientos').innerHTML = mantenimientos.length ? mantenimientos.map(m => {
         const eq = equipos.find(e => e.id === m.equipoId);
-        return `<tr class="hover:bg-slate-50 text-xs"><td class="p-2 border font-mono font-bold text-purple-900">${m.id}</td><td class="p-2 border font-semibold text-slate-800">${eq ? eq.tag + ' - ' + eq.nombre : m.equipoId}</td><td class="p-2 border"><span class="bg-purple-100 text-purple-800 px-2 py-0.5 rounded text-[10px] font-bold border border-purple-200">${m.tipo}</span></td><td class="p-2 border font-mono text-[11px]">Prog: ${m.fechaProgramada || '-'}<br>Ejec: ${m.fechaEjecucion || '-'}</td><td class="p-2 border">${m.realizadoPor}</td><td class="p-2 border text-[11px]">Paro: ${m.tiempoParo}h<br><span class="text-slate-500">${m.repuestos ? 'Repuestos: ' + m.repuestos : ''}</span></td><td class="p-2 border text-center"><span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-[10px] font-bold border border-emerald-300">${m.estado}</span></td></tr>`;
+        const fotosBtn = (m.fotosUrls && m.fotosUrls.length > 0)
+          ? `<button onclick="window.verFotosMantenimiento('${m.id}')" class="bg-purple-100 hover:bg-purple-200 border border-purple-300 text-purple-900 px-2 py-0.5 rounded font-bold text-[10px] mt-1 flex items-center space-x-1 cursor-pointer"><span>📷</span><span>Ver Fotos (${m.fotosUrls.length})</span></button>`
+          : `<span class="text-slate-400 text-[10px] block mt-0.5">Sin fotos</span>`;
+
+        return `<tr class="hover:bg-slate-50 text-xs"><td class="p-2 border font-mono font-bold text-purple-900">${m.id}</td><td class="p-2 border font-semibold text-slate-800">${eq ? eq.tag + ' - ' + eq.nombre : m.equipoId}</td><td class="p-2 border"><span class="bg-purple-100 text-purple-800 px-2 py-0.5 rounded text-[10px] font-bold border border-purple-200">${m.tipo}</span></td><td class="p-2 border font-mono text-[11px]">Prog: ${m.fechaProgramada || '-'}<br>Ejec: ${m.fechaEjecucion || '-'}</td><td class="p-2 border">${m.realizadoPor}</td><td class="p-2 border text-[11px]">Paro: ${m.tiempoParo}h<br><span class="text-slate-500">${m.repuestos ? 'Repuestos: ' + m.repuestos : ''}</span>${fotosBtn}</td><td class="p-2 border text-center"><span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-[10px] font-bold border border-emerald-300">${m.estado}</span></td></tr>`;
       }).join('') : `<tr><td colspan="7" class="p-4 text-center text-slate-400">Sin mantenimientos registrados.</td></tr>`;
     };
 
@@ -1641,12 +1682,18 @@
       
       let html = `
         <div class="bg-slate-50 p-3 rounded-lg border space-y-2">
-          <div class="flex justify-between items-center mb-2">
+          <div class="flex justify-between items-center mb-2 flex-wrap gap-2">
             <span class="font-bold text-xs text-slate-800">Detalles del Activo</span>
-            <button onclick="window.imprimirEtiquetaEquipoQR('${eq.id}')" class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-1 rounded font-bold cursor-pointer text-xs flex items-center space-x-1 shadow-sm">
-              <span>🏷️</span>
-              <span>Imprimir Etiqueta QR</span>
-            </button>
+            <div class="flex space-x-2">
+              <button onclick="window.toggleModal('modalVerEquipoHistorial', false); window.abrirModalNuevoMantenimiento('${eq.id}');" class="bg-purple-700 hover:bg-purple-800 text-white px-3 py-1 rounded font-bold cursor-pointer text-xs flex items-center space-x-1 shadow-sm">
+                <span>🛠️</span>
+                <span>Registrar Mantenimiento</span>
+              </button>
+              <button onclick="window.imprimirEtiquetaEquipoQR('${eq.id}')" class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-1 rounded font-bold cursor-pointer text-xs flex items-center space-x-1 shadow-sm">
+                <span>🏷️</span>
+                <span>Imprimir Etiqueta QR</span>
+              </button>
+            </div>
           </div>
           <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-slate-700">
             <p><strong>Fabricante:</strong> ${eq.fabricante || 'N/A'}</p>
@@ -1667,7 +1714,12 @@
 
         <div class="space-y-2">
           <h4 class="font-bold text-xs text-purple-900">🛠️ Historial de Mantenimientos (${maints.length})</h4>
-          ${maints.length ? `<table class="w-full border-collapse text-left text-[11px]"><thead><tr class="bg-slate-100 border"><th class="p-1.5 border">ID</th><th class="p-1.5 border">Tipo</th><th class="p-1.5 border">Fecha Ejecución</th><th class="p-1.5 border">Técnico</th><th class="p-1.5 border">Paro (h)</th></tr></thead><tbody>` + maints.map(m => `<tr><td class="p-1 border font-mono font-bold">${m.id}</td><td class="p-1 border font-bold">${m.tipo}</td><td class="p-1 border font-mono">${m.fechaEjecucion || m.fechaProgramada}</td><td class="p-1 border">${m.realizadoPor}</td><td class="p-1 border font-mono">${m.tiempoParo}h</td></tr>`).join('') + `</tbody></table>` : `<p class="text-slate-400 italic">Sin registros de mantenimiento.</p>`}
+          ${maints.length ? `<table class="w-full border-collapse text-left text-[11px]"><thead><tr class="bg-slate-100 border"><th class="p-1.5 border">ID</th><th class="p-1.5 border">Tipo</th><th class="p-1.5 border">Fecha Ejecución</th><th class="p-1.5 border">Técnico</th><th class="p-1.5 border">Evidencia Fotográfica</th></tr></thead><tbody>` + maints.map(m => {
+            const fotosBtn = (m.fotosUrls && m.fotosUrls.length > 0)
+              ? `<button onclick="window.verFotosMantenimiento('${m.id}')" class="bg-purple-100 hover:bg-purple-200 border border-purple-300 text-purple-900 px-2 py-0.5 rounded font-bold text-[10px] flex items-center space-x-1 cursor-pointer"><span>📷</span><span>Ver Fotos (${m.fotosUrls.length})</span></button>`
+              : `<span class="text-slate-400 text-[10px]">Sin fotos</span>`;
+            return `<tr><td class="p-1 border font-mono font-bold">${m.id}</td><td class="p-1 border font-bold">${m.tipo}</td><td class="p-1 border font-mono">${m.fechaEjecucion || m.fechaProgramada}</td><td class="p-1 border">${m.realizadoPor}</td><td class="p-1 border text-center">${fotosBtn}</td></tr>`;
+          }).join('') + `</tbody></table>` : `<p class="text-slate-400 italic">Sin registros de mantenimiento.</p>`}
         </div>
 
         <div class="space-y-2">
@@ -1680,6 +1732,23 @@
 
       document.getElementById('histEqBody').innerHTML = html;
       window.toggleModal('modalVerEquipoHistorial', true);
+    };
+
+    window.verFotosMantenimiento = function(mntId) {
+      const mnt = window.cachedMantenimientos.find(m => m.id === mntId);
+      if (!mnt || !mnt.fotosUrls || mnt.fotosUrls.length === 0) {
+        alert("No hay fotografías de evidencia adjuntas a este registro de mantenimiento.");
+        return;
+      }
+      document.getElementById('galeriaTitle').innerText = `📷 Evidencia Mantenimiento ${mnt.id} (${mnt.tipo})`;
+      const galeriaBody = document.getElementById('galeriaBody');
+      galeriaBody.innerHTML = mnt.fotosUrls.map((fotoB64, idx) => `
+        <div class="border rounded-lg p-2 bg-slate-50 flex flex-col items-center">
+          <img src="${fotoB64}" class="max-h-60 rounded object-contain mb-2 cursor-pointer border hover:opacity-90 shadow-sm" onclick="window.viewDocBase64('${fotoB64}')" title="Haga clic para ampliar imagen" />
+          <span class="text-[10px] font-mono text-slate-500">Fotografía Evidencia #${idx + 1}</span>
+        </div>
+      `).join('');
+      window.toggleModal('modalGaleriaFotos', true);
     };
 
     window.imprimirEtiquetaEquipoQR = async function(eqId) {
@@ -1800,6 +1869,7 @@
       document.getElementById('mntCausaFalla').value = '';
       document.getElementById('mntRepuestos').value = '';
       document.getElementById('mntObs').value = '';
+      document.getElementById('mntFotosFile').value = '';
       window.toggleModal('modalMantenimiento', true);
     };
 
@@ -1810,6 +1880,22 @@
       const realizadoPor = document.getElementById('mntRealizadoPor').value.trim();
 
       if (!eqId || !realizadoPor) { alert("Complete los campos requeridos."); return; }
+
+      // Procesar Fotos de Evidencia
+      const fotosFiles = document.getElementById('mntFotosFile').files;
+      const fotosUrls = [];
+      if (fotosFiles && fotosFiles.length > 0) {
+        for (let i = 0; i < fotosFiles.length; i++) {
+          if (fotosFiles[i].size > 1048576) {
+            alert(`⛔ La fotografía "${fotosFiles[i].name}" supera el límite de 1MB.`);
+            return;
+          }
+          try {
+            const b64 = await window.readFileAsBase64(fotosFiles[i]);
+            fotosUrls.push(b64);
+          } catch(e) { console.error("Error convirtiendo foto a Base64:", e); }
+        }
+      }
 
       const eq = window.cachedEquipos.find(e => e.id === eqId);
       if (eq && tipo === 'Preventivo' && fechaEjec) {
@@ -1829,11 +1915,12 @@
         tiempoParo: parseFloat(document.getElementById('mntTiempoParo').value) || 0,
         causaFalla: document.getElementById('mntCausaFalla').value,
         repuestos: document.getElementById('mntRepuestos').value,
-        observaciones: document.getElementById('mntObs').value
+        observaciones: document.getElementById('mntObs').value,
+        fotosUrls: fotosUrls
       };
 
       window.cachedMantenimientos.unshift(mntObj);
-      window.registrarAuditTrail(window.activeGxpUser.correo, 'MAINTENANCE_RECORD', `Registró mantenimiento ${tipo} para equipo ${eq ? eq.tag : eqId}`);
+      window.registrarAuditTrail(window.activeGxpUser.correo, 'MAINTENANCE_RECORD', `Registró mantenimiento ${tipo} con ${fotosUrls.length} fotos para equipo ${eq ? eq.tag : eqId}`);
 
       await window.saveData();
       window.toggleModal('modalMantenimiento', false);
@@ -1842,8 +1929,12 @@
 
     window.viewDocBase64 = function(base64Data) {
       const viewerArea = document.getElementById('pdfViewerArea');
-      document.getElementById('pdfViewerTitle').innerText = 'Adjunto / Certificado Oficial';
-      viewerArea.innerHTML = `<iframe src="${base64Data}" class="w-full h-full border-0"></iframe>`;
+      document.getElementById('pdfViewerTitle').innerText = 'Adjunto / Certificado / Fotografía Oficial';
+      if (base64Data.startsWith('data:image/')) {
+        viewerArea.innerHTML = `<div class="flex h-full items-center justify-center bg-slate-900 p-4"><img src="${base64Data}" class="max-h-full max-w-full rounded shadow-lg object-contain" /></div>`;
+      } else {
+        viewerArea.innerHTML = `<iframe src="${base64Data}" class="w-full h-full border-0"></iframe>`;
+      }
       window.toggleModal('modalExportPdf', true);
     };
 
@@ -1869,10 +1960,10 @@
     };
 
     window.exportarExcelMantenimientos = function() {
-      let html = `<table><thead><tr><th>ID</th><th>Equipo</th><th>Tipo</th><th>Estado</th><th>Fecha Prog</th><th>Fecha Ejec</th><th>Técnico</th><th>Paro (h)</th></tr></thead><tbody>`;
+      let html = `<table><thead><tr><th>ID</th><th>Equipo</th><th>Tipo</th><th>Estado</th><th>Fecha Prog</th><th>Fecha Ejec</th><th>Técnico</th><th>Paro (h)</th><th>Cant Fotos</th></tr></thead><tbody>`;
       window.cachedMantenimientos.forEach(m => {
         const eq = window.cachedEquipos.find(e => e.id === m.equipoId);
-        html += `<tr><td>${m.id}</td><td>${eq ? eq.tag : m.equipoId}</td><td>${m.tipo}</td><td>${m.estado}</td><td>${m.fechaProgramada}</td><td>${m.fechaEjecucion}</td><td>${m.realizadoPor}</td><td>${m.tiempoParo}</td></tr>`;
+        html += `<tr><td>${m.id}</td><td>${eq ? eq.tag : m.equipoId}</td><td>${m.tipo}</td><td>${m.estado}</td><td>${m.fechaProgramada}</td><td>${m.fechaEjecucion}</td><td>${m.realizadoPor}</td><td>${m.tiempoParo}</td><td>${m.fotosUrls ? m.fotosUrls.length : 0}</td></tr>`;
       });
       html += `</tbody></table>`;
       const blob = new Blob(['\ufeff' + html], { type: 'application/vnd.ms-excel' });
@@ -2229,7 +2320,7 @@
       document.getElementById('loginPassword').addEventListener('keypress', function (e) { if (e.key === 'Enter') window.ejecutarLoginPrincipal(); }); 
       document.getElementById('loginEmail').addEventListener('keypress', function (e) { if (e.key === 'Enter') document.getElementById('loginPassword').focus(); }); 
 
-      // LÓGICA DE ROUTER Y AUTO-VALIDACIÓN POR ESCANEO DE QR
+      // LÓGICA DE ROUTER, AUTENTICACIÓN Y AUTO-VALIDACIÓN POR ESCANEO DE QR
       const urlParams = new URLSearchParams(window.location.search);
       const validarDocCode = urlParams.get('validarDoc');
       const copiaId = urlParams.get('copia');
@@ -2245,14 +2336,18 @@
           }
         }, 1200);
       } else if (eqIdScan) {
-        setTimeout(() => {
-          const eq = (window.cachedEquipos || []).find(e => e.id === eqIdScan);
-          if (eq) {
-            window.verHistorialEquipo(eq.id);
-          } else {
-            alert(`🚨 ALERTA GxP - EQUIPO NO ENCONTRADO\n\nEl ID de equipo ${eqIdScan} no existe en la base de datos de metrología.`);
-          }
-        }, 1200);
+        window.pendingScanEquipoId = eqIdScan;
+        if (window.activeGxpUser) {
+          setTimeout(() => {
+            const btnMetro = document.querySelector('[data-tab="metrologia"]');
+            if (btnMetro) window.switchTab('metrologia', btnMetro);
+            window.verHistorialEquipo(eqIdScan);
+            window.pendingScanEquipoId = null;
+          }, 1200);
+        } else {
+          const scanNotice = document.getElementById('loginScanNotice');
+          if (scanNotice) scanNotice.classList.remove('hidden');
+        }
       }
     });
   </script>
