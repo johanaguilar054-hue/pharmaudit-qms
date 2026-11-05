@@ -15,6 +15,8 @@
     .doc-subtab-content.active { display: block; }
     .config-subtab-content { display: none; }
     .config-subtab-content.active { display: block; }
+    .metro-subtab-content { display: none; }
+    .metro-subtab-content.active { display: block; }
     .modal-backdrop { display: none; }
     .modal-backdrop.active { display: flex; }
   </style>
@@ -109,7 +111,7 @@
       <button data-tab="copias" onclick="window.switchTab('copias', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 text-amber-300 font-bold cursor-pointer emisor-only">📋 Copias Controladas</button>
       <button data-tab="desviaciones" onclick="window.switchTab('desviaciones', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">⚠️ Desviaciones & NC</button>
       <button data-tab="capa" onclick="window.switchTab('capa', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">☑️ Módulo CAPA</button>
-      <button data-tab="metrologia" onclick="window.switchTab('metrologia', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">🛠️ Equipos & Calibración</button>
+      <button data-tab="metrologia" onclick="window.switchTab('metrologia', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 text-emerald-300 font-bold cursor-pointer">🛠️ Equipos & Calibración</button>
       <button data-tab="firmas" onclick="window.switchTab('firmas', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">✍️ Firmas Part 11</button>
       <button data-tab="audit" onclick="window.switchTab('audit', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">📜 Audit Trail</button>
       <button data-tab="admin" onclick="window.switchTab('admin', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 bg-slate-700 text-cyan-300 cursor-pointer master-only">⚙️ Configuraciones GxP</button>
@@ -126,7 +128,7 @@
           <div class="bg-white p-3 rounded-xl border-l-4 border-l-blue-500 shadow-sm"><div class="text-slate-500 text-[11px]">Documentos Vigentes</div><div id="cnt-docs" class="text-xl font-bold text-slate-800 mt-1">0</div></div>
           <div class="bg-white p-3 rounded-xl border-l-4 border-l-amber-500 shadow-sm"><div class="text-slate-500 text-[11px]">Copias Activas</div><div id="cnt-copias" class="text-xl font-bold text-amber-600 mt-1">0</div></div>
           <div class="bg-white p-3 rounded-xl border-l-4 border-l-purple-500 shadow-sm"><div class="text-slate-500 text-[11px]">CAPAs</div><div id="cnt-capas" class="text-xl font-bold text-purple-600 mt-1">0</div></div>
-          <div class="bg-white p-3 rounded-xl border-l-4 border-l-emerald-500 shadow-sm"><div class="text-slate-500 text-[11px]">Equipos GxP</div><div id="cnt-eqps" class="text-xl font-bold text-emerald-600 mt-1">0</div></div>
+          <div class="bg-white p-3 rounded-xl border-l-4 border-l-emerald-500 shadow-sm"><div class="text-slate-500 text-[11px]">Equipos GxP Operativos</div><div id="cnt-eqps" class="text-xl font-bold text-emerald-600 mt-1">0</div></div>
           <div class="bg-white p-3 rounded-xl border-l-4 border-l-rose-500 shadow-sm"><div class="text-slate-500 text-[11px]">Audit Trail Log</div><div id="cnt-audit" class="text-xl font-bold text-rose-600 mt-1">1</div></div>
         </div>
       </div>
@@ -209,7 +211,127 @@
       <!-- OTROS MÓDULOS -->
       <div id="view-desviaciones" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-3"><h2 class="font-bold text-sm">Desviaciones & NC</h2></div>
       <div id="view-capa" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4"><h2 class="font-bold text-sm">Planes CAPA</h2></div>
-      <div id="view-metrologia" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4"><h2 class="font-bold text-sm">Equipos & Metrología</h2></div>
+
+      <!-- MÓDULO NUEVO: EQUIPOS & CALIBRACIÓN (METROLOGÍA) -->
+      <div id="view-metrologia" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-4">
+        <div class="flex space-x-1 border-b pb-2 overflow-x-auto text-xs font-semibold">
+          <button onclick="window.switchMetroSubtab('dashboard', this)" class="metro-subtab-btn px-3 py-1.5 rounded-lg bg-emerald-600 text-white cursor-pointer">📊 Dashboard Equipos</button>
+          <button onclick="window.switchMetroSubtab('maestro', this)" class="metro-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">🖥️ Maestro de Equipos (<span id="cnt-metro-total">0</span>)</button>
+          <button onclick="window.switchMetroSubtab('calibraciones', this)" class="metro-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">📐 Calibraciones (<span id="cnt-metro-calib">0</span>)</button>
+          <button onclick="window.switchMetroSubtab('mantenimiento', this)" class="metro-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">🛠️ Mantenimiento (<span id="cnt-metro-maint">0</span>)</button>
+        </div>
+
+        <!-- SUBTAB: DASHBOARD Y ALERTAS METROLOGÍA -->
+        <div id="metro-dashboard" class="metro-subtab-content active space-y-4">
+          <div class="grid grid-cols-2 md:grid-cols-5 gap-3 text-xs font-mono">
+            <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 shadow-xs"><div class="text-slate-500 font-sans font-semibold">Total Equipos Registrados</div><div id="kpi-eq-total" class="text-xl font-bold text-slate-800 mt-1">0</div></div>
+            <div class="bg-rose-50 p-3 rounded-xl border border-rose-200 shadow-xs"><div class="text-rose-700 font-sans font-semibold">Calib. Vencidas / OOT</div><div id="kpi-eq-cal-vencidas" class="text-xl font-bold text-rose-700 mt-1">0</div></div>
+            <div class="bg-amber-50 p-3 rounded-xl border border-amber-200 shadow-xs"><div class="text-amber-800 font-sans font-semibold">Calib. Por Vencer (&lt;30d)</div><div id="kpi-eq-cal-porvencer" class="text-xl font-bold text-amber-700 mt-1">0</div></div>
+            <div class="bg-purple-50 p-3 rounded-xl border border-purple-200 shadow-xs"><div class="text-purple-800 font-sans font-semibold">Mantenimiento Vencido</div><div id="kpi-eq-maint-vencidos" class="text-xl font-bold text-purple-700 mt-1">0</div></div>
+            <div class="bg-emerald-50 p-3 rounded-xl border border-emerald-200 shadow-xs"><div class="text-emerald-800 font-sans font-semibold">Equipos Operativos</div><div id="kpi-eq-operativos" class="text-xl font-bold text-emerald-700 mt-1">0</div></div>
+          </div>
+
+          <div class="border rounded-xl p-3.5 bg-slate-50 space-y-2">
+            <h3 class="font-bold text-xs text-slate-800 flex items-center space-x-1.5"><span>⚠️</span><span>Alertas de Calibración &amp; Mantenimientos Críticos</span></h3>
+            <div id="tablaAlertasMetrologia" class="overflow-x-auto"></div>
+          </div>
+        </div>
+
+        <!-- SUBTAB: MAESTRO DE EQUIPOS -->
+        <div id="metro-maestro" class="metro-subtab-content space-y-3">
+          <div class="flex justify-between items-center flex-wrap gap-2 text-xs">
+            <div class="flex space-x-2 items-center">
+              <button type="button" onclick="window.abrirModalNuevoEquipo()" class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg font-bold shadow cursor-pointer">+ Registrar Equipo</button>
+              <div class="relative">
+                <input type="text" id="filtroEquipoInput" oninput="window.renderMetrologiaData()" placeholder="Buscar por Tag, Nombre, Serie..." class="pl-3 pr-3 py-1.5 border border-slate-300 rounded-lg text-xs font-mono bg-slate-50 focus:bg-white outline-none focus:ring-2 focus:ring-emerald-500 w-56" />
+              </div>
+            </div>
+            <div class="flex space-x-2 items-center">
+              <select id="filtroEquipoTipo" onchange="window.renderMetrologiaData()" class="p-1.5 border rounded bg-slate-50 text-xs">
+                <option value="">Todos los Tipos</option>
+                <option value="Instrumento">Instrumento</option>
+                <option value="Equipo de producción">Equipo de producción</option>
+                <option value="Utilidad">Utilidad</option>
+                <option value="Otro">Otro</option>
+              </select>
+              <select id="filtroEquipoCriticidad" onchange="window.renderMetrologiaData()" class="p-1.5 border rounded bg-slate-50 text-xs">
+                <option value="">Todas las Criticidades</option>
+                <option value="Crítico">Crítico</option>
+                <option value="No crítico">No crítico</option>
+              </select>
+              <button type="button" onclick="window.exportarExcelEquipos()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow cursor-pointer">📊 Exportar Excel</button>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full border-collapse text-left text-xs">
+              <thead>
+                <tr class="bg-slate-100 text-slate-700 border-b font-bold">
+                  <th class="p-2 border">Tag / ID</th>
+                  <th class="p-2 border">Nombre / Descripción</th>
+                  <th class="p-2 border">Tipo / Criticidad</th>
+                  <th class="p-2 border">Área / Ubicación</th>
+                  <th class="p-2 border">Próx. Calibración</th>
+                  <th class="p-2 border">Próx. Mantenimiento</th>
+                  <th class="p-2 border text-center">Estado GxP</th>
+                  <th class="p-2 border text-center">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="table-maestro-equipos" class="divide-y divide-slate-100"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- SUBTAB: CALIBRACIONES -->
+        <div id="metro-calibraciones" class="metro-subtab-content space-y-3">
+          <div class="flex justify-between items-center flex-wrap gap-2 text-xs">
+            <button type="button" onclick="window.abrirModalNuevaCalibracion()" class="bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-1.5 rounded-lg font-bold shadow cursor-pointer">+ Registrar Calibración</button>
+            <button type="button" onclick="window.exportarExcelCalibraciones()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow cursor-pointer">📊 Exportar Calibraciones</button>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full border-collapse text-left text-xs">
+              <thead>
+                <tr class="bg-slate-100 text-slate-700 border-b font-bold">
+                  <th class="p-2 border">ID Calib</th>
+                  <th class="p-2 border">Equipo (Tag)</th>
+                  <th class="p-2 border">Fecha Ejecución</th>
+                  <th class="p-2 border">Ejecutado por</th>
+                  <th class="p-2 border">Resultado</th>
+                  <th class="p-2 border">Próxima Calib.</th>
+                  <th class="p-2 border text-center">Certificado</th>
+                  <th class="p-2 border text-center">Firma Part 11</th>
+                </tr>
+              </thead>
+              <tbody id="table-calibraciones" class="divide-y divide-slate-100"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- SUBTAB: MANTENIMIENTO -->
+        <div id="metro-mantenimiento" class="metro-subtab-content space-y-3">
+          <div class="flex justify-between items-center flex-wrap gap-2 text-xs">
+            <button type="button" onclick="window.abrirModalNuevoMantenimiento()" class="bg-purple-700 hover:bg-purple-800 text-white px-3 py-1.5 rounded-lg font-bold shadow cursor-pointer">+ Registrar Mantenimiento</button>
+            <button type="button" onclick="window.exportarExcelMantenimientos()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow cursor-pointer">📊 Exportar Mantenimientos</button>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full border-collapse text-left text-xs">
+              <thead>
+                <tr class="bg-slate-100 text-slate-700 border-b font-bold">
+                  <th class="p-2 border">ID Orden</th>
+                  <th class="p-2 border">Equipo</th>
+                  <th class="p-2 border">Tipo</th>
+                  <th class="p-2 border">Fechas (Prog / Ejec)</th>
+                  <th class="p-2 border">Responsable / Técnico</th>
+                  <th class="p-2 border">Detalles / Repuestos</th>
+                  <th class="p-2 border text-center">Estado</th>
+                </tr>
+              </thead>
+              <tbody id="table-mantenimientos" class="divide-y divide-slate-100"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
       <div id="view-firmas" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4"><h2 class="font-bold text-sm">Firmas Electrónicas (21 CFR Part 11)</h2></div>
       
       <!-- AUDIT TRAIL -->
@@ -500,6 +622,210 @@
     </div>
   </div>
 
+  <!-- NUEVOS MODALES PARA EL MÓDULO DE METROLOGÍA Y EQUIPOS -->
+
+  <!-- MODAL: REGISTRAR / EDITAR EQUIPO -->
+  <div id="modalEquipo" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl max-w-2xl w-full p-5 border shadow-2xl space-y-4 text-xs max-h-[90vh] overflow-y-auto">
+      <div class="border-b pb-2 flex justify-between items-center">
+        <h3 class="font-bold text-sm text-slate-800" id="modalEquipoTitle">🖥️ Registrar / Editar Equipo GxP</h3>
+        <button onclick="window.toggleModal('modalEquipo', false)" class="text-slate-400 font-bold text-lg">✕</button>
+      </div>
+      <input type="hidden" id="eqEditId" value="">
+      <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <div><label class="block font-semibold mb-1">Tag / Código ID *</label><input type="text" id="eqTag" placeholder="EJ: BAL-QC-001" class="w-full p-2 border rounded font-mono font-bold bg-slate-50 uppercase" /></div>
+        <div><label class="block font-semibold mb-1">Nombre / Descripción *</label><input type="text" id="eqNombre" placeholder="Balanza Analítica 220g" class="w-full p-2 border rounded" /></div>
+        <div>
+          <label class="block font-semibold mb-1">Tipo de Equipo *</label>
+          <select id="eqTipo" class="w-full p-2 border rounded bg-slate-50 font-semibold">
+            <option value="Instrumento">Instrumento</option>
+            <option value="Equipo de producción">Equipo de producción</option>
+            <option value="Utilidad">Utilidad</option>
+            <option value="Otro">Otro</option>
+          </select>
+        </div>
+        <div>
+          <label class="block font-semibold mb-1">Criticidad GxP *</label>
+          <select id="eqCriticidad" class="w-full p-2 border rounded bg-slate-50 font-bold text-slate-800">
+            <option value="Crítico">Crítico (Impacto Directo GxP)</option>
+            <option value="No crítico">No crítico</option>
+          </select>
+        </div>
+        <div><label class="block font-semibold mb-1">Fabricante</label><input type="text" id="eqFabricante" class="w-full p-2 border rounded" /></div>
+        <div><label class="block font-semibold mb-1">Modelo</label><input type="text" id="eqModelo" class="w-full p-2 border rounded" /></div>
+        <div><label class="block font-semibold mb-1">Número de Serie</label><input type="text" id="eqSerie" class="w-full p-2 border rounded font-mono" /></div>
+        <div><label class="block font-semibold mb-1">Área Perteneciente *</label><select id="eqAreaSelect" class="w-full p-2 border rounded bg-slate-50" onchange="window.poblarProcesosEquipoSelect()"></select></div>
+        <div><label class="block font-semibold mb-1">Proceso Asociado</label><select id="eqProcesoSelect" class="w-full p-2 border rounded bg-slate-50"></select></div>
+        <div><label class="block font-semibold mb-1">Ubicación Física</label><input type="text" id="eqUbicacion" placeholder="Lab QC - Sala 2" class="w-full p-2 border rounded" /></div>
+        <div><label class="block font-semibold mb-1">Responsable Custodio</label><input type="text" id="eqResponsable" class="w-full p-2 border rounded" /></div>
+        <div>
+          <label class="block font-semibold mb-1">Estado GxP *</label>
+          <select id="eqEstadoSelect" class="w-full p-2 border rounded font-bold">
+            <option value="Operativo">Operativo</option>
+            <option value="En Calibración">En Calibración</option>
+            <option value="En Mantenimiento">En Mantenimiento</option>
+            <option value="Fuera de Servicio">Fuera de Servicio</option>
+            <option value="Dado de Baja">Dado de Baja</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="border-t pt-3 grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-3 rounded-lg">
+        <div class="space-y-2">
+          <label class="flex items-center space-x-2 font-bold text-cyan-900 cursor-pointer">
+            <input type="checkbox" id="eqReqCalib" onchange="window.toggleCalibInputs()" class="rounded" />
+            <span>¿Requiere Calibración?</span>
+          </label>
+          <div id="groupCalibInputs" class="space-y-2">
+            <div><label class="block mb-1">Frecuencia (Meses)</label><input type="number" id="eqCalibInterval" min="1" value="6" class="w-full p-1.5 border rounded font-mono" /></div>
+            <div><label class="block mb-1">Última Calibración</label><input type="date" id="eqLastCalibDate" class="w-full p-1.5 border rounded font-mono" /></div>
+          </div>
+        </div>
+
+        <div class="space-y-2">
+          <label class="flex items-center space-x-2 font-bold text-purple-900 cursor-pointer">
+            <input type="checkbox" id="eqReqMaint" onchange="window.toggleMaintInputs()" class="rounded" />
+            <span>¿Requiere Mantenimiento Preventivo?</span>
+          </label>
+          <div id="groupMaintInputs" class="space-y-2">
+            <div><label class="block mb-1">Frecuencia (Meses)</label><input type="number" id="eqMaintInterval" min="1" value="12" class="w-full p-1.5 border rounded font-mono" /></div>
+            <div><label class="block mb-1">Último Mantenimiento</label><input type="date" id="eqLastMaintDate" class="w-full p-1.5 border rounded font-mono" /></div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <label class="block font-semibold mb-1">Adjuntar Archivos (Ficha Técnica / Manual / Foto &lt; 1MB)</label>
+        <input type="file" id="eqAdjuntoFile" accept="image/*,.pdf" class="w-full p-1.5 border rounded bg-slate-50" />
+      </div>
+
+      <div class="flex justify-end space-x-2 pt-3 border-t">
+        <button type="button" onclick="window.toggleModal('modalEquipo', false)" class="px-3 py-1.5 border rounded cursor-pointer">Cancelar</button>
+        <button type="button" onclick="window.guardarEquipoCompleto()" class="px-4 py-1.5 bg-slate-800 text-white rounded font-bold shadow cursor-pointer">Guardar Equipo GxP</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: REGISTRAR CALIBRACIÓN -->
+  <div id="modalCalibracion" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl max-w-lg w-full p-5 border shadow-2xl space-y-4 text-xs max-h-[90vh] overflow-y-auto">
+      <div class="border-b pb-2 flex justify-between items-center">
+        <h3 class="font-bold text-sm text-cyan-900">📐 Registrar Calibración &amp; Firma Part 11</h3>
+        <button onclick="window.toggleModal('modalCalibracion', false)" class="text-slate-400 font-bold text-lg">✕</button>
+      </div>
+      <div class="space-y-3">
+        <div>
+          <label class="block font-semibold mb-1">Equipo a Calibrar *</label>
+          <select id="calEqSelect" class="w-full p-2 border rounded font-mono bg-slate-50 font-bold"></select>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div><label class="block font-semibold mb-1">Fecha de Ejecución *</label><input type="date" id="calFecha" class="w-full p-2 border rounded font-mono bg-slate-50" /></div>
+          <div><label class="block font-semibold mb-1">Realizada Por *</label><input type="text" id="calRealizadoPor" placeholder="Metrología Interna / Proveedor" class="w-full p-2 border rounded bg-slate-50" /></div>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div><label class="block font-semibold mb-1">Lecturas As-Found</label><input type="text" id="calAsFound" placeholder="Lectura inicial" class="w-full p-2 border rounded" /></div>
+          <div><label class="block font-semibold mb-1">Lecturas As-Left</label><input type="text" id="calAsLeft" placeholder="Lectura tras ajuste" class="w-full p-2 border rounded" /></div>
+        </div>
+        <div><label class="block font-semibold mb-1">Patrones / Estándares Utilizados</label><input type="text" id="calEstandares" placeholder="Ej: Pesas Patrón Clase E2 Cert #9988" class="w-full p-2 border rounded" /></div>
+        <div>
+          <label class="block font-semibold mb-1">Resultado de Calibración *</label>
+          <select id="calResultado" class="w-full p-2 border rounded font-bold text-slate-800">
+            <option value="Conforme">Conforme (Dentro de Espec.)</option>
+            <option value="OOT">OOT (Fuera de Especificación)</option>
+          </select>
+        </div>
+        <div>
+          <label class="block font-semibold mb-1">Certificado de Calibración (PDF / Imagen)</label>
+          <input type="file" id="calCertFile" accept=".pdf,image/*" class="w-full p-1.5 border rounded bg-slate-50 font-mono" />
+        </div>
+        <div><label class="block font-semibold mb-1">Observaciones</label><textarea id="calObs" rows="2" class="w-full p-2 border rounded bg-slate-50"></textarea></div>
+
+        <!-- Firma Integrada 21 CFR Part 11 -->
+        <div class="border-t pt-3 space-y-2 bg-slate-50 p-3 rounded-lg border">
+          <div class="font-bold text-slate-800 text-[11px]">✍️ Autenticación Electrónica Requerida (Part 11)</div>
+          <div class="grid grid-cols-2 gap-2">
+            <div><label class="block mb-1">Correo Administrador/Metrólogo</label><input type="email" id="calUserEmail" class="w-full p-1.5 border rounded font-mono" /></div>
+            <div>
+              <label class="block mb-1">Contraseña</label>
+              <div class="relative">
+                <input type="password" id="calUserPass" class="w-full p-1.5 pr-8 border rounded font-mono" />
+                <button type="button" onclick="window.togglePasswordVisibility('calUserPass', 'iconCalPass')" class="absolute inset-y-0 right-0 pr-2 flex items-center text-slate-400">
+                  <span id="iconCalPass" class="text-xs">👁️</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="flex justify-end space-x-2 pt-3 border-t">
+        <button type="button" onclick="window.toggleModal('modalCalibracion', false)" class="px-3 py-1.5 border rounded cursor-pointer">Cancelar</button>
+        <button type="button" onclick="window.guardarCalibracionCompleta()" class="px-4 py-1.5 bg-cyan-600 text-white rounded font-bold shadow cursor-pointer">Firmar &amp; Registrar Calibración</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: REGISTRAR MANTENIMIENTO -->
+  <div id="modalMantenimiento" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl max-w-lg w-full p-5 border shadow-2xl space-y-4 text-xs max-h-[90vh] overflow-y-auto">
+      <div class="border-b pb-2 flex justify-between items-center">
+        <h3 class="font-bold text-sm text-purple-900">🛠️ Registrar Mantenimiento Preventivo / Correctivo</h3>
+        <button onclick="window.toggleModal('modalMantenimiento', false)" class="text-slate-400 font-bold text-lg">✕</button>
+      </div>
+      <div class="space-y-3">
+        <div>
+          <label class="block font-semibold mb-1">Equipo *</label>
+          <select id="mntEqSelect" class="w-full p-2 border rounded font-mono bg-slate-50 font-bold"></select>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block font-semibold mb-1">Tipo de Mantenimiento *</label>
+            <select id="mntTipoSelect" class="w-full p-2 border rounded font-bold">
+              <option value="Preventivo">Preventivo Programado</option>
+              <option value="Correctivo">Correctivo por Falla</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-semibold mb-1">Estado de la Orden *</label>
+            <select id="mntEstadoSelect" class="w-full p-2 border rounded font-bold">
+              <option value="Completado">Completado</option>
+              <option value="En ejecución">En ejecución</option>
+              <option value="Programado">Programado</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div><label class="block font-semibold mb-1">Fecha Programada</label><input type="date" id="mntFechaProg" class="w-full p-2 border rounded font-mono" /></div>
+          <div><label class="block font-semibold mb-1">Fecha Ejecución</label><input type="date" id="mntFechaEjec" class="w-full p-2 border rounded font-mono" /></div>
+        </div>
+        <div><label class="block font-semibold mb-1">Realizado Por / Servicio Técnico</label><input type="text" id="mntRealizadoPor" class="w-full p-2 border rounded" /></div>
+        <div class="grid grid-cols-2 gap-2">
+          <div><label class="block font-semibold mb-1">Tiempo de Paro (Horas)</label><input type="number" step="0.5" id="mntTiempoParo" min="0" value="0" class="w-full p-2 border rounded font-mono" /></div>
+          <div><label class="block font-semibold mb-1">Causa de Falla (Si aplica)</label><input type="text" id="mntCausaFalla" placeholder="Desgaste, corto, etc." class="w-full p-2 border rounded" /></div>
+        </div>
+        <div><label class="block font-semibold mb-1">Repuestos Utilizados</label><input type="text" id="mntRepuestos" placeholder="Filtros, empacaduras, fusibles..." class="w-full p-2 border rounded" /></div>
+        <div><label class="block font-semibold mb-1">Observaciones Téchnicas</label><textarea id="mntObs" rows="2" class="w-full p-2 border rounded bg-slate-50"></textarea></div>
+      </div>
+      <div class="flex justify-end space-x-2 pt-3 border-t">
+        <button type="button" onclick="window.toggleModal('modalMantenimiento', false)" class="px-3 py-1.5 border rounded cursor-pointer">Cancelar</button>
+        <button type="button" onclick="window.guardarMantenimientoCompleto()" class="px-4 py-1.5 bg-purple-700 text-white rounded font-bold shadow cursor-pointer">Guardar Registro Mantenimiento</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: VER DETALLE & HISTORIAL DEL EQUIPO -->
+  <div id="modalVerEquipoHistorial" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl max-w-3xl w-full p-5 border shadow-2xl space-y-4 text-xs max-h-[90vh] overflow-y-auto">
+      <div class="border-b pb-2 flex justify-between items-center">
+        <h3 class="font-bold text-sm text-slate-800" id="histEqTitle">📜 Hoja de Vida e Historial del Equipo</h3>
+        <button onclick="window.toggleModal('modalVerEquipoHistorial', false)" class="text-slate-400 font-bold text-lg">✕</button>
+      </div>
+      <div id="histEqBody" class="space-y-4"></div>
+      <div class="flex justify-end pt-3 border-t">
+        <button onclick="window.toggleModal('modalVerEquipoHistorial', false)" class="px-4 py-1.5 bg-slate-800 text-white rounded font-bold cursor-pointer">Cerrar Hoja de Vida</button>
+      </div>
+    </div>
+  </div>
+
   <div id="modalUpdateData" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
     <div class="bg-white rounded-xl max-w-sm w-full p-5 border shadow-xl space-y-3 text-xs">
       <div class="border-b pb-2"><h3 class="font-bold text-sm text-slate-800">👤 Actualización de datos</h3></div>
@@ -578,9 +904,7 @@
         <h3 class="font-bold text-sm text-slate-800">🔔 Notificaciones</h3>
         <span id="modalNotiBadge" class="bg-cyan-100 text-cyan-800 px-2 rounded-full font-bold text-[10px]">0</span>
       </div>
-      <div id="notificationsList" class="py-4 text-center text-slate-500 italic bg-slate-50 rounded-lg border border-slate-200 max-h-64 overflow-y-auto">
-        <!-- Contenido Dinámico -->
-      </div>
+      <div id="notificationsList" class="py-4 text-center text-slate-500 italic bg-slate-50 rounded-lg border border-slate-200 max-h-64 overflow-y-auto"></div>
       <div class="flex justify-end pt-2 border-t">
         <button onclick="window.toggleModal('modalNotifications', false)" class="px-4 py-1.5 bg-slate-800 text-white rounded font-bold cursor-pointer">Cerrar</button>
       </div>
@@ -590,14 +914,14 @@
   <div id="modalAbout" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
     <div class="bg-white rounded-xl max-w-sm w-full p-5 border shadow-xl space-y-3 text-xs text-center">
       <div class="text-3xl font-extrabold text-slate-900 tracking-tight mt-2">🛡️ PharmAudit</div>
-      <p class="text-slate-500 font-mono mb-2">v1.0.0 (Release Build)</p>
+      <p class="text-slate-500 font-mono mb-2">v1.1.0 (Module Equipments Release)</p>
       <div class="bg-slate-50 p-3 rounded text-left space-y-2 border text-slate-700">
         <p><strong>Licencia:</strong> Pharmor S.A.S.</p>
-        <p><strong>Módulo:</strong> eQMS & Document Control ERP</p>
+        <p><strong>Módulo:</strong> eQMS, Document Control &amp; Metrology ERP</p>
         <p><strong>Cumplimiento Normativo:</strong></p>
         <ul class="list-disc pl-5">
           <li>FDA 21 CFR Part 11 (Firmas y Audit Trail)</li>
-          <li>ISPE GAMP 5 (Integridad de Datos)</li>
+          <li>ISPE GAMP 5 (Integridad de Datos ALCOA+)</li>
           <li>EU-GMP Annex 11</li>
         </ul>
       </div>
@@ -651,7 +975,17 @@
     window.cachedUsuarios = [ { id: 1, empleadoId: 1, correo: 'j.aguilar@pharmor.com.co', password: '123', rolesIds: ['rol_admin'], areasAsignadas: ['ar_qa', 'ar_qc', 'ar_prod'], estado: 'Activo' } ];
     window.cachedDocs = []; window.cachedCopias = []; window.cachedObsoletos = []; window.auditTrailLogs = [];
 
-    // FUNCIÓN DE VISIBILIDAD DE CONTRASEÑA
+    // DATOS MAESTROS DE METROLOGÍA Y EQUIPOS
+    window.cachedEquipos = [
+      { id: 'EQ-001', tag: 'EQ-001', nombre: 'Balanza Analítica Sartorius', tipo: 'Instrumento', criticidad: 'Crítico', fabricante: 'Sartorius', modelo: 'Cubis II', serie: 'SN-987654', areaId: 'ar_qc', procesoId: 'pr_gestion', ubicacion: 'Lab QC - Sala 2', responsable: 'Johan Aguilar', estado: 'Operativo', requiereCalibracion: true, intervaloCalMonths: 6, requiereMantenimiento: true, intervaloMantenimientoMonths: 12, fechaUltimaCal: '2026-05-10', fechaProximaCal: '2026-11-10', fechaUltimoMaint: '2026-01-15', fechaProximoMaint: '2027-01-15', adjuntoUrl: null }
+    ];
+    window.cachedCalibraciones = [
+      { id: 'CAL-001', equipoId: 'EQ-001', fecha: '2026-05-10', realizadaPor: 'Metrología Externa S.A.S.', asFound: 'Dentro de especificación', asLeft: 'Calibrado y ajustado', estandares: 'Pesas Patrón E2 Cert #9988', resultado: 'Conforme', certificadoUrl: null, observaciones: 'Calibración semestral ejecutada sin desviaciones.', proximaFecha: '2026-11-10', firmadaPor: 'j.aguilar@pharmor.com.co' }
+    ];
+    window.cachedMantenimientos = [
+      { id: 'MNT-001', equipoId: 'EQ-001', tipo: 'Preventivo', estado: 'Completado', fechaProgramada: '2026-01-15', fechaEjecucion: '2026-01-15', realizadoPor: 'Servicio Técnico Sartorius', tiempoParo: 2, causaFalla: '', repuestos: 'Filtro de aire, celda de peso', observaciones: 'Mantenimiento preventivo anual verificado.' }
+    ];
+
     window.togglePasswordVisibility = function(inputId, iconId) {
       const input = document.getElementById(inputId);
       const icon = document.getElementById(iconId);
@@ -704,7 +1038,21 @@
 
     window.saveData = async function() {
       window.actualizarEstadoNube('guardando', 'Guardando...');
-      const dbState = { areas: window.cachedAreas, procesos: window.cachedProcesos, roles: window.cachedRoles, matriz: window.cachedMatrizPermisos, empleados: window.cachedEmpleados, usuarios: window.cachedUsuarios, docs: window.cachedDocs, copias: window.cachedCopias, obsoletos: window.cachedObsoletos, audit: window.auditTrailLogs };
+      const dbState = { 
+        areas: window.cachedAreas, 
+        procesos: window.cachedProcesos, 
+        roles: window.cachedRoles, 
+        matriz: window.cachedMatrizPermisos, 
+        empleados: window.cachedEmpleados, 
+        usuarios: window.cachedUsuarios, 
+        docs: window.cachedDocs, 
+        copias: window.cachedCopias, 
+        obsoletos: window.cachedObsoletos, 
+        audit: window.auditTrailLogs,
+        equipos: window.cachedEquipos,
+        calibraciones: window.cachedCalibraciones,
+        mantenimientos: window.cachedMantenimientos
+      };
       try {
         const res = await fetch(`${SUPABASE_URL}/rest/v1/erp_state`, { method: 'POST', headers: { ...HEADERS, 'Prefer': 'resolution=merge-duplicates' }, body: JSON.stringify({ id: 1, app_data: dbState }) });
         if (res.ok) { window.actualizarEstadoNube('conectado', 'Guardado'); setTimeout(() => window.actualizarEstadoNube('conectado', 'Conectado'), 2000); } else { window.actualizarEstadoNube('error', 'Fallo al guardar'); }
@@ -750,6 +1098,9 @@
             if (dbState.copias) window.cachedCopias = dbState.copias;
             if (dbState.obsoletos) window.cachedObsoletos = dbState.obsoletos;
             if (dbState.audit) window.auditTrailLogs = dbState.audit;
+            if (dbState.equipos) window.cachedEquipos = dbState.equipos;
+            if (dbState.calibraciones) window.cachedCalibraciones = dbState.calibraciones;
+            if (dbState.mantenimientos) window.cachedMantenimientos = dbState.mantenimientos;
           }
         }
       } catch(e) { console.error("Accediendo en modo local por fallo de red:", e); } finally { window.activarBotonLogin(); }
@@ -780,6 +1131,13 @@
       document.querySelectorAll('.doc-subtab-btn').forEach(b => { b.classList.remove('bg-cyan-600', 'text-white'); b.classList.add('bg-slate-100', 'text-slate-700'); });
       const t = document.getElementById('subtab-' + tabId); if(t) t.classList.add('active');
       if(btnElement) { btnElement.classList.add('bg-cyan-600', 'text-white'); btnElement.classList.remove('bg-slate-100', 'text-slate-700'); }
+    };
+
+    window.switchMetroSubtab = function(tabId, btnElement) {
+      document.querySelectorAll('.metro-subtab-content').forEach(v => v.classList.remove('active'));
+      document.querySelectorAll('.metro-subtab-btn').forEach(b => { b.classList.remove('bg-emerald-600', 'text-white'); b.classList.add('bg-slate-100', 'text-slate-700'); });
+      const t = document.getElementById('metro-' + tabId); if(t) t.classList.add('active');
+      if(btnElement) { btnElement.classList.add('bg-emerald-600', 'text-white'); btnElement.classList.remove('bg-slate-100', 'text-slate-700'); }
     };
 
     window.switchConfigSubtab = function(tabId, btnElement) {
@@ -891,6 +1249,478 @@
       window.toggleModal('modalNotifications', true); 
     };
 
+    // LOGICA PRINCIPAL DEL MÓDULO METROLOGÍA Y EQUIPOS
+    window.calcularEstadoCalibracion = function(eq) {
+      if (!eq.requiereCalibracion) return { label: 'N/A', badge: 'bg-slate-100 text-slate-600 border-slate-300' };
+      if (!eq.fechaProximaCal) return { label: 'Sin Programar', badge: 'bg-amber-100 text-amber-800 border-amber-300' };
+      
+      const ultimaCalib = (window.cachedCalibraciones || []).filter(c => c.equipoId === eq.id).sort((a,b) => new Date(b.fecha) - new Date(a.fecha))[0];
+      if (ultimaCalib && ultimaCalib.resultado === 'OOT') {
+        return { label: 'FUERA DE ESPECIFICACIÓN (OOT)', badge: 'bg-rose-600 text-white font-bold border-rose-700 animate-pulse' };
+      }
+
+      const hoy = new Date(); hoy.setHours(0,0,0,0);
+      const prox = new Date(eq.fechaProximaCal); prox.setHours(0,0,0,0);
+      const diffDays = Math.ceil((prox - hoy) / (1000 * 60 * 60 * 24));
+
+      if (diffDays < 0) return { label: 'VENCIDA', badge: 'bg-rose-100 text-rose-800 border-rose-300 font-bold' };
+      if (diffDays <= 30) return { label: `POR VENCER (${diffDays}d)`, badge: 'bg-amber-100 text-amber-800 border-amber-300 font-bold' };
+      return { label: 'VIGENTE', badge: 'bg-emerald-100 text-emerald-800 border-emerald-300 font-bold' };
+    };
+
+    window.calcularEstadoMantenimiento = function(eq) {
+      if (!eq.requiereMantenimiento) return { label: 'N/A', badge: 'bg-slate-100 text-slate-600 border-slate-300' };
+      if (!eq.fechaProximoMaint) return { label: 'Sin Programar', badge: 'bg-amber-100 text-amber-800 border-amber-300' };
+
+      const hoy = new Date(); hoy.setHours(0,0,0,0);
+      const prox = new Date(eq.fechaProximoMaint); prox.setHours(0,0,0,0);
+      const diffDays = Math.ceil((prox - hoy) / (1000 * 60 * 60 * 24));
+
+      if (diffDays < 0) return { label: 'VENCIDO', badge: 'bg-purple-100 text-purple-800 border-purple-300 font-bold' };
+      if (diffDays <= 30) return { label: `POR VENCER (${diffDays}d)`, badge: 'bg-amber-100 text-amber-800 border-amber-300 font-bold' };
+      return { label: 'AL DÍA', badge: 'bg-emerald-100 text-emerald-800 border-emerald-300 font-bold' };
+    };
+
+    window.renderMetrologiaData = function() {
+      const equipos = window.cachedEquipos || [];
+      const calibraciones = window.cachedCalibraciones || [];
+      const mantenimientos = window.cachedMantenimientos || [];
+
+      document.getElementById('cnt-metro-total').innerText = equipos.length;
+      document.getElementById('cnt-metro-calib').innerText = calibraciones.length;
+      document.getElementById('cnt-metro-maint').innerText = mantenimientos.length;
+
+      let calVencidasCount = 0;
+      let calPorVencerCount = 0;
+      let maintVencidosCount = 0;
+      let operativosCount = 0;
+
+      equipos.forEach(eq => {
+        if (eq.estado === 'Operativo') operativosCount++;
+        const stCal = window.calcularEstadoCalibracion(eq);
+        if (stCal.label.includes('VENCIDA') || stCal.label.includes('OOT')) calVencidasCount++;
+        if (stCal.label.includes('POR VENCER')) calPorVencerCount++;
+        
+        const stMnt = window.calcularEstadoMantenimiento(eq);
+        if (stMnt.label.includes('VENCIDO')) maintVencidosCount++;
+      });
+
+      document.getElementById('kpi-eq-total').innerText = equipos.length;
+      document.getElementById('kpi-eq-cal-vencidas').innerText = calVencidasCount;
+      document.getElementById('kpi-eq-cal-porvencer').innerText = calPorVencerCount;
+      document.getElementById('kpi-eq-maint-vencidos').innerText = maintVencidosCount;
+      document.getElementById('kpi-eq-operativos').innerText = operativosCount;
+
+      // Render Alertas
+      const alertas = equipos.filter(eq => {
+        const c = window.calcularEstadoCalibracion(eq).label;
+        const m = window.calcularEstadoMantenimiento(eq).label;
+        return c.includes('VENCIDA') || c.includes('OOT') || c.includes('POR VENCER') || m.includes('VENCIDO') || m.includes('POR VENCER');
+      });
+
+      const divAlertas = document.getElementById('tablaAlertasMetrologia');
+      if (alertas.length > 0) {
+        divAlertas.innerHTML = `<table class="w-full border-collapse text-left text-xs bg-white"><thead><tr class="bg-slate-100 border-b font-bold"><th class="p-1.5 border">Tag</th><th class="p-1.5 border">Equipo</th><th class="p-1.5 border">Área</th><th class="p-1.5 border">Estado Calibración</th><th class="p-1.5 border">Estado Mantenimiento</th><th class="p-1.5 border text-center">Acción</th></tr></thead><tbody>` +
+        alertas.map(eq => {
+          const area = window.cachedAreas.find(a => a.id === eq.areaId);
+          const stC = window.calcularEstadoCalibracion(eq);
+          const stM = window.calcularEstadoMantenimiento(eq);
+          return `<tr class="border hover:bg-slate-50"><td class="p-1.5 border font-mono font-bold text-cyan-800">${eq.tag}</td><td class="p-1.5 border font-semibold">${eq.nombre}</td><td class="p-1.5 border text-slate-600">${area ? area.nombre : 'N/A'}</td><td class="p-1.5 border"><span class="${stC.badge} px-2 py-0.5 rounded text-[10px] border">${stC.label}</span></td><td class="p-1.5 border"><span class="${stM.badge} px-2 py-0.5 rounded text-[10px] border">${stM.label}</span></td><td class="p-1.5 border text-center space-x-1"><button onclick="window.abrirModalNuevaCalibracion('${eq.id}')" class="bg-cyan-600 text-white px-2 py-0.5 rounded text-[10px] font-bold">📐 Calibrar</button><button onclick="window.abrirModalNuevoMantenimiento('${eq.id}')" class="bg-purple-700 text-white px-2 py-0.5 rounded text-[10px] font-bold">🛠️ Maint.</button></td></tr>`;
+        }).join('') + `</tbody></table>`;
+      } else {
+        divAlertas.innerHTML = `<div class="p-3 text-center text-slate-500 italic font-mono bg-white rounded border">✅ Excelente: No hay calibraciones ni mantenimientos pendientes o vencidos.</div>`;
+      }
+
+      // Render Maestro Equipos
+      const txtFilter = (document.getElementById('filtroEquipoInput')?.value || '').toLowerCase();
+      const tipoFilter = document.getElementById('filtroEquipoTipo')?.value || '';
+      const critFilter = document.getElementById('filtroEquipoCriticidad')?.value || '';
+
+      const eqFiltered = equipos.filter(e => {
+        if (txtFilter && !`${e.tag} ${e.nombre} ${e.serie}`.toLowerCase().includes(txtFilter)) return false;
+        if (tipoFilter && e.tipo !== tipoFilter) return false;
+        if (critFilter && e.criticidad !== critFilter) return false;
+        return true;
+      });
+
+      document.getElementById('table-maestro-equipos').innerHTML = eqFiltered.length ? eqFiltered.map((e, idx) => {
+        const area = window.cachedAreas.find(a => a.id === e.areaId);
+        const stC = window.calcularEstadoCalibracion(e);
+        const stM = window.calcularEstadoMantenimiento(e);
+        return `<tr class="hover:bg-slate-50"><td class="p-2 border font-mono font-bold text-cyan-800">${e.tag}</td><td class="p-2 border font-semibold">${e.nombre}<br><span class="text-[10px] font-mono text-slate-500">SN: ${e.serie || 'N/A'}</span></td><td class="p-2 border text-[11px]">${e.tipo}<br><span class="font-bold ${e.criticidad==='Crítico'?'text-rose-600':'text-slate-500'}">${e.criticidad}</span></td><td class="p-2 border text-[11px]">${area ? area.nombre : 'N/A'}<br><span class="text-slate-500">${e.ubicacion}</span></td><td class="p-2 border"><span class="${stC.badge} px-2 py-0.5 rounded text-[10px] border block text-center">${stC.label}</span><span class="text-[10px] font-mono block text-center mt-0.5">${e.fechaProximaCal || '-'}</span></td><td class="p-2 border"><span class="${stM.badge} px-2 py-0.5 rounded text-[10px] border block text-center">${stM.label}</span><span class="text-[10px] font-mono block text-center mt-0.5">${e.fechaProximoMaint || '-'}</span></td><td class="p-2 border text-center"><span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-[10px] font-bold border border-emerald-300">${e.estado}</span></td><td class="p-2 border text-center space-x-1"><button onclick="window.verHistorialEquipo('${e.id}')" class="bg-slate-100 border px-2 py-1 rounded font-bold text-slate-700 cursor-pointer">👁️ Hoja Vida</button><button onclick="window.abrirModalEditarEquipo('${e.id}')" class="bg-cyan-50 border border-cyan-300 px-2 py-1 rounded font-bold text-cyan-800 cursor-pointer">✏️</button></td></tr>`;
+      }).join('') : `<tr><td colspan="8" class="p-4 text-center text-slate-400">Sin equipos registrados.</td></tr>`;
+
+      // Render Calibraciones
+      document.getElementById('table-calibraciones').innerHTML = calibraciones.length ? calibraciones.map(c => {
+        const eq = equipos.find(e => e.id === c.equipoId);
+        const resBadge = c.resultado === 'Conforme' ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-rose-100 text-rose-800 border-rose-300 font-bold';
+        const certBtn = c.certificadoUrl ? `<button onclick="window.viewDocBase64('${c.certificadoUrl}')" class="bg-cyan-50 border px-2 py-0.5 rounded font-bold text-cyan-800">📄 Cert</button>` : `<span class="text-slate-400">Sin Cert.</span>`;
+        return `<tr class="hover:bg-slate-50"><td class="p-2 border font-bold text-slate-700">${c.id}</td><td class="p-2 border font-bold text-cyan-800">${eq ? eq.tag + ' - ' + eq.nombre : c.equipoId}</td><td class="p-2 border">${c.fecha}</td><td class="p-2 border font-sans">${c.realizadaPor}</td><td class="p-2 border"><span class="${resBadge} px-2 py-0.5 rounded text-[10px] border">${c.resultado}</span></td><td class="p-2 border font-mono">${c.proximaFecha}</td><td class="p-2 border text-center">${certBtn}</td><td class="p-2 border text-center font-sans text-[11px] text-cyan-800 font-bold">✍️ ${c.firmadaPor || 'Part 11'}</td></tr>`;
+      }).join('') : `<tr><td colspan="8" class="p-4 text-center text-slate-400">Sin calibraciones registradas.</td></tr>`;
+
+      // Render Mantenimientos
+      document.getElementById('table-mantenimientos').innerHTML = mantenimientos.length ? mantenimientos.map(m => {
+        const eq = equipos.find(e => e.id === m.equipoId);
+        return `<tr class="hover:bg-slate-50 text-xs"><td class="p-2 border font-mono font-bold text-purple-900">${m.id}</td><td class="p-2 border font-semibold text-slate-800">${eq ? eq.tag + ' - ' + eq.nombre : m.equipoId}</td><td class="p-2 border"><span class="bg-purple-100 text-purple-800 px-2 py-0.5 rounded text-[10px] font-bold border border-purple-200">${m.tipo}</span></td><td class="p-2 border font-mono text-[11px]">Prog: ${m.fechaProgramada || '-'}<br>Ejec: ${m.fechaEjecucion || '-'}</td><td class="p-2 border">${m.realizadoPor}</td><td class="p-2 border text-[11px]">Paro: ${m.tiempoParo}h<br><span class="text-slate-500">${m.repuestos ? 'Repuestos: ' + m.repuestos : ''}</span></td><td class="p-2 border text-center"><span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-[10px] font-bold border border-emerald-300">${m.estado}</span></td></tr>`;
+      }).join('') : `<tr><td colspan="7" class="p-4 text-center text-slate-400">Sin mantenimientos registrados.</td></tr>`;
+    };
+
+    window.poblarProcesosEquipoSelect = function() {
+      const areaId = document.getElementById('eqAreaSelect').value;
+      const procesosArea = window.cachedProcesos.filter(p => p.areaId === areaId);
+      document.getElementById('eqProcesoSelect').innerHTML = procesosArea.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
+    };
+
+    window.toggleCalibInputs = function() {
+      const checked = document.getElementById('eqReqCalib').checked;
+      document.getElementById('groupCalibInputs').style.display = checked ? 'block' : 'none';
+    };
+
+    window.toggleMaintInputs = function() {
+      const checked = document.getElementById('eqReqMaint').checked;
+      document.getElementById('groupMaintInputs').style.display = checked ? 'block' : 'none';
+    };
+
+    window.abrirModalNuevoEquipo = function() {
+      document.getElementById('modalEquipoTitle').innerText = '🖥️ Registrar Nuevo Equipo GxP';
+      document.getElementById('eqEditId').value = '';
+      document.getElementById('eqTag').value = `EQ-${String(window.cachedEquipos.length + 1).padStart(3, '0')}`;
+      document.getElementById('eqNombre').value = '';
+      document.getElementById('eqTipo').value = 'Instrumento';
+      document.getElementById('eqCriticidad').value = 'Crítico';
+      document.getElementById('eqFabricante').value = '';
+      document.getElementById('eqModelo').value = '';
+      document.getElementById('eqSerie').value = '';
+      document.getElementById('eqAreaSelect').innerHTML = window.cachedAreas.map(a => `<option value="${a.id}">${a.nombre}</option>`).join('');
+      window.poblarProcesosEquipoSelect();
+      document.getElementById('eqUbicacion').value = '';
+      document.getElementById('eqResponsable').value = window.activeGxpUser ? window.activeGxpUser.correo : '';
+      document.getElementById('eqEstadoSelect').value = 'Operativo';
+      document.getElementById('eqReqCalib').checked = true;
+      window.toggleCalibInputs();
+      document.getElementById('eqReqMaint').checked = true;
+      window.toggleMaintInputs();
+      document.getElementById('eqCalibInterval').value = '6';
+      document.getElementById('eqMaintInterval').value = '12';
+      document.getElementById('eqLastCalibDate').value = new Date().toISOString().split('T')[0];
+      document.getElementById('eqLastMaintDate').value = new Date().toISOString().split('T')[0];
+      document.getElementById('eqAdjuntoFile').value = '';
+      window.toggleModal('modalEquipo', true);
+    };
+
+    window.abrirModalEditarEquipo = function(eqId) {
+      const eq = window.cachedEquipos.find(e => e.id === eqId);
+      if (!eq) return;
+      document.getElementById('modalEquipoTitle').innerText = `✏️ Editar Equipo ${eq.tag}`;
+      document.getElementById('eqEditId').value = eq.id;
+      document.getElementById('eqTag').value = eq.tag;
+      document.getElementById('eqNombre').value = eq.nombre;
+      document.getElementById('eqTipo').value = eq.tipo;
+      document.getElementById('eqCriticidad').value = eq.criticidad;
+      document.getElementById('eqFabricante').value = eq.fabricante || '';
+      document.getElementById('eqModelo').value = eq.modelo || '';
+      document.getElementById('eqSerie').value = eq.serie || '';
+      document.getElementById('eqAreaSelect').innerHTML = window.cachedAreas.map(a => `<option value="${a.id}" ${a.id===eq.areaId?'selected':''}>${a.nombre}</option>`).join('');
+      window.poblarProcesosEquipoSelect();
+      if(eq.procesoId) document.getElementById('eqProcesoSelect').value = eq.procesoId;
+      document.getElementById('eqUbicacion').value = eq.ubicacion || '';
+      document.getElementById('eqResponsable').value = eq.responsable || '';
+      document.getElementById('eqEstadoSelect').value = eq.estado || 'Operativo';
+      document.getElementById('eqReqCalib').checked = !!eq.requiereCalibracion;
+      window.toggleCalibInputs();
+      document.getElementById('eqReqMaint').checked = !!eq.requiereMantenimiento;
+      window.toggleMaintInputs();
+      document.getElementById('eqCalibInterval').value = eq.intervaloCalMonths || 6;
+      document.getElementById('eqMaintInterval').value = eq.intervaloMantenimientoMonths || 12;
+      document.getElementById('eqLastCalibDate').value = eq.fechaUltimaCal || '';
+      document.getElementById('eqLastMaintDate').value = eq.fechaUltimoMaint || '';
+      window.toggleModal('modalEquipo', true);
+    };
+
+    window.guardarEquipoCompleto = async function() {
+      const editId = document.getElementById('eqEditId').value;
+      const tag = document.getElementById('eqTag').value.trim().toUpperCase();
+      const nombre = document.getElementById('eqNombre').value.trim();
+      
+      if (!tag || !nombre) { alert("Complete Tag y Nombre del equipo."); return; }
+
+      let adjuntoUrl = null;
+      const fileInput = document.getElementById('eqAdjuntoFile');
+      if (fileInput.files && fileInput.files[0]) {
+        if (fileInput.files[0].size > 1048576) { alert("⛔ El archivo adjunto supera el límite seguro de 1MB."); return; }
+        try { adjuntoUrl = await window.readFileAsBase64(fileInput.files[0]); } catch(e) { console.error(e); }
+      }
+
+      const reqCal = document.getElementById('eqReqCalib').checked;
+      const calInt = parseInt(document.getElementById('eqCalibInterval').value) || 6;
+      const lastCal = document.getElementById('eqLastCalibDate').value;
+      let proxCal = '';
+      if (reqCal && lastCal) {
+        const d = new Date(lastCal); d.setMonth(d.getMonth() + calInt);
+        proxCal = d.toISOString().split('T')[0];
+      }
+
+      const reqMnt = document.getElementById('eqReqMaint').checked;
+      const mntInt = parseInt(document.getElementById('eqMaintInterval').value) || 12;
+      const lastMnt = document.getElementById('eqLastMaintDate').value;
+      let proxMnt = '';
+      if (reqMnt && lastMnt) {
+        const d = new Date(lastMnt); d.setMonth(d.getMonth() + mntInt);
+        proxMnt = d.toISOString().split('T')[0];
+      }
+
+      const eqObj = {
+        id: editId || `EQ-${Date.now()}`,
+        tag: tag,
+        nombre: nombre,
+        tipo: document.getElementById('eqTipo').value,
+        criticidad: document.getElementById('eqCriticidad').value,
+        fabricante: document.getElementById('eqFabricante').value,
+        modelo: document.getElementById('eqModelo').value,
+        serie: document.getElementById('eqSerie').value,
+        areaId: document.getElementById('eqAreaSelect').value,
+        procesoId: document.getElementById('eqProcesoSelect').value,
+        ubicacion: document.getElementById('eqUbicacion').value,
+        responsable: document.getElementById('eqResponsable').value,
+        estado: document.getElementById('eqEstadoSelect').value,
+        requiereCalibracion: reqCal,
+        intervaloCalMonths: calInt,
+        requiereMantenimiento: reqMnt,
+        intervaloMantenimientoMonths: mntInt,
+        fechaUltimaCal: lastCal,
+        fechaProximaCal: proxCal,
+        fechaUltimoMaint: lastMnt,
+        fechaProximoMaint: proxMnt,
+        adjuntoUrl: adjuntoUrl
+      };
+
+      if (!editId) {
+        window.cachedEquipos.push(eqObj);
+        window.registrarAuditTrail(window.activeGxpUser.correo, 'CREATE_ASSET', `Registró activo GxP: ${tag} - ${nombre}`);
+      } else {
+        const idx = window.cachedEquipos.findIndex(e => e.id === editId);
+        if (idx > -1) {
+          window.cachedEquipos[idx] = { ...window.cachedEquipos[idx], ...eqObj };
+          window.registrarAuditTrail(window.activeGxpUser.correo, 'UPDATE_ASSET', `Actualizó activo GxP: ${tag}`);
+        }
+      }
+
+      await window.saveData();
+      window.toggleModal('modalEquipo', false);
+      window.renderAllData();
+    };
+
+    window.verHistorialEquipo = function(eqId) {
+      const eq = window.cachedEquipos.find(e => e.id === eqId);
+      if (!eq) return;
+
+      const area = window.cachedAreas.find(a => a.id === eq.areaId);
+      const calibs = (window.cachedCalibraciones || []).filter(c => c.equipoId === eq.id);
+      const maints = (window.cachedMantenimientos || []).filter(m => m.equipoId === eq.id);
+      const logs = (window.auditTrailLogs || []).filter(l => l.detalle && l.detalle.includes(eq.tag));
+
+      document.getElementById('histEqTitle').innerText = `📜 Hoja de Vida e Historial: ${eq.tag} - ${eq.nombre}`;
+      
+      let html = `
+        <div class="bg-slate-50 p-3 rounded-lg border space-y-2">
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-slate-700">
+            <p><strong>Fabricante:</strong> ${eq.fabricante || 'N/A'}</p>
+            <p><strong>Modelo:</strong> ${eq.modelo || 'N/A'}</p>
+            <p><strong>N° Serie:</strong> <span class="font-mono">${eq.serie || 'N/A'}</span></p>
+            <p><strong>Área:</strong> ${area ? area.nombre : 'N/A'}</p>
+            <p><strong>Ubicación:</strong> ${eq.ubicacion || 'N/A'}</p>
+            <p><strong>Responsable:</strong> ${eq.responsable || 'N/A'}</p>
+            <p><strong>Estado GxP:</strong> <span class="font-bold text-emerald-700">${eq.estado}</span></p>
+            <p><strong>Criticidad:</strong> ${eq.criticidad}</p>
+          </div>
+        </div>
+
+        <div class="space-y-2">
+          <h4 class="font-bold text-xs text-cyan-900">📐 Calibraciones Registradas (${calibs.length})</h4>
+          ${calibs.length ? `<table class="w-full border-collapse text-left font-mono text-[11px]"><thead><tr class="bg-slate-100 border"><th class="p-1.5 border">ID</th><th class="p-1.5 border">Fecha</th><th class="p-1.5 border">Ejecutor</th><th class="p-1.5 border">Resultado</th><th class="p-1.5 border">Firma</th></tr></thead><tbody>` + calibs.map(c => `<tr><td class="p-1 border font-bold">${c.id}</td><td class="p-1 border">${c.fecha}</td><td class="p-1 border font-sans">${c.realizadaPor}</td><td class="p-1 border font-sans font-bold ${c.resultado==='Conforme'?'text-emerald-700':'text-rose-700'}">${c.resultado}</td><td class="p-1 border font-sans text-slate-500">${c.firmadaPor}</td></tr>`).join('') + `</tbody></table>` : `<p class="text-slate-400 italic">Sin registros de calibración.</p>`}
+        </div>
+
+        <div class="space-y-2">
+          <h4 class="font-bold text-xs text-purple-900">🛠️ Historial de Mantenimientos (${maints.length})</h4>
+          ${maints.length ? `<table class="w-full border-collapse text-left text-[11px]"><thead><tr class="bg-slate-100 border"><th class="p-1.5 border">ID</th><th class="p-1.5 border">Tipo</th><th class="p-1.5 border">Fecha Ejecución</th><th class="p-1.5 border">Técnico</th><th class="p-1.5 border">Paro (h)</th></tr></thead><tbody>` + maints.map(m => `<tr><td class="p-1 border font-mono font-bold">${m.id}</td><td class="p-1 border font-bold">${m.tipo}</td><td class="p-1 border font-mono">${m.fechaEjecucion || m.fechaProgramada}</td><td class="p-1 border">${m.realizadoPor}</td><td class="p-1 border font-mono">${m.tiempoParo}h</td></tr>`).join('') + `</tbody></table>` : `<p class="text-slate-400 italic">Sin registros de mantenimiento.</p>`}
+        </div>
+
+        <div class="space-y-2">
+          <h4 class="font-bold text-xs text-slate-800">📜 Audit Trail del Activo (${logs.length})</h4>
+          <div class="bg-slate-900 text-slate-200 p-2.5 rounded font-mono text-[10px] max-h-36 overflow-y-auto space-y-1">
+            ${logs.length ? logs.map(l => `<div>[${l.fecha}] <strong>${l.usuario}</strong> [${l.accion}]: ${l.detalle}</div>`).join('') : `<div>Sin eventos específicos registrados en Audit Trail.</div>`}
+          </div>
+        </div>
+      `;
+
+      document.getElementById('histEqBody').innerHTML = html;
+      window.toggleModal('modalVerEquipoHistorial', true);
+    };
+
+    window.abrirModalNuevaCalibracion = function(eqId = null) {
+      const selectEq = document.getElementById('calEqSelect');
+      selectEq.innerHTML = window.cachedEquipos.filter(e => e.requiereCalibracion).map(e => `<option value="${e.id}">${e.tag} - ${e.nombre}</option>`).join('');
+      if (eqId) selectEq.value = eqId;
+      document.getElementById('calFecha').value = new Date().toISOString().split('T')[0];
+      document.getElementById('calRealizadoPor').value = 'Laboratorio de Metrología Acreditado';
+      document.getElementById('calAsFound').value = 'Dentro de tolerancias fijadas';
+      document.getElementById('calAsLeft').value = 'Conforme';
+      document.getElementById('calEstandares').value = 'Pesas patrón / Calibrador certificado';
+      document.getElementById('calResultado').value = 'Conforme';
+      document.getElementById('calCertFile').value = '';
+      document.getElementById('calObs').value = '';
+      document.getElementById('calUserEmail').value = window.activeGxpUser ? window.activeGxpUser.correo : '';
+      document.getElementById('calUserPass').value = '';
+      window.toggleModal('modalCalibracion', true);
+    };
+
+    window.guardarCalibracionCompleta = async function() {
+      const eqId = document.getElementById('calEqSelect').value;
+      const fecha = document.getElementById('calFecha').value;
+      const realizadoPor = document.getElementById('calRealizadoPor').value.trim();
+      const resultado = document.getElementById('calResultado').value;
+      const email = document.getElementById('calUserEmail').value.trim();
+      const pass = document.getElementById('calUserPass').value.trim();
+
+      if (!eqId || !fecha || !realizadoPor) { alert("Complete los campos obligatorios."); return; }
+
+      // Validación de Firma Part 11
+      const user = window.cachedUsuarios.find(u => u.correo.toLowerCase() === email.toLowerCase() && u.password === pass);
+      if (!user) { alert("⛔ Firma Part 11 rechazada: Credenciales de usuario inválidas."); return; }
+
+      const eq = window.cachedEquipos.find(e => e.id === eqId);
+      if (!eq) return;
+
+      let certUrl = null;
+      const certFile = document.getElementById('calCertFile').files[0];
+      if (certFile) {
+        if (certFile.size > 1048576) { alert("⛔ El certificado supera el límite de 1MB."); return; }
+        try { certUrl = await window.readFileAsBase64(certFile); } catch(e) { console.error(e); }
+      }
+
+      // Cálculo próxima calibración
+      const d = new Date(fecha); d.setMonth(d.getMonth() + (eq.intervaloCalMonths || 6));
+      const proxCalDate = d.toISOString().split('T')[0];
+
+      eq.fechaUltimaCal = fecha;
+      eq.fechaProximaCal = proxCalDate;
+      if (resultado === 'OOT') { eq.estado = 'Fuera de Servicio'; }
+
+      const calibObj = {
+        id: `CAL-${String(window.cachedCalibraciones.length + 1).padStart(3, '0')}`,
+        equipoId: eq.id,
+        fecha: fecha,
+        realizadaPor: realizadoPor,
+        asFound: document.getElementById('calAsFound').value,
+        asLeft: document.getElementById('calAsLeft').value,
+        estandares: document.getElementById('calEstandares').value,
+        resultado: resultado,
+        certificadoUrl: certUrl,
+        observaciones: document.getElementById('calObs').value,
+        proximaFecha: proxCalDate,
+        firmadaPor: user.correo
+      };
+
+      window.cachedCalibraciones.unshift(calibObj);
+      window.registrarAuditTrail(user.correo, 'CALIBRATION_PART11', `Firmó y registró calibración (${resultado}) para activo ${eq.tag}`);
+      
+      await window.saveData();
+      window.toggleModal('modalCalibracion', false);
+      window.renderAllData();
+    };
+
+    window.abrirModalNuevoMantenimiento = function(eqId = null) {
+      const selectEq = document.getElementById('mntEqSelect');
+      selectEq.innerHTML = window.cachedEquipos.map(e => `<option value="${e.id}">${e.tag} - ${e.nombre}</option>`).join('');
+      if (eqId) selectEq.value = eqId;
+      document.getElementById('mntTipoSelect').value = 'Preventivo';
+      document.getElementById('mntEstadoSelect').value = 'Completado';
+      document.getElementById('mntFechaProg').value = new Date().toISOString().split('T')[0];
+      document.getElementById('mntFechaEjec').value = new Date().toISOString().split('T')[0];
+      document.getElementById('mntRealizadoPor').value = 'Servicio Técnico Especializado';
+      document.getElementById('mntTiempoParo').value = '0';
+      document.getElementById('mntCausaFalla').value = '';
+      document.getElementById('mntRepuestos').value = '';
+      document.getElementById('mntObs').value = '';
+      window.toggleModal('modalMantenimiento', true);
+    };
+
+    window.guardarMantenimientoCompleto = async function() {
+      const eqId = document.getElementById('mntEqSelect').value;
+      const tipo = document.getElementById('mntTipoSelect').value;
+      const fechaEjec = document.getElementById('mntFechaEjec').value || document.getElementById('mntFechaProg').value;
+      const realizadoPor = document.getElementById('mntRealizadoPor').value.trim();
+
+      if (!eqId || !realizadoPor) { alert("Complete los campos requeridos."); return; }
+
+      const eq = window.cachedEquipos.find(e => e.id === eqId);
+      if (eq && tipo === 'Preventivo' && fechaEjec) {
+        eq.fechaUltimoMaint = fechaEjec;
+        const d = new Date(fechaEjec); d.setMonth(d.getMonth() + (eq.intervaloMantenimientoMonths || 12));
+        eq.fechaProximoMaint = d.toISOString().split('T')[0];
+      }
+
+      const mntObj = {
+        id: `MNT-${String(window.cachedMantenimientos.length + 1).padStart(3, '0')}`,
+        equipoId: eqId,
+        tipo: tipo,
+        estado: document.getElementById('mntEstadoSelect').value,
+        fechaProgramada: document.getElementById('mntFechaProg').value,
+        fechaEjecucion: fechaEjec,
+        realizadoPor: realizadoPor,
+        tiempoParo: parseFloat(document.getElementById('mntTiempoParo').value) || 0,
+        causaFalla: document.getElementById('mntCausaFalla').value,
+        repuestos: document.getElementById('mntRepuestos').value,
+        observaciones: document.getElementById('mntObs').value
+      };
+
+      window.cachedMantenimientos.unshift(mntObj);
+      window.registrarAuditTrail(window.activeGxpUser.correo, 'MAINTENANCE_RECORD', `Registró mantenimiento ${tipo} para equipo ${eq ? eq.tag : eqId}`);
+
+      await window.saveData();
+      window.toggleModal('modalMantenimiento', false);
+      window.renderAllData();
+    };
+
+    window.viewDocBase64 = function(base64Data) {
+      const viewerArea = document.getElementById('pdfViewerArea');
+      document.getElementById('pdfViewerTitle').innerText = 'Adjunto / Certificado Oficial';
+      viewerArea.innerHTML = `<iframe src="${base64Data}" class="w-full h-full border-0"></iframe>`;
+      window.toggleModal('modalExportPdf', true);
+    };
+
+    window.exportarExcelEquipos = function() {
+      let html = `<table><thead><tr><th>Tag</th><th>Nombre</th><th>Tipo</th><th>Criticidad</th><th>Fabricante</th><th>Modelo</th><th>Serie</th><th>Ubicación</th><th>Próx Calibración</th><th>Próx Mantenimiento</th><th>Estado</th></tr></thead><tbody>`;
+      window.cachedEquipos.forEach(e => {
+        html += `<tr><td>${e.tag}</td><td>${e.nombre}</td><td>${e.tipo}</td><td>${e.criticidad}</td><td>${e.fabricante||''}</td><td>${e.modelo||''}</td><td>${e.serie||''}</td><td>${e.ubicacion||''}</td><td>${e.fechaProximaCal||'-'}</td><td>${e.fechaProximoMaint||'-'}</td><td>${e.estado}</td></tr>`;
+      });
+      html += `</tbody></table>`;
+      const blob = new Blob(['\ufeff' + html], { type: 'application/vnd.ms-excel' });
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `Maestro_Equipos_${new Date().toISOString().split('T')[0]}.xls`; a.click();
+    };
+
+    window.exportarExcelCalibraciones = function() {
+      let html = `<table><thead><tr><th>ID</th><th>Equipo</th><th>Fecha</th><th>Realizada Por</th><th>Resultado</th><th>Próxima Fecha</th><th>Firmada Por</th></tr></thead><tbody>`;
+      window.cachedCalibraciones.forEach(c => {
+        const eq = window.cachedEquipos.find(e => e.id === c.equipoId);
+        html += `<tr><td>${c.id}</td><td>${eq ? eq.tag : c.equipoId}</td><td>${c.fecha}</td><td>${c.realizadaPor}</td><td>${c.resultado}</td><td>${c.proximaFecha}</td><td>${c.firmadaPor}</td></tr>`;
+      });
+      html += `</tbody></table>`;
+      const blob = new Blob(['\ufeff' + html], { type: 'application/vnd.ms-excel' });
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `Historial_Calibraciones_${new Date().toISOString().split('T')[0]}.xls`; a.click();
+    };
+
+    window.exportarExcelMantenimientos = function() {
+      let html = `<table><thead><tr><th>ID</th><th>Equipo</th><th>Tipo</th><th>Estado</th><th>Fecha Prog</th><th>Fecha Ejec</th><th>Técnico</th><th>Paro (h)</th></tr></thead><tbody>`;
+      window.cachedMantenimientos.forEach(m => {
+        const eq = window.cachedEquipos.find(e => e.id === m.equipoId);
+        html += `<tr><td>${m.id}</td><td>${eq ? eq.tag : m.equipoId}</td><td>${m.tipo}</td><td>${m.estado}</td><td>${m.fechaProgramada}</td><td>${m.fechaEjecucion}</td><td>${m.realizadoPor}</td><td>${m.tiempoParo}</td></tr>`;
+      });
+      html += `</tbody></table>`;
+      const blob = new Blob(['\ufeff' + html], { type: 'application/vnd.ms-excel' });
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `Registro_Mantenimientos_${new Date().toISOString().split('T')[0]}.xls`; a.click();
+    };
+
     window.renderAllData = function() {
       window.actualizarBadgeNotificaciones();
       const filtroVal = (document.getElementById('filtroDocsInput')?.value || '').trim().toLowerCase();
@@ -937,7 +1767,9 @@
       document.getElementById('table-obsoleto').innerHTML = obsoletos.length ? obsoletos.map((o, idx) => `<tr class="hover:bg-slate-50 bg-rose-50/40"><td class="p-2 border text-center font-mono font-bold text-slate-500">${idx + 1}</td><td class="p-2 border font-mono font-bold text-rose-800">${o.codigo}</td><td class="p-2 border font-mono text-rose-600">v${o.version}</td><td class="p-2 border font-semibold">${o.titulo}</td><td class="p-2 border text-slate-700 italic">${o.motivo_cambio}</td><td class="p-2 border text-center"><button onclick="window.viewDocument('${o.id}')" class="bg-slate-100 border px-2 py-1 rounded font-bold text-slate-700 cursor-pointer">👁️ Ver</button></td></tr>`).join('') : `<tr><td colspan="6" class="p-4 text-center text-slate-400">Papelera vacía.</td></tr>`;
       document.getElementById('list-copias-body').innerHTML = window.cachedCopias.length ? window.cachedCopias.map(c => `<tr class="hover:bg-slate-50"><td class="p-2 border font-bold text-amber-900">${c.codigo}</td><td class="p-2 border">${c.doc}</td><td class="p-2 border">${c.area}</td><td class="p-2 border">${c.custodio}</td><td class="p-2 border"><span class="bg-emerald-100 text-emerald-800 px-2 rounded text-[10px] font-bold">ACTIVA</span></td></tr>`).join('') : `<tr><td colspan="5" class="p-4 text-center text-slate-400">Sin copias emitidas.</td></tr>`;
       const auditDiv = document.getElementById('list-auds'); if(auditDiv) auditDiv.innerHTML = window.auditTrailLogs.map(l => `[${l.fecha}] <strong>${l.usuario}</strong> [${l.accion}]: ${l.detalle}`).join('<br><hr class="border-slate-100">');
+      
       window.renderConfigTablas();
+      window.renderMetrologiaData();
     };
 
     window.renderConfigTablas = function() {
@@ -961,7 +1793,7 @@
       const newId = document.getElementById('inputAreaId').value.trim(); const nom = document.getElementById('inputAreaNombre').value.trim();
       if(!newId || !nom) { alert("Complete ID y Nombre."); return; }
       if(editIdx === -1) { if(window.cachedAreas.find(a => a.id === newId)) { alert("ID duplicado."); return; } window.cachedAreas.push({ id: newId, nombre: nom }); window.registrarAuditTrail(window.activeGxpUser.correo, 'CREATE_AREA', `Creó área: ${nom}`); } 
-      else { const oldId = window.cachedAreas[editIdx].id; window.cachedAreas[editIdx].nombre = nom; if(oldId !== newId) { window.cachedAreas[editIdx].id = newId; window.cachedProcesos.forEach(p => { if(p.areaId === oldId) p.areaId = newId; }); window.cachedEmpleados.forEach(e => { if(e.areaId === oldId) e.areaId = newId; }); window.cachedUsuarios.forEach(u => { const idx = u.areasAsignadas.indexOf(oldId); if(idx > -1) u.areasAsignadas[idx] = newId; }); window.cachedDocs.forEach(d => { if(d.areaId === oldId) d.areaId = newId; }); } window.registrarAuditTrail(window.activeGxpUser.correo, 'UPDATE_AREA', `Actualizó área: ${newId}`); }
+      else { const oldId = window.cachedAreas[editIdx].id; window.cachedAreas[editIdx].nombre = nom; if(oldId !== newId) { window.cachedAreas[editIdx].id = newId; window.cachedProcesos.forEach(p => { if(p.areaId === oldId) p.areaId = newId; }); window.cachedEmpleados.forEach(e => { if(e.areaId === oldId) e.areaId = newId; }); window.cachedUsuarios.forEach(u => { const idx = u.areasAsignadas.indexOf(oldId); if(idx > -1) u.areasAsignadas[idx] = newId; }); window.cachedDocs.forEach(d => { if(d.areaId === oldId) d.areaId = newId; }); window.cachedEquipos.forEach(eq => { if(eq.areaId === oldId) eq.areaId = newId; }); } window.registrarAuditTrail(window.activeGxpUser.correo, 'UPDATE_AREA', `Actualizó área: ${newId}`); }
       await window.saveData(); window.toggleModal('modalArea', false); window.renderAllData();
     };
 
