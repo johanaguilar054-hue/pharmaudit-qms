@@ -212,7 +212,7 @@
       <div id="view-desviaciones" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-3"><h2 class="font-bold text-sm">Desviaciones & NC</h2></div>
       <div id="view-capa" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4"><h2 class="font-bold text-sm">Planes CAPA</h2></div>
 
-      <!-- MÓDULO NUEVO: EQUIPOS & CALIBRACIÓN (METROLOGÍA) -->
+      <!-- MÓDULO: EQUIPOS & CALIBRACIÓN (METROLOGÍA) -->
       <div id="view-metrologia" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-4">
         <div class="flex space-x-1 border-b pb-2 overflow-x-auto text-xs font-semibold">
           <button onclick="window.switchMetroSubtab('dashboard', this)" class="metro-subtab-btn px-3 py-1.5 rounded-lg bg-emerald-600 text-white cursor-pointer">📊 Dashboard Equipos</button>
@@ -250,9 +250,7 @@
               <select id="filtroEquipoTipo" onchange="window.renderMetrologiaData()" class="p-1.5 border rounded bg-slate-50 text-xs">
                 <option value="">Todos los Tipos</option>
                 <option value="Instrumento">Instrumento</option>
-                <option value="Equipo de producción">Equipo de producción</option>
-                <option value="Utilidad">Utilidad</option>
-                <option value="Otro">Otro</option>
+                <option value="Equipo">Equipo</option>
               </select>
               <select id="filtroEquipoCriticidad" onchange="window.renderMetrologiaData()" class="p-1.5 border rounded bg-slate-50 text-xs">
                 <option value="">Todas las Criticidades</option>
@@ -622,8 +620,6 @@
     </div>
   </div>
 
-  <!-- NUEVOS MODALES PARA EL MÓDULO DE METROLOGÍA Y EQUIPOS -->
-
   <!-- MODAL: REGISTRAR / EDITAR EQUIPO -->
   <div id="modalEquipo" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
     <div class="bg-white rounded-xl max-w-2xl w-full p-5 border shadow-2xl space-y-4 text-xs max-h-[90vh] overflow-y-auto">
@@ -639,9 +635,7 @@
           <label class="block font-semibold mb-1">Tipo de Equipo *</label>
           <select id="eqTipo" class="w-full p-2 border rounded bg-slate-50 font-semibold">
             <option value="Instrumento">Instrumento</option>
-            <option value="Equipo de producción">Equipo de producción</option>
-            <option value="Utilidad">Utilidad</option>
-            <option value="Otro">Otro</option>
+            <option value="Equipo">Equipo</option>
           </select>
         </div>
         <div>
@@ -803,7 +797,7 @@
           <div><label class="block font-semibold mb-1">Causa de Falla (Si aplica)</label><input type="text" id="mntCausaFalla" placeholder="Desgaste, corto, etc." class="w-full p-2 border rounded" /></div>
         </div>
         <div><label class="block font-semibold mb-1">Repuestos Utilizados</label><input type="text" id="mntRepuestos" placeholder="Filtros, empacaduras, fusibles..." class="w-full p-2 border rounded" /></div>
-        <div><label class="block font-semibold mb-1">Observaciones Téchnicas</label><textarea id="mntObs" rows="2" class="w-full p-2 border rounded bg-slate-50"></textarea></div>
+        <div><label class="block font-semibold mb-1">Observaciones Técnicas</label><textarea id="mntObs" rows="2" class="w-full p-2 border rounded bg-slate-50"></textarea></div>
       </div>
       <div class="flex justify-end space-x-2 pt-3 border-t">
         <button type="button" onclick="window.toggleModal('modalMantenimiento', false)" class="px-3 py-1.5 border rounded cursor-pointer">Cancelar</button>
@@ -1197,7 +1191,101 @@
       document.body.appendChild(a); a.click(); document.body.removeChild(a);
     };
 
-    window.exportarAuditTrailPDF = function() { /* Función intacta */ };
+    window.exportarAuditTrailPDF = function() {
+      if (!window.auditTrailLogs || window.auditTrailLogs.length === 0) {
+        alert("No hay registros en el Audit Trail para exportar.");
+        return;
+      }
+      let htmlTabla = `<html><head><style>
+        body { font-family: Arial, sans-serif; font-size: 10px; margin: 20px; }
+        h2 { color: #0f172a; margin-bottom: 4px; }
+        p { color: #64748b; margin-top: 0; font-size: 9px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #cbd5e1; padding: 6px; text-align: left; }
+        th { background-color: #f1f5f9; font-weight: bold; }
+      </style></head><body>
+      <h2>📜 Reporte Oficial de Audit Trail GxP (ALCOA+)</h2>
+      <p>Generado el: ${new Date().toLocaleString()} | PharmAudit ERP</p>
+      <table><thead><tr><th>Fecha / Hora</th><th>Usuario</th><th>Acción GxP</th><th>Detalle / Evento</th></tr></thead><tbody>`;
+      window.auditTrailLogs.forEach(l => {
+        htmlTabla += `<tr><td>${l.fecha}</td><td>${l.usuario}</td><td><b>${l.accion}</b></td><td>${l.detalle}</td></tr>`;
+      });
+      htmlTabla += `</tbody></table></body></html>`;
+
+      const win = window.open('', '_blank');
+      win.document.write(htmlTabla);
+      win.document.close();
+      win.print();
+    };
+
+    window.abrirModalNuevaVersion = function() {
+      const selectDoc = document.getElementById('versionDocSelect');
+      const vigentes = window.cachedDocs.filter(d => d.estado === 'VIGENTE');
+      selectDoc.innerHTML = vigentes.map(d => `<option value="${d.id}">${d.codigo} - ${d.titulo} (v${d.version})</option>`).join('');
+      if (vigentes.length > 0) {
+        window.cargarDatosVersionBase();
+      } else {
+        document.getElementById('verNewTitle').value = '';
+        document.getElementById('verNewCode').value = '';
+        document.getElementById('verNewNumber').value = '';
+      }
+      document.getElementById('verChangeReason').value = '';
+      document.getElementById('verNewFile').value = '';
+      window.toggleModal('modalVersion', true);
+    };
+
+    window.cargarDatosVersionBase = function() {
+      const docId = document.getElementById('versionDocSelect').value;
+      const doc = window.cachedDocs.find(d => d.id === docId);
+      if (doc) {
+        document.getElementById('verNewTitle').value = doc.titulo;
+        document.getElementById('verNewCode').value = doc.codigo;
+        const currentVer = parseFloat(doc.version) || 1.0;
+        document.getElementById('verNewNumber').value = (currentVer + 1.0).toFixed(1);
+      }
+    };
+
+    window.guardarNuevaVersion = async function() {
+      const baseDocId = document.getElementById('versionDocSelect').value;
+      const baseDoc = window.cachedDocs.find(d => d.id === baseDocId);
+      if (!baseDoc) { alert("Seleccione un documento base válido."); return; }
+
+      const newTitle = document.getElementById('verNewTitle').value.trim();
+      const newVer = document.getElementById('verNewNumber').value.trim();
+      const reason = document.getElementById('verChangeReason').value.trim();
+      const fileInput = document.getElementById('verNewFile');
+
+      if (!newTitle || !newVer || !reason) {
+        alert("Por favor complete título, número de versión y justificación del cambio.");
+        return;
+      }
+
+      let fileUrl = baseDoc.archivo_url;
+      if (fileInput.files && fileInput.files[0]) {
+        try { fileUrl = await window.readFileAsBase64(fileInput.files[0]); } catch(e) { console.error(e); }
+      }
+
+      const newDoc = {
+        id: `doc_${Date.now()}`,
+        codigo: baseDoc.codigo,
+        titulo: newTitle,
+        version: newVer,
+        estado: 'PROCESO',
+        fase: 'Elaboración',
+        procesoId: baseDoc.procesoId,
+        areaId: baseDoc.areaId,
+        fechaAprob: new Date().toISOString().split('T')[0],
+        fechaVenc: baseDoc.fechaVenc,
+        archivo_url: fileUrl,
+        motivo_cambio: reason
+      };
+
+      window.cachedDocs.push(newDoc);
+      window.registrarAuditTrail(window.activeGxpUser.correo, 'CREATE_VERSION', `Creó nueva versión en flujo: ${baseDoc.codigo} v${newVer}`);
+      await window.saveData();
+      window.toggleModal('modalVersion', false);
+      window.renderAllData();
+    };
 
     window.obtenerNotificacionesPendientes = function() {
       let notificaciones = [];
@@ -1415,7 +1503,7 @@
       document.getElementById('eqEditId').value = eq.id;
       document.getElementById('eqTag').value = eq.tag;
       document.getElementById('eqNombre').value = eq.nombre;
-      document.getElementById('eqTipo').value = eq.tipo;
+      document.getElementById('eqTipo').value = eq.tipo || 'Instrumento';
       document.getElementById('eqCriticidad').value = eq.criticidad;
       document.getElementById('eqFabricante').value = eq.fabricante || '';
       document.getElementById('eqModelo').value = eq.modelo || '';
@@ -1946,7 +2034,7 @@
         doc.estado = 'VIGENTE';
       }
 
-      window.registrarAuditTrail(user.correo, 'FIRM_PART11', `Firma aplicada sobre ${doc.codigo} (Fase lograda: ${doc.estado || doc.fase}).`); 
+      window.registrarAuditTrail(user.correo, 'FIRM_PART11', `Firma applied sobre ${doc.codigo} (Fase lograda: ${doc.estado || doc.fase}).`); 
       await window.saveData(); 
       window.toggleModal('modalFirmaPart11', false); 
       window.renderAllData();
