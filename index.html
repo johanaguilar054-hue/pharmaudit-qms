@@ -22,6 +22,7 @@
     .capa-subtab-content.active { display: block; }
     .modal-backdrop { display: none; }
     .modal-backdrop.active { display: flex; }
+    /* Estilos para scrollbars y acordeones */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: #f1f5f9; }
     ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
@@ -38,6 +39,11 @@
       <div class="text-center">
         <div class="text-3xl font-extrabold text-slate-900 tracking-tight">🛡️ PharmAudit</div>
         <p class="text-xs text-slate-500 mt-1 font-mono">Portal de Gestión de Calidad GxP · Pharmor (GAMP 5)</p>
+      </div>
+
+      <div id="loginScanNotice" class="hidden p-3 bg-amber-50 border border-amber-300 rounded-xl text-amber-900 text-xs text-center space-y-1">
+        <div class="font-bold">🔑 Escaneo de QR de Equipo Detectado</div>
+        <p class="text-[11px] text-amber-800">Inicie sesión para acceder de forma segura a la Hoja de Vida.</p>
       </div>
 
       <div class="space-y-3">
@@ -70,6 +76,7 @@
         <span class="text-xs text-slate-400 block font-mono">QMS / GxP ERP Compliance · Pharmor</span>
       </div>
       <div class="flex items-center space-x-3">
+        <!-- Indicador Nube GxP -->
         <div id="cloudStatusBadge" class="flex items-center space-x-1.5 bg-slate-800/80 px-2.5 py-1 rounded-lg border border-slate-700 text-xs font-mono">
           <span id="cloudLed" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
           <span id="cloudStatusText" class="text-emerald-400 font-semibold">Conectado</span>
@@ -80,16 +87,31 @@
           <span>Sincronizar Nube</span>
         </button>
 
+        <!-- Menú de Usuario -->
         <div class="relative inline-block text-left">
           <button type="button" onclick="window.toggleUserMenu()" class="flex items-center space-x-2 bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg border border-slate-600 transition cursor-pointer focus:outline-none relative">
             <span id="userBadge" class="text-xs font-bold text-white"></span>
             <div id="userAvatarCircle" class="w-6 h-6 rounded-full bg-slate-300 overflow-hidden flex items-center justify-center text-slate-700 text-xs">👤</div>
             <span class="text-xs text-slate-400">▼</span>
+            <span id="bellIndicatorTop" class="absolute -top-1 -right-1 bg-rose-500 w-3 h-3 rounded-full border-2 border-slate-800 hidden animate-pulse"></span>
           </button>
           
           <div id="userDropdown" class="hidden absolute right-0 mt-2 w-56 bg-white rounded-md shadow-xl border border-slate-200 z-50 text-xs font-medium text-slate-600">
             <div class="py-1">
-              <a href="#" onclick="window.location.reload()" class="block px-4 py-2 hover:bg-rose-50 text-rose-600 flex items-center space-x-2 cursor-pointer font-bold"><span>🚪</span><span>Cerrar sesión</span></a>
+              <a href="#" onclick="window.abrirModalUpdateData(); window.toggleUserMenu(); return false;" class="block px-4 py-2 hover:bg-slate-50 flex items-center space-x-2"><span>👤</span><span>Actualización de datos</span></a>
+              <a href="#" onclick="window.abrirModalProfile(); window.toggleUserMenu(); return false;" class="block px-4 py-2 hover:bg-slate-50 flex items-center space-x-2"><span>💼</span><span>Ver perfil de cargo</span></a>
+              <a href="#" onclick="window.translateToEnglish(); window.toggleUserMenu(); return false;" class="block px-4 py-2 hover:bg-slate-50 flex items-center space-x-2"><span>🇺🇸</span><span>Translate to english</span></a>
+              <a href="#" onclick="window.abrirModalPassword(); window.toggleUserMenu(); return false;" class="block px-4 py-2 hover:bg-slate-50 flex items-center space-x-2"><span>🔒</span><span>Contraseña y Autenticación</span></a>
+              
+              <a href="#" onclick="window.abrirModalNotifications(); window.toggleUserMenu(); return false;" class="block px-4 py-2 hover:bg-slate-50 flex items-center justify-between">
+                <div class="flex items-center space-x-2"><span>🔔</span><span>Notificaciones</span></div>
+                <span id="menuNotiBadge" class="bg-rose-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full hidden">0</span>
+              </a>
+
+              <div class="border-t border-slate-100 my-1"></div>
+              <button onclick="window.location.reload()" class="w-full text-left px-4 py-2 hover:bg-rose-50 text-rose-600 flex items-center space-x-2 cursor-pointer font-bold"><span>🚪</span><span>Cerrar sesión</span></button>
+              <div class="border-t border-slate-100 my-1"></div>
+              <a href="#" onclick="window.abrirModalAbout(); window.toggleUserMenu(); return false;" class="block px-4 py-2 hover:bg-slate-50 flex items-center space-x-2 text-slate-400"><span>ℹ️</span><span>Acerca de...</span></a>
             </div>
           </div>
         </div>
@@ -100,12 +122,12 @@
     <nav class="bg-slate-800 text-slate-300 rounded-xl p-1 mb-4 flex space-x-1 overflow-x-auto text-xs font-medium">
       <button data-tab="dashboard" onclick="window.switchTab('dashboard', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap bg-cyan-600 text-white font-bold cursor-pointer">📊 Dashboard</button>
       <button data-tab="documentos" onclick="window.switchTab('documentos', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">📑 Gestión Documental</button>
-      <button data-tab="copias" onclick="window.switchTab('copias', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 text-amber-300 font-bold cursor-pointer">📋 Copias Controladas</button>
+      <button data-tab="copias" onclick="window.switchTab('copias', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 text-amber-300 font-bold cursor-pointer emisor-only">📋 Copias Controladas</button>
       <button data-tab="capa" onclick="window.switchTab('capa', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 text-rose-300 font-bold cursor-pointer">☑️ Módulo CAPA & NC</button>
       <button data-tab="metrologia" onclick="window.switchTab('metrologia', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 text-emerald-300 font-bold cursor-pointer">🛠️ Mantenimiento & Metrología</button>
       <button data-tab="firmas" onclick="window.switchTab('firmas', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">✍️ Firmas Part 11</button>
       <button data-tab="audit" onclick="window.switchTab('audit', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">📜 Audit Trail</button>
-      <button data-tab="admin" onclick="window.switchTab('admin', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 bg-slate-700 text-cyan-300 cursor-pointer">⚙️ Configuraciones GxP</button>
+      <button data-tab="admin" onclick="window.switchTab('admin', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 bg-slate-700 text-cyan-300 cursor-pointer master-only">⚙️ Configuraciones GxP</button>
     </nav>
 
     <main>
@@ -131,9 +153,19 @@
           <button onclick="window.switchDocSubtab('proceso', this)" class="doc-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">En Proceso / Flujo (<span id="count-proceso">0</span>)</button>
           <button onclick="window.switchDocSubtab('obsoleto', this)" class="doc-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">Documentos Obsoletos (<span id="count-obsoleto">0</span>)</button>
         </div>
-        <div id="subtab-vigente" class="doc-subtab-content active overflow-x-auto"><table class="w-full border-collapse text-left text-xs"><thead><tr class="bg-slate-100 text-slate-700 border-b"><th class="p-2 border font-bold text-center w-12">#</th><th class="p-2 border font-bold">Código</th><th class="p-2 border font-bold">Versión</th><th class="p-2 border font-bold">Título</th><th class="p-2 border font-bold">Área / Proceso</th></tr></thead><tbody id="table-vigente" class="divide-y divide-slate-100"></tbody></table></div>
-        <div id="subtab-proceso" class="doc-subtab-content overflow-x-auto"><table class="w-full border-collapse text-left text-xs"><thead><tr class="bg-slate-100 text-slate-700 border-b"><th class="p-2 border font-bold text-center w-12">#</th><th class="p-2 border font-bold">Código</th><th class="p-2 border font-bold">Versión</th><th class="p-2 border font-bold">Título</th></tr></thead><tbody id="table-proceso" class="divide-y divide-slate-100"></tbody></table></div>
-        <div id="subtab-obsoleto" class="doc-subtab-content overflow-x-auto"><table class="w-full border-collapse text-left text-xs"><thead><tr class="bg-slate-100 text-slate-700 border-b"><th class="p-2 border font-bold text-center w-12">#</th><th class="p-2 border font-bold">Código</th><th class="p-2 border font-bold">Versión</th><th class="p-2 border font-bold">Título</th></tr></thead><tbody id="table-obsoleto" class="divide-y divide-slate-100"></tbody></table></div>
+        <div class="flex justify-between items-center flex-wrap gap-2">
+          <div class="flex space-x-2">
+            <button type="button" id="btnNuevoDoc" onclick="window.abrirModalNuevoDoc()" class="bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow cursor-pointer">+ Crear Documento</button>
+            <button type="button" id="btnNuevaVer" onclick="window.abrirModalNuevaVersion()" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow cursor-pointer">🔄 Nueva Versión (CC)</button>
+          </div>
+          <div class="flex items-center space-x-2">
+            <div class="relative"><span class="absolute inset-y-0 left-0 flex items-center pl-2.5 text-slate-400">🔍</span><input type="text" id="filtroDocsInput" oninput="window.renderAllData()" placeholder="Filtrar por código, título..." class="pl-8 pr-3 py-1.5 border border-slate-300 rounded-lg text-xs font-mono bg-slate-50 focus:bg-white outline-none focus:ring-2 focus:ring-cyan-500 w-64 shadow-sm" /></div>
+          </div>
+          <div><button type="button" onclick="window.exportarExcelAuditoria()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow cursor-pointer">📊 Exportar a Excel</button></div>
+        </div>
+        <div id="subtab-vigente" class="doc-subtab-content active overflow-x-auto"><table class="w-full border-collapse text-left text-xs"><thead><tr class="bg-slate-100 text-slate-700 border-b"><th class="p-2 border font-bold text-center w-12">#</th><th class="p-2 border font-bold">Código</th><th class="p-2 border font-bold">Versión</th><th class="p-2 border font-bold">Título</th><th class="p-2 border font-bold">Área / Proceso</th><th class="p-2 border font-bold">Fechas</th><th class="p-2 border font-bold">Estado</th><th class="p-2 border font-bold text-center">Acciones</th></tr></thead><tbody id="table-vigente" class="divide-y divide-slate-100"></tbody></table></div>
+        <div id="subtab-proceso" class="doc-subtab-content overflow-x-auto"><table class="w-full border-collapse text-left text-xs"><thead><tr class="bg-slate-100 text-slate-700 border-b"><th class="p-2 border font-bold text-center w-12">#</th><th class="p-2 border font-bold">Código</th><th class="p-2 border font-bold">Versión</th><th class="p-2 border font-bold">Título</th><th class="p-2 border font-bold">Área / Proceso</th><th class="p-2 border font-bold">Fase / Workflow GxP</th><th class="p-2 border font-bold text-center">Acciones y Firma</th></tr></thead><tbody id="table-proceso" class="divide-y divide-slate-100"></tbody></table></div>
+        <div id="subtab-obsoleto" class="doc-subtab-content overflow-x-auto"><table class="w-full border-collapse text-left text-xs"><thead><tr class="bg-slate-100 text-slate-700 border-b"><th class="p-2 border font-bold text-center w-12">#</th><th class="p-2 border font-bold">Código</th><th class="p-2 border font-bold">Versión</th><th class="p-2 border font-bold">Título</th><th class="p-2 border font-bold">Motivo Cambio</th><th class="p-2 border font-bold text-center">Acción</th></tr></thead><tbody id="table-obsoleto" class="divide-y divide-slate-100"></tbody></table></div>
       </div>
 
       <!-- COPIAS CONTROLADAS -->
@@ -147,7 +179,7 @@
         <div class="flex justify-between items-center border-b pb-2">
           <div class="flex space-x-1 overflow-x-auto text-xs font-semibold">
             <button onclick="window.switchCapaSubtab('dashboard', this)" class="capa-subtab-btn px-3 py-1.5 rounded-lg bg-rose-600 text-white cursor-pointer">📊 Dashboard CAPA</button>
-            <button onclick="window.switchCapaSubtab('maestro', this)" class="capa-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">📑 Listado Maestro (<span id="cnt-capa-total">0</span>)</button>
+            <button onclick="window.switchCapaSubtab('maestro', this)" class="capa-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">📑 Listado Maestro de Hallazgos y CAPAs (<span id="cnt-capa-total">0</span>)</button>
           </div>
           <div class="flex space-x-2 text-xs">
             <button type="button" onclick="window.abrirModalNuevaCapa()" class="bg-rose-700 hover:bg-rose-800 text-white px-3 py-1.5 rounded-lg font-bold shadow cursor-pointer flex items-center space-x-1"><span>+</span><span>Reportar NC / Iniciar CAPA</span></button>
@@ -156,11 +188,12 @@
 
         <div id="capa-dashboard" class="capa-subtab-content active space-y-4">
           <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs font-mono">
-            <div class="bg-slate-50 p-3 rounded-xl border border-slate-200"><div class="text-slate-500 font-sans font-semibold">Total Expedientes</div><div id="kpi-capa-total" class="text-xl font-bold text-slate-800 mt-1">0</div></div>
-            <div class="bg-rose-50 p-3 rounded-xl border border-rose-200"><div class="text-rose-700 font-sans font-semibold">En Análisis / Ejecución</div><div id="kpi-capa-abiertas" class="text-xl font-bold text-rose-700 mt-1">0</div></div>
-            <div class="bg-amber-50 p-3 rounded-xl border border-amber-200"><div class="text-amber-800 font-sans font-semibold">Planes Vencidos</div><div id="kpi-capa-vencidas" class="text-xl font-bold text-amber-700 mt-1">0</div></div>
-            <div class="bg-indigo-50 p-3 rounded-xl border border-indigo-200"><div class="text-indigo-800 font-sans font-semibold">En Evaluación Efectividad</div><div id="kpi-capa-eval" class="text-xl font-bold text-indigo-700 mt-1">0</div></div>
+            <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 shadow-xs"><div class="text-slate-500 font-sans font-semibold">Total Expedientes</div><div id="kpi-capa-total" class="text-xl font-bold text-slate-800 mt-1">0</div></div>
+            <div class="bg-rose-50 p-3 rounded-xl border border-rose-200 shadow-xs"><div class="text-rose-700 font-sans font-semibold">En Análisis / Ejecución</div><div id="kpi-capa-abiertas" class="text-xl font-bold text-rose-700 mt-1">0</div></div>
+            <div class="bg-amber-50 p-3 rounded-xl border border-amber-200 shadow-xs"><div class="text-amber-800 font-sans font-semibold">Planes Vencidos</div><div id="kpi-capa-vencidas" class="text-xl font-bold text-amber-700 mt-1">0</div></div>
+            <div class="bg-indigo-50 p-3 rounded-xl border border-indigo-200 shadow-xs"><div class="text-indigo-800 font-sans font-semibold">En Evaluación Efectividad</div><div id="kpi-capa-eval" class="text-xl font-bold text-indigo-700 mt-1">0</div></div>
           </div>
+          
           <div class="border rounded-xl p-3 bg-slate-50 space-y-2">
             <h3 class="font-bold text-xs text-slate-800 flex items-center space-x-1.5"><span>⚠️</span><span>Alertas de Planes de Acción y Evaluación de Efectividad</span></h3>
             <div id="tablaAlertasCapa" class="overflow-x-auto"></div>
@@ -183,9 +216,16 @@
                 <option value="CERRADO DEFINITIVO">Cerrado Definitivo</option>
                 <option value="REABIERTO">Reabierto</option>
               </select>
+              <select id="filtroCapaCriticidad" onchange="window.renderCapaData()" class="px-2 py-1.5 border rounded bg-white">
+                <option value="">Todas las Criticidades</option>
+                <option value="Crítico">Crítico</option>
+                <option value="Mayor">Mayor</option>
+                <option value="Menor">Menor</option>
+              </select>
             </div>
             <button type="button" onclick="window.exportarExcelCAPA()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded text-xs font-bold shadow cursor-pointer">📊 Exportar Matriz</button>
           </div>
+          
           <div class="overflow-x-auto">
             <table class="w-full border-collapse text-left text-xs bg-white">
               <thead>
@@ -212,38 +252,57 @@
           <button onclick="window.switchMetroSubtab('dashboard', this)" class="metro-subtab-btn px-3 py-1.5 rounded-lg bg-emerald-600 text-white cursor-pointer">📊 Dashboard Equipos &amp; Infra</button>
           <button onclick="window.switchMetroSubtab('maestro', this)" class="metro-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">🖥️ Maestro de Equipos (<span id="cnt-metro-total">0</span>)</button>
           <button onclick="window.switchMetroSubtab('calibraciones', this)" class="metro-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">📐 Calibraciones (<span id="cnt-metro-calib">0</span>)</button>
-          <button onclick="window.switchMetroSubtab('mantenimiento', this)" class="metro-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">🛠️ Mantenimiento (<span id="cnt-metro-maint">0</span>)</button>
-          <button onclick="window.switchMetroSubtab('infraestructura', this)" class="metro-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer text-cyan-800">🏛️ Infraestructura (<span id="cnt-metro-infra">0</span>)</button>
+          <button onclick="window.switchMetroSubtab('mantenimiento', this)" class="metro-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">🛠️ Mantenimiento Equipos (<span id="cnt-metro-maint">0</span>)</button>
+          <button onclick="window.switchMetroSubtab('infraestructura', this)" class="metro-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer text-cyan-800">🏛️ Mantenimiento Infraestructura (<span id="cnt-metro-infra">0</span>)</button>
         </div>
         <div id="metro-dashboard" class="metro-subtab-content active space-y-4">
-          <div class="grid grid-cols-2 md:grid-cols-5 gap-3 text-xs font-mono"><div class="bg-slate-50 p-3 rounded-xl border">Total Equipos: <span id="kpi-eq-total">0</span></div></div>
+          <div class="grid grid-cols-2 md:grid-cols-5 gap-3 text-xs font-mono"><div class="bg-slate-50 p-3 rounded-xl border border-slate-200"><div class="text-slate-500 font-sans font-semibold">Total Equipos</div><div id="kpi-eq-total" class="text-xl font-bold mt-1">0</div></div><div class="bg-rose-50 p-3 rounded-xl border border-rose-200"><div class="text-rose-700 font-sans font-semibold">Calib. Vencidas/OOT</div><div id="kpi-eq-cal-vencidas" class="text-xl font-bold text-rose-700 mt-1">0</div></div><div class="bg-amber-50 p-3 rounded-xl border border-amber-200"><div class="text-amber-800 font-sans font-semibold">Calib. Por Vencer</div><div id="kpi-eq-cal-porvencer" class="text-xl font-bold text-amber-700 mt-1">0</div></div><div class="bg-purple-50 p-3 rounded-xl border border-purple-200"><div class="text-purple-800 font-sans font-semibold">Maint. Vencido</div><div id="kpi-eq-maint-vencidos" class="text-xl font-bold text-purple-700 mt-1">0</div></div><div class="bg-cyan-50 p-3 rounded-xl border border-cyan-200"><div class="text-cyan-800 font-sans font-semibold">Áreas Infraestructura</div><div id="kpi-infra-operativos" class="text-xl font-bold text-cyan-700 mt-1">0</div></div></div>
+          <div class="border rounded-xl p-3.5 bg-slate-50 space-y-2"><h3 class="font-bold text-xs flex items-center space-x-1.5"><span>⚠️</span><span>Alertas de Calibración &amp; Mantenimientos Críticos</span></h3><div id="tablaAlertasMetrologia" class="overflow-x-auto"></div></div>
         </div>
         <div id="metro-maestro" class="metro-subtab-content space-y-3">
-          <div class="overflow-x-auto"><table class="w-full border-collapse text-left text-xs"><thead><tr class="bg-slate-100 border-b font-bold"><th class="p-2 border">Tag / ID</th><th class="p-2 border">Nombre</th><th class="p-2 border">Ubicación</th></tr></thead><tbody id="table-maestro-equipos"></tbody></table></div>
+          <div class="flex justify-between items-center flex-wrap gap-2 text-xs"><div class="flex space-x-2 items-center"><button type="button" onclick="window.abrirModalNuevoEquipo()" class="bg-slate-800 text-white px-3 py-1.5 rounded-lg font-bold">+ Registrar Equipo</button><input type="text" id="filtroEquipoInput" oninput="window.renderMetrologiaData()" placeholder="Buscar..." class="px-3 py-1.5 border rounded-lg w-56 font-mono" /></div><div class="flex space-x-2 items-center"><select id="filtroEquipoTipo" onchange="window.renderMetrologiaData()" class="p-1.5 border rounded"><option value="">Todos</option><option value="Instrumento">Instrumento</option><option value="Equipo">Equipo</option></select><select id="filtroEquipoCriticidad" onchange="window.renderMetrologiaData()" class="p-1.5 border rounded"><option value="">Todas</option><option value="Crítico">Crítico</option><option value="No crítico">No crítico</option></select><button type="button" onclick="window.exportarExcelEquipos()" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg font-bold">📊 Exportar</button></div></div>
+          <div class="overflow-x-auto"><table class="w-full border-collapse text-left text-xs"><thead><tr class="bg-slate-100 border-b font-bold"><th class="p-2 border">Tag / ID</th><th class="p-2 border">Nombre</th><th class="p-2 border">Tipo/Criticidad</th><th class="p-2 border">Ubicación</th><th class="p-2 border">Próx. Calib.</th><th class="p-2 border">Próx. Maint.</th><th class="p-2 border text-center">Estado GxP</th><th class="p-2 border text-center">Acciones</th></tr></thead><tbody id="table-maestro-equipos" class="divide-y divide-slate-100"></tbody></table></div>
         </div>
-        <div id="metro-calibraciones" class="metro-subtab-content"><table class="w-full text-xs"><tbody id="table-calibraciones"></tbody></table></div>
-        <div id="metro-mantenimiento" class="metro-subtab-content"><table class="w-full text-xs"><tbody id="table-mantenimientos"></tbody></table></div>
-        <div id="metro-infraestructura" class="metro-subtab-content"><table class="w-full text-xs"><tbody id="table-maestro-infraestructura"></tbody></table></div>
+        <div id="metro-calibraciones" class="metro-subtab-content space-y-3">
+          <div class="flex justify-between items-center flex-wrap gap-2 text-xs"><button type="button" onclick="window.abrirModalNuevaCalibracion()" class="bg-cyan-600 text-white px-3 py-1.5 rounded-lg font-bold">+ Registrar Calibración</button><button type="button" onclick="window.exportarExcelCalibraciones()" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg font-bold">📊 Exportar</button></div>
+          <div class="overflow-x-auto"><table class="w-full border-collapse text-left text-xs"><thead><tr class="bg-slate-100 border-b font-bold"><th class="p-2 border">ID Calib</th><th class="p-2 border">Equipo (Tag)</th><th class="p-2 border">Fecha Ejecución</th><th class="p-2 border">Ejecutado por</th><th class="p-2 border">Resultado</th><th class="p-2 border">Próxima Calib.</th><th class="p-2 border text-center">Certificado</th><th class="p-2 border text-center">Firma Part 11</th></tr></thead><tbody id="table-calibraciones" class="divide-y divide-slate-100"></tbody></table></div>
+        </div>
+        <div id="metro-mantenimiento" class="metro-subtab-content space-y-3">
+          <div class="flex justify-between items-center flex-wrap gap-2 text-xs"><button type="button" onclick="window.abrirModalNuevoMantenimiento()" class="bg-purple-700 text-white px-3 py-1.5 rounded-lg font-bold">+ Registrar Mantenimiento</button><button type="button" onclick="window.exportarExcelMantenimientos()" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg font-bold">📊 Exportar</button></div>
+          <div class="overflow-x-auto"><table class="w-full border-collapse text-left text-xs"><thead><tr class="bg-slate-100 border-b font-bold"><th class="p-2 border">ID Orden</th><th class="p-2 border">Equipo</th><th class="p-2 border">Tipo</th><th class="p-2 border">Fechas</th><th class="p-2 border">Responsable</th><th class="p-2 border">Detalles/Evidencia</th><th class="p-2 border text-center">Estado</th></tr></thead><tbody id="table-mantenimientos" class="divide-y divide-slate-100"></tbody></table></div>
+        </div>
+        <div id="metro-infraestructura" class="metro-subtab-content space-y-4">
+          <div class="flex justify-between items-center flex-wrap gap-2 text-xs"><div class="flex space-x-2"><button type="button" onclick="window.abrirModalNuevaInfraestructura()" class="bg-cyan-700 text-white px-3 py-1.5 rounded-lg font-bold">+ Registrar Infraestructura</button><button type="button" onclick="window.abrirModalNuevoMantenimientoInfra()" class="bg-blue-700 text-white px-3 py-1.5 rounded-lg font-bold">🛠️ Reportar Reparación</button></div><button type="button" onclick="window.exportarExcelInfraestructura()" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg font-bold">📊 Exportar</button></div>
+          <div class="border rounded-xl p-3 bg-slate-50 space-y-2"><h3 class="font-bold text-xs flex items-center space-x-1.5"><span>🏛️</span><span>Maestro de Infraestructura</span></h3><div class="overflow-x-auto"><table class="w-full border-collapse text-left text-xs bg-white"><thead><tr class="bg-slate-100 border-b font-bold"><th class="p-2 border">Código</th><th class="p-2 border">Área</th><th class="p-2 border">Instalación</th><th class="p-2 border">Ubicación</th><th class="p-2 border">Frec. Maint.</th><th class="p-2 border">Próximo Maint.</th><th class="p-2 border text-center">Estado GxP</th><th class="p-2 border text-center">Acciones</th></tr></thead><tbody id="table-maestro-infraestructura"></tbody></table></div></div>
+          <div class="border rounded-xl p-3 bg-slate-50 space-y-2"><h3 class="font-bold text-xs flex items-center space-x-1.5"><span>📜</span><span>Historial de Reparaciones Infraestructura</span></h3><div class="overflow-x-auto"><table class="w-full border-collapse text-left text-xs bg-white"><thead><tr class="bg-slate-100 border-b font-bold"><th class="p-2 border">ID</th><th class="p-2 border">Infraestructura</th><th class="p-2 border">Tipo</th><th class="p-2 border">Fecha</th><th class="p-2 border">Técnico</th><th class="p-2 border">Detalles</th><th class="p-2 border text-center">Evidencia</th><th class="p-2 border text-center">Estado</th></tr></thead><tbody id="table-mantenimientos-infraestructura"></tbody></table></div></div>
+        </div>
       </div>
 
-      <div id="view-firmas" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4"><h2 class="font-bold text-sm">Firmas Electrónicas (21 CFR Part 11)</h2></div>
+      <div id="view-firmas" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4"><h2 class="font-bold text-sm">Firmas Electrónicas (21 CFR Part 11)</h2><p class="text-xs text-slate-500 mt-2">Módulo integrado en los flujos documentales y de metrología.</p></div>
+      
+      <!-- AUDIT TRAIL -->
       <div id="view-audit" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-        <h2 class="font-bold text-sm text-slate-800">📜 Audit Trail Inalterable (ALCOA+)</h2>
+        <div class="flex justify-between items-center mb-3 pb-2 border-b border-slate-100">
+          <div><h2 class="font-bold text-sm text-slate-800">📜 Audit Trail Inalterable (ALCOA+)</h2><p class="text-[11px] text-slate-500">Registro histórico de eventos y firmas electrónicas</p></div>
+          <button type="button" onclick="window.exportarAuditTrailPDF()" class="bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow transition cursor-pointer flex items-center space-x-1"><span>📄</span><span>Exportar PDF Oficial GxP</span></button>
+        </div>
         <div id="list-auds" class="space-y-1 font-mono text-[11px] text-slate-600 max-h-96 overflow-y-auto"></div>
       </div>
 
       <!-- CONFIGURACIONES GxP -->
       <div id="view-admin" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-4">
         <div class="flex space-x-1 border-b pb-2 text-xs font-semibold overflow-x-auto">
-          <button onclick="window.switchConfigSubtab('areas', this)" class="config-subtab-btn px-3 py-1.5 rounded-lg bg-slate-800 text-white cursor-pointer">🏢 Áreas y Procesos</button>
-          <button onclick="window.switchConfigSubtab('empleados', this)" class="config-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 cursor-pointer">👥 Empleados</button>
-          <button onclick="window.switchConfigSubtab('roles', this)" class="config-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 cursor-pointer">🛡️ Roles</button>
-          <button onclick="window.switchConfigSubtab('usuarios', this)" class="config-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 cursor-pointer">🔑 Usuarios</button>
+          <button onclick="window.switchConfigSubtab('areas', this)" class="config-subtab-btn px-3 py-1.5 rounded-lg bg-slate-800 text-white cursor-pointer">🏢 1. Áreas y Procesos</button>
+          <button onclick="window.switchConfigSubtab('empleados', this)" class="config-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">👥 2. Empleados</button>
+          <button onclick="window.switchConfigSubtab('roles', this)" class="config-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">🛡️ 3. Roles GxP</button>
+          <button onclick="window.switchConfigSubtab('matriz', this)" class="config-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">📊 4. Matriz Permisos</button>
+          <button onclick="window.switchConfigSubtab('usuarios', this)" class="config-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">🔑 5. Gestión de Usuarios</button>
         </div>
-        <div id="configsub-areas" class="config-subtab-content active space-y-4 text-xs"><table class="w-full border-collapse bg-white"><tbody id="tablaAreasConfig"></tbody></table></div>
-        <div id="configsub-empleados" class="config-subtab-content space-y-3 text-xs"><table class="w-full border-collapse"><tbody id="tablaEmpleadosConfig"></tbody></table></div>
-        <div id="configsub-roles" class="config-subtab-content space-y-3 text-xs"><table class="w-full border-collapse"><tbody id="tablaRolesConfig"></tbody></table></div>
-        <div id="configsub-usuarios" class="config-subtab-content space-y-3 text-xs"><table class="w-full border-collapse"><tbody id="tablaUsuariosConfig"></tbody></table></div>
+        <div id="configsub-areas" class="config-subtab-content active space-y-4 text-xs"><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div class="space-y-2 border p-3 rounded-xl bg-slate-50"><div class="flex justify-between items-center"><h4 class="font-bold text-slate-800">Departamentos / Áreas</h4><button onclick="window.abrirModalArea()" class="bg-slate-800 text-white px-2 py-1 rounded text-[11px]">+ Nueva</button></div><table class="w-full border-collapse bg-white"><thead><tr class="bg-slate-100 border"><th class="p-1.5 border">ID</th><th class="p-1.5 border">Nombre</th><th class="p-1.5 border text-center">Acción</th></tr></thead><tbody id="tablaAreasConfig"></tbody></table></div><div class="space-y-2 border p-3 rounded-xl bg-slate-50"><div class="flex justify-between items-center"><h4 class="font-bold text-slate-800">Procesos GxP</h4><button onclick="window.abrirModalProceso()" class="bg-cyan-600 text-white px-2 py-1 rounded text-[11px]">+ Nuevo</button></div><table class="w-full border-collapse bg-white"><thead><tr class="bg-slate-100 border"><th class="p-1.5 border">Proceso</th><th class="p-1.5 border">Área</th><th class="p-1.5 border text-center">Acción</th></tr></thead><tbody id="tablaProcesosConfig"></tbody></table></div></div></div>
+        <div id="configsub-empleados" class="config-subtab-content space-y-3 text-xs"><div class="flex justify-between items-center"><h3 class="font-bold">Empleados</h3><button onclick="window.abrirModalEmpleado()" class="bg-slate-800 text-white px-3 py-1.5 rounded font-bold">+ Registrar Empleado</button></div><table class="w-full border-collapse text-left"><thead><tr class="bg-slate-100 border font-mono"><th class="p-2 border">ID</th><th class="p-2 border">Nombres</th><th class="p-2 border">Cargo</th><th class="p-2 border">Correo</th><th class="p-2 border">Área</th><th class="p-2 border">Estado</th><th class="p-2 border text-center">Acción</th></tr></thead><tbody id="tablaEmpleadosConfig" class="divide-y"></tbody></table></div>
+        <div id="configsub-roles" class="config-subtab-content space-y-3 text-xs"><h3 class="font-bold">Roles</h3><table class="w-full border-collapse text-left"><thead><tr class="bg-slate-100 border font-mono"><th class="p-2 border">ID Rol</th><th class="p-2 border">Nombre del Rol</th><th class="p-2 border">Descripción</th></tr></thead><tbody id="tablaRolesConfig" class="divide-y bg-white"></tbody></table></div>
+        <div id="configsub-matriz" class="config-subtab-content space-y-3 text-xs"><h3 class="font-bold">Matriz de Permisos GxP</h3><table class="w-full border-collapse text-center"><thead><tr class="bg-slate-100 border font-mono"><th class="p-2 border text-left">Rol del Sistema</th><th class="p-2 border">Lectura</th><th class="p-2 border">Creación/Edición</th><th class="p-2 border">Revisión</th><th class="p-2 border">Aprobación/Firma</th><th class="p-2 border">Administración</th></tr></thead><tbody id="tablaMatrizConfig" class="divide-y font-mono bg-white"></tbody></table></div>
+        <div id="configsub-usuarios" class="config-subtab-content space-y-3 text-xs"><div class="flex justify-between items-center"><h3 class="font-bold">Gestión de Usuarios GxP</h3><button onclick="window.abrirModalUsuario()" class="bg-slate-800 text-white px-3 py-1.5 rounded font-bold">+ Asignar Usuario</button></div><table class="w-full border-collapse text-left"><thead><tr class="bg-slate-100 border font-mono"><th class="p-2 border">ID</th><th class="p-2 border">Empleado</th><th class="p-2 border">Correo</th><th class="p-2 border">Roles</th><th class="p-2 border">Áreas</th><th class="p-2 border">Estado</th><th class="p-2 border text-center">Acción</th></tr></thead><tbody id="tablaUsuariosConfig" class="divide-y"></tbody></table></div>
       </div>
     </main>
   </div>
@@ -251,12 +310,13 @@
   <!-- MODAL: GESTOR DE NO CONFORMIDADES Y CAPA (CONSECUTIVO EDITABLE) -->
   <div id="modalCapa" class="modal-backdrop fixed inset-0 bg-slate-900/80 backdrop-blur-sm items-center justify-center p-4 z-50">
     <div class="bg-white rounded-xl w-full max-w-5xl p-0 border shadow-2xl flex flex-col max-h-[95vh] overflow-hidden">
+      <!-- Header del Modal -->
       <div class="bg-slate-800 p-4 flex justify-between items-center shrink-0 rounded-t-xl border-b-4 border-rose-500">
         <div class="text-white">
           <h3 class="font-bold text-base flex items-center space-x-2">
             <span>☑️</span><span id="modalCapaTitle">Reporte de No Conformidad / Solicitud CAPA</span>
           </h3>
-          <p class="text-[11px] text-slate-300 font-mono mt-0.5">Formato PH-GAC-FO-61 V2 | GxP Workflow</p>
+          <p class="text-[11px] text-slate-300 font-mono mt-0.5" id="modalCapaSubtitle">Formato PH-GAC-FO-61 V2 | GxP Workflow</p>
         </div>
         <div class="flex items-center space-x-4">
           <div id="capaBadgeEstado" class="px-3 py-1 rounded text-xs font-bold font-mono bg-slate-600 text-slate-200">BORRADOR</div>
@@ -264,18 +324,24 @@
         </div>
       </div>
 
+      <!-- Cuerpo del Modal con Scroll Independiente -->
       <div class="p-5 overflow-y-auto flex-grow bg-slate-50 space-y-4 text-xs" id="capaFormBody">
         <input type="hidden" id="capaEditId" value="">
         <input type="hidden" id="capaEstadoActual" value="BORRADOR">
 
+        <!-- 1. IDENTIFICACIÓN Y ALCANCE (Consecutivo Editable) -->
         <details class="bg-white border rounded-lg shadow-sm group" open>
           <summary class="p-3 font-bold text-sm bg-slate-100 text-slate-800 cursor-pointer flex justify-between items-center rounded-t-lg group-open:border-b">
             <span>1. Identificación y Alcance (RU-01, RU-02)</span>
             <span class="text-slate-400 group-open:rotate-180 transition-transform">▼</span>
           </summary>
-          <div class="p-4 space-y-4">
+          <div class="p-4 space-y-4 capa-section-borrador">
             <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div><label class="block font-semibold mb-1">Consecutivo / Código Interno *</label><input type="text" id="capaCodigo" placeholder="Ej: NC-2026-001" class="w-full p-2 border rounded font-mono font-bold bg-white text-rose-800 focus:ring-2 focus:ring-rose-500 outline-none shadow-sm" /></div>
+              <!-- MODIFICADO: Campo Consecutivo ahora es editable -->
+              <div>
+                <label class="block font-semibold mb-1">Consecutivo / Código Interno *</label>
+                <input type="text" id="capaCodigo" placeholder="Ej: NC-2026-001" class="w-full p-2 border rounded font-mono font-bold bg-white text-rose-800 focus:ring-2 focus:ring-rose-500 outline-none shadow-sm" />
+              </div>
               <div><label class="block font-semibold mb-1">Proceso Origen *</label><select id="capaProcesoOrigen" class="w-full p-2 border rounded bg-white"></select></div>
               <div><label class="block font-semibold mb-1">Responsable Acción *</label><select id="capaResponsable" class="w-full p-2 border rounded bg-white font-mono"></select></div>
               <div>
@@ -287,102 +353,314 @@
                   <option value="OOS / OOT">Resultados OOS / OOT</option>
                   <option value="Reclamo de Cliente">Reclamo de Cliente / PQR</option>
                   <option value="Desviación de Proceso">Desviación de Proceso / Inspección</option>
-                  <option value="Mantenimiento / Calibración">Fallo Equipo</option>
+                  <option value="Mantenimiento / Calibración">Fallo Equipo (Mantenimiento/Calibración)</option>
                   <option value="Revisión por la Dirección">Revisión por la Dirección</option>
                   <option value="Mejora Continua">Oportunidad de Mejora Continua</option>
                 </select>
               </div>
             </div>
-            <div><label class="block font-semibold mb-1">Descripción del Hallazgo / Situación Detectada *</label><textarea id="capaDescripcion" rows="3" class="w-full p-2 border rounded bg-white" placeholder="Describa el evento..."></textarea></div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 bg-amber-50 p-3 rounded border border-amber-200">
+              <div class="md:col-span-1">
+                <label class="block font-semibold mb-1 text-amber-900">¿Es Reincidente?</label>
+                <select id="capaReincidente" class="w-full p-2 border border-amber-300 rounded bg-white font-bold" onchange="window.toggleCapaReincidente()">
+                  <option value="No">No</option>
+                  <option value="Sí">Sí, es reincidente</option>
+                </select>
+              </div>
+              <div class="md:col-span-2 hidden" id="divCapaPrevia">
+                <label class="block font-semibold mb-1 text-amber-900">Vincular ID de NC / CAPA Previa</label>
+                <select id="capaPreviaId" class="w-full p-2 border border-amber-300 rounded bg-white font-mono"></select>
+              </div>
+            </div>
+
+            <div><label class="block font-semibold mb-1">Descripción del Hallazgo / Situación Detectada *</label><textarea id="capaDescripcion" rows="3" class="w-full p-2 border rounded bg-white" placeholder="Describa el evento, cómo se detectó y la evidencia inicial..."></textarea></div>
+            
+            <div class="border p-3 rounded-lg bg-slate-50 space-y-3">
+              <h4 class="font-bold text-cyan-900">🔗 Delimitación del Alcance (Vinculaciones)</h4>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div><label class="block mb-1">Lotes / Órdenes Afectadas</label><input type="text" id="capaLotes" placeholder="Ej: Lote 25A001, OP-1029" class="w-full p-2 border rounded" /></div>
+                <div><label class="block mb-1">Documentos GxP Involucrados</label><select id="capaDocs" multiple class="w-full p-2 border rounded font-mono text-[10px] h-20 bg-white"></select><p class="text-[9px] text-slate-500 mt-0.5">Use Ctrl/Cmd para selección múltiple</p></div>
+                <div><label class="block mb-1">Equipos / Instrumentos Afectados</label><select id="capaEquipos" multiple class="w-full p-2 border rounded font-mono text-[10px] h-20 bg-white"></select></div>
+                <div><label class="block mb-1">Áreas o Líneas Físicas</label><select id="capaAreas" multiple class="w-full p-2 border rounded font-mono text-[10px] h-20 bg-white"></select></div>
+              </div>
+            </div>
           </div>
         </details>
 
+        <!-- 2. EVALUACIÓN Y CRITICIDAD -->
         <details class="bg-white border rounded-lg shadow-sm group" open>
           <summary class="p-3 font-bold text-sm bg-slate-100 text-slate-800 cursor-pointer flex justify-between items-center rounded-t-lg group-open:border-b">
             <span>2. Evaluación de Impacto y Criticidad (RU-03, RU-04)</span>
             <span class="text-slate-400 group-open:rotate-180 transition-transform">▼</span>
           </summary>
-          <div class="p-4 space-y-4">
+          <div class="p-4 space-y-4 capa-section-borrador">
+            <p class="text-[11px] text-slate-500">Evaluación multidimensional para líneas (Cosméticos, Alimentos, Suplementos, Fito).</p>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div><label class="block font-semibold mb-1">Impacto en Calidad *</label><select id="impCalidad" class="w-full p-2 border rounded"><option value="Ninguno">Ninguno</option><option value="Potencial">Potencial / Leve</option><option value="Directo">Impacto Directo / Grave</option></select></div>
+              <div><label class="block font-semibold mb-1">Impacto en Calidad del Producto *</label><select id="impCalidad" class="w-full p-2 border rounded"><option value="Ninguno">Ninguno</option><option value="Potencial">Potencial / Leve</option><option value="Directo">Impacto Directo / Grave</option></select></div>
+              <div><label class="block font-semibold mb-1">Seguridad del Paciente / Consumidor *</label><select id="impSeguridad" class="w-full p-2 border rounded"><option value="Sin riesgo">Sin Riesgo</option><option value="Riesgo Moderado">Riesgo Moderado</option><option value="Riesgo Crítico">Riesgo Crítico (Recall)</option></select></div>
+              <div><label class="block font-semibold mb-1">Estado de Validación / Calificación *</label><select id="impValidacion" class="w-full p-2 border rounded"><option value="No afecta">No Afecta</option><option value="Requiere revisión">Requiere Revisión</option><option value="Invalida estado">Invalida Estado (Recalificar)</option></select></div>
               <div class="bg-rose-50 p-2 rounded border border-rose-200 grid grid-cols-2 gap-2">
-                <div><label class="block font-bold text-rose-900 mb-1">¿Incumple BPM?</label><select id="capaIncumpleBpm" class="w-full p-2 border rounded font-bold"><option value="No Aplica">No Aplica</option><option value="No">No</option><option value="Sí">Sí</option></select></div>
-                <div><label class="block font-bold text-rose-900 mb-1">Criticidad</label><select id="capaCriticidad" class="w-full p-2 border rounded font-bold"><option value="No Aplica">No Aplica</option><option value="Menor">Menor</option><option value="Mayor">Mayor</option><option value="Crítico">Crítico</option></select></div>
+                <div>
+                  <label class="block font-bold text-rose-900 mb-1">¿Incumple BPM? *</label>
+                  <select id="capaIncumpleBpm" class="w-full p-2 border border-rose-300 rounded font-bold"><option value="No Aplica">No Aplica</option><option value="No">No</option><option value="Sí">Sí</option></select>
+                </div>
+                <div>
+                  <label class="block font-bold text-rose-900 mb-1">Criticidad *</label>
+                  <select id="capaCriticidad" class="w-full p-2 border border-rose-300 rounded font-bold"><option value="No Aplica">No Aplica</option><option value="Menor">Menor</option><option value="Mayor">Mayor</option><option value="Crítico">Crítico</option></select>
+                </div>
               </div>
             </div>
-            <div class="border-t pt-3 flex justify-end" id="divBtnFirmarBorrador">
-              <button type="button" onclick="window.firmarCapaFase('EN ANÁLISIS Y PLAN')" class="bg-cyan-600 text-white px-4 py-1.5 rounded font-bold shadow">✍️ Firmar y Pasar a Análisis</button>
+            
+            <div class="border-t pt-3 flex justify-end space-x-2" id="divBtnFirmarBorrador">
+              <button type="button" onclick="window.firmarCapaFase('EN ANÁLISIS Y PLAN')" class="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-1.5 rounded font-bold shadow flex items-center space-x-1"><span>✍️</span><span>Firmar & Pasar a Fase Análisis (Elaborador)</span></button>
             </div>
           </div>
         </details>
 
-        <details class="bg-white border rounded-lg shadow-sm group" open>
+        <!-- 3. CONTENCIÓN Y CAUSA RAÍZ -->
+        <details class="bg-white border rounded-lg shadow-sm group" id="detCausa" open>
           <summary class="p-3 font-bold text-sm bg-slate-100 text-slate-800 cursor-pointer flex justify-between items-center rounded-t-lg group-open:border-b">
-            <span>3. Causa Raíz y Plan de Acción (RU-05 a RU-09)</span>
+            <span>3. Contención y Análisis de Causa Raíz (RU-05, RU-06)</span>
             <span class="text-slate-400 group-open:rotate-180 transition-transform">▼</span>
           </summary>
-          <div class="p-4 space-y-4">
-            <div><label class="block font-semibold mb-1 text-rose-800">Causa Raíz Definida *</label><textarea id="capaCausaRaiz" rows="2" class="w-full p-2 border rounded bg-rose-50"></textarea></div>
-            <div id="formAddTarea" class="bg-blue-50 p-3 rounded-lg flex flex-wrap gap-2 items-end">
-              <div class="flex-grow"><input type="text" id="ntDesc" placeholder="Descripción actividad" class="w-full p-1.5 border rounded text-xs" /></div>
-              <div class="w-28"><select id="ntTipo" class="w-full p-1.5 border rounded text-xs"><option value="Correctiva">Correctiva</option><option value="Preventiva">Preventiva</option></select></div>
-              <div class="w-36"><select id="ntResp" class="w-full p-1.5 border rounded text-xs"></select></div>
-              <div class="w-28"><input type="date" id="ntFecha" class="w-full p-1.5 border rounded text-xs" /></div>
-              <button type="button" onclick="window.agregarActividadCAPA()" class="bg-blue-700 text-white px-3 py-1.5 rounded font-bold text-xs">➕ Agregar Tarea</button>
+          <div class="p-4 space-y-4 capa-section-analisis opacity-50 pointer-events-none" id="secAnalisis">
+            <div><label class="block font-semibold mb-1 text-purple-900">Corrección / Acción de Contención Inmediata</label><textarea id="capaContencion" rows="2" class="w-full p-2 border rounded bg-white" placeholder="Acciones tomadas inmediatamente para mitigar el impacto antes de la causa raíz..."></textarea></div>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-3 bg-slate-50 p-3 rounded border">
+              <div class="md:col-span-1">
+                <label class="block font-semibold mb-1">Metodología *</label>
+                <select id="capaMetodologia" class="w-full p-2 border rounded font-bold text-slate-700">
+                  <option value="">Seleccione...</option>
+                  <option value="5 Porqués">Los 5 Porqués</option>
+                  <option value="Ishikawa (6M)">Espina de Pescado (6M)</option>
+                  <option value="FTA">Árbol de Fallas (FTA)</option>
+                  <option value="AMFE / FMEA">AMFE / Análisis de Riesgos</option>
+                </select>
+              </div>
+              <div class="md:col-span-3">
+                <label class="block font-semibold mb-1">Desarrollo del Análisis *</label>
+                <textarea id="capaDesarrolloAnalisis" rows="3" class="w-full p-2 border rounded font-mono text-[11px]" placeholder="Ej: 1. ¿Por qué...? Porque... 2. ¿Por qué...?"></textarea>
+              </div>
             </div>
-            <div class="overflow-x-auto border rounded"><table class="w-full text-xs"><thead><tr class="bg-slate-100 border-b"><th class="p-2">Actividad</th><th class="p-2">Responsable</th><th class="p-2">Fecha</th><th class="p-2">Estado</th></tr></thead><tbody id="tbodyCapaPlan"></tbody></table></div>
+            <div>
+              <label class="block font-bold text-rose-800 mb-1">Causa Raíz Definida *</label>
+              <textarea id="capaCausaRaiz" rows="2" class="w-full p-2 border-2 border-rose-200 rounded bg-rose-50" placeholder="Conclusión formal de la causa raíz identificada..."></textarea>
+            </div>
           </div>
         </details>
-      </div>
 
+        <!-- 4. PLAN DE ACCIÓN CAPA -->
+        <details class="bg-white border rounded-lg shadow-sm group" id="detPlan" open>
+          <summary class="p-3 font-bold text-sm bg-slate-100 text-slate-800 cursor-pointer flex justify-between items-center rounded-t-lg group-open:border-b">
+            <span>4. Plan de Acción, Seguimiento y Prórrogas (RU-07, RU-08)</span>
+            <span class="text-slate-400 group-open:rotate-180 transition-transform">▼</span>
+          </summary>
+          <div class="p-4 space-y-3 capa-section-plan opacity-50 pointer-events-none" id="secPlan">
+            <div id="formAddTarea" class="bg-blue-50 border border-blue-200 p-3 rounded-lg flex flex-wrap gap-2 items-end">
+              <div class="flex-grow"><label class="block text-[10px] font-bold text-blue-900 mb-1">Descripción Actividad</label><input type="text" id="ntDesc" class="w-full p-1.5 border rounded text-xs" /></div>
+              <div class="w-28"><label class="block text-[10px] font-bold text-blue-900 mb-1">Tipo</label><select id="ntTipo" class="w-full p-1.5 border rounded text-xs"><option value="Correctiva">Correctiva</option><option value="Preventiva">Preventiva</option><option value="Mejora">Mejora</option></select></div>
+              <div class="w-40"><label class="block text-[10px] font-bold text-blue-900 mb-1">Responsable</label><select id="ntResp" class="w-full p-1.5 border rounded text-xs font-mono"></select></div>
+              <div class="w-28"><label class="block text-[10px] font-bold text-blue-900 mb-1">Fecha Límite</label><input type="date" id="ntFecha" class="w-full p-1.5 border rounded text-xs font-mono" /></div>
+              <button type="button" onclick="window.agregarActividadCAPA()" class="bg-blue-700 text-white px-3 py-1.5 rounded font-bold shadow text-xs">➕ Agregar Tarea</button>
+            </div>
+            
+            <div class="overflow-x-auto border rounded">
+              <table class="w-full border-collapse text-left text-xs bg-white">
+                <thead>
+                  <tr class="bg-slate-100 border-b font-bold text-slate-700">
+                    <th class="p-2 border">Actividad</th><th class="p-2 border">Tipo</th><th class="p-2 border">Responsable</th><th class="p-2 border text-center">F. Límite</th><th class="p-2 border text-center">Estado</th><th class="p-2 border text-center">Verificación & Prórrogas</th>
+                  </tr>
+                </thead>
+                <tbody id="tbodyCapaPlan" class="divide-y divide-slate-100"></tbody>
+              </table>
+            </div>
+
+            <div class="border-t pt-3 flex justify-end space-x-2" id="divBtnFirmarPlan">
+              <button type="button" onclick="window.firmarCapaFase('PLAN APROBADO')" class="bg-purple-700 hover:bg-purple-800 text-white px-4 py-1.5 rounded font-bold shadow flex items-center space-x-1"><span>✍️</span><span>Aprobar Plan (Revisor / QA)</span></button>
+            </div>
+            <div class="border-t pt-3 flex justify-end space-x-2 hidden" id="divBtnIniciarEjecucion">
+              <button type="button" onclick="window.pasarFaseCapaSilencioso('EN EJECUCIÓN')" class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-1.5 rounded font-bold shadow">▶️ Iniciar Ejecución del Plan</button>
+            </div>
+            <div class="border-t pt-3 flex justify-between space-x-2 hidden bg-slate-50 p-2 rounded border" id="divCierreOperativo">
+              <div class="w-2/3"><label class="block font-bold text-slate-700 text-[10px] mb-1">Observaciones de Cierre Operativo (RU-09)</label><input type="text" id="capaObsCierre" class="w-full p-1.5 border rounded text-xs" placeholder="Todas las tareas completadas..." /></div>
+              <button type="button" onclick="window.firmarCapaFase('CERRADO OPERATIVO')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1.5 rounded font-bold shadow mt-4 h-8 self-end">🔒 Confirmar Cierre Operativo</button>
+            </div>
+          </div>
+        </details>
+
+        <!-- 5. EFECTIVIDAD Y CIERRE -->
+        <details class="bg-white border rounded-lg shadow-sm group" id="detEfectividad" open>
+          <summary class="p-3 font-bold text-sm bg-slate-100 text-slate-800 cursor-pointer flex justify-between items-center rounded-t-lg group-open:border-b">
+            <span>5. Verificación de Efectividad (RU-10, RU-11)</span>
+            <span class="text-slate-400 group-open:rotate-180 transition-transform">▼</span>
+          </summary>
+          <div class="p-4 space-y-4 capa-section-efectividad opacity-50 pointer-events-none" id="secEfectividad">
+            <div class="bg-indigo-50 p-3 rounded border border-indigo-200 grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div class="md:col-span-2"><label class="block font-bold text-indigo-900 mb-1">Criterio de Efectividad (Evidencia Objetiva) *</label><textarea id="capaCriterioEf" rows="2" class="w-full p-2 border rounded font-mono text-xs" placeholder="Ej: Cero reincidencias en los próximos 3 meses, verificación analítica de 3 lotes..."></textarea></div>
+              <div>
+                <label class="block font-bold text-indigo-900 mb-1">Programar Fecha de Evaluación *</label>
+                <div class="flex space-x-1 mb-1">
+                  <button type="button" onclick="window.setEvalDate(30)" class="px-2 py-0.5 bg-white border rounded text-[10px]">30d</button>
+                  <button type="button" onclick="window.setEvalDate(60)" class="px-2 py-0.5 bg-white border rounded text-[10px]">60d</button>
+                  <button type="button" onclick="window.setEvalDate(90)" class="px-2 py-0.5 bg-white border rounded text-[10px]">90d</button>
+                  <button type="button" onclick="window.setEvalDate(180)" class="px-2 py-0.5 bg-white border rounded text-[10px]">180d</button>
+                </div>
+                <input type="date" id="capaFechaEval" class="w-full p-1.5 border rounded font-mono text-xs font-bold" />
+              </div>
+            </div>
+            
+            <div class="border-t pt-3 flex justify-end space-x-2 hidden" id="divBtnProgEval">
+               <button type="button" onclick="window.pasarFaseCapaSilencioso('EN EVALUACIÓN DE EFECTIVIDAD')" class="bg-indigo-700 text-white px-4 py-1.5 rounded font-bold shadow">⏱️ Iniciar Periodo de Evaluación</button>
+            </div>
+
+            <div class="bg-emerald-50 p-3 rounded border border-emerald-200 grid grid-cols-1 md:grid-cols-2 gap-3 hidden" id="divEvaluacionFinal">
+              <div><label class="block font-bold text-emerald-900 mb-1">Acción Ejecutada a evaluar</label><input type="text" id="capaAccionEjecutadaEf" class="w-full p-2 border rounded text-xs" /></div>
+              <div>
+                <label class="block font-bold text-emerald-900 mb-1">¿El Plan Fue Eficaz? *</label>
+                <select id="capaEficaz" class="w-full p-2 border-2 border-emerald-400 rounded font-bold text-slate-800 bg-white" onchange="window.alertaIneficaciaCAPA(this.value)">
+                  <option value="">Seleccione veredicto...</option>
+                  <option value="Sí">Sí (Cierre Definitivo)</option>
+                  <option value="No">No (Reapertura RU-11)</option>
+                </select>
+              </div>
+              <div class="md:col-span-2 flex justify-end mt-2">
+                <button type="button" onclick="window.firmarCapaFase('CERRADO DEFINITIVO')" class="bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-1.5 rounded font-bold shadow flex items-center space-x-1"><span>✍️</span><span>Firmar Cierre de Efectividad (QA)</span></button>
+              </div>
+            </div>
+          </div>
+        </details>
+
+      </div>
+      
+      <!-- Footer del Modal -->
       <div class="bg-slate-100 p-4 border-t flex justify-between items-center shrink-0">
-        <div class="text-[10px] text-slate-500 font-mono">Workflow GxP 21 CFR Part 11</div>
+        <div class="text-[10px] text-slate-500 font-mono">Workflow GxP sujeto a Audit Trail 21 CFR Part 11</div>
         <div class="flex space-x-2">
-          <button type="button" onclick="window.toggleModal('modalCapa', false)" class="px-4 py-2 border rounded-lg text-xs font-bold bg-white">Cerrar</button>
-          <button type="button" id="btnGuardarBorradorCapa" onclick="window.guardarCapa(false)" class="px-4 py-2 bg-slate-800 text-white rounded-lg text-xs font-bold">💾 Guardar Borrador</button>
+          <button type="button" onclick="window.toggleModal('modalCapa', false)" class="px-4 py-2 border border-slate-300 rounded-lg text-xs font-bold text-slate-600 bg-white hover:bg-slate-50 cursor-pointer">Cerrar / Cancelar</button>
+          <button type="button" id="btnGuardarBorradorCapa" onclick="window.guardarCapa(false)" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-bold shadow cursor-pointer">💾 Guardar Borrador / Progreso</button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- MODAL: FIRMA PART 11 -->
-  <div id="modalFirmaCapa" class="modal-backdrop fixed inset-0 bg-slate-900/70 backdrop-blur-sm items-center justify-center p-4 z-[60]">
-    <div class="bg-white rounded-xl max-w-md w-full p-5 border shadow-2xl space-y-4 text-xs">
-      <div class="border-b pb-2"><h3 class="font-bold text-sm text-cyan-900">✍️ Firma Electrónica GxP</h3></div>
-      <input type="hidden" id="firmaCapaFaseDestino">
-      <div><label class="block font-semibold mb-1">Correo</label><input type="email" id="firmaCapaEmail" class="w-full p-2 border rounded font-mono" /></div>
-      <div><label class="block font-semibold mb-1">Contraseña</label><input type="password" id="firmaCapaPass" class="w-full p-2 border rounded font-mono" /></div>
-      <div class="flex justify-end space-x-2 pt-3 border-t">
-        <button type="button" onclick="window.toggleModal('modalFirmaCapa', false)" class="px-3 py-1.5 border rounded">Cancelar</button>
-        <button type="button" onclick="window.ejecutarFirmaCapa()" class="px-4 py-1.5 bg-cyan-600 text-white rounded font-bold">Firmar</button>
+  <!-- MODAL: VERIFICAR TAREA -->
+  <div id="modalCapaTarea" class="modal-backdrop fixed inset-0 bg-slate-900/70 backdrop-blur-sm items-center justify-center p-4 z-[60]">
+    <div class="bg-white rounded-xl max-w-sm w-full p-5 border shadow-2xl space-y-3 text-xs">
+      <div class="border-b pb-2"><h3 class="font-bold text-sm text-blue-900">✅ Verificación de Actividad (RU-08)</h3></div>
+      <input type="hidden" id="vtIndex">
+      <div class="bg-slate-50 p-2 border rounded font-mono text-[11px] text-slate-700 mb-2" id="vtDescText"></div>
+      <div><label class="block font-semibold mb-1">Estado Cumplimiento *</label><select id="vtEstado" class="w-full p-2 border rounded font-bold"><option value="Cumple">Cumple (Completada)</option><option value="No Cumple">No Cumple</option></select></div>
+      <div><label class="block font-semibold mb-1">Comentarios / Evidencia Adjunta</label><textarea id="vtComentarios" rows="2" class="w-full p-2 border rounded" placeholder="Referencia a documento, número de lote, enlace..."></textarea></div>
+      <div class="flex justify-end space-x-2 pt-2 border-t">
+        <button type="button" onclick="window.toggleModal('modalCapaTarea', false)" class="px-3 py-1.5 border rounded">Cancelar</button>
+        <button type="button" onclick="window.guardarVerificacionTarea()" class="px-4 py-1.5 bg-blue-700 text-white rounded font-bold">Verificar (Firma Simple)</button>
       </div>
     </div>
   </div>
+
+  <!-- MODAL: SOLICITAR PRÓRROGA -->
+  <div id="modalCapaProrroga" class="modal-backdrop fixed inset-0 bg-slate-900/70 backdrop-blur-sm items-center justify-center p-4 z-[60]">
+    <div class="bg-white rounded-xl max-w-sm w-full p-5 border shadow-2xl space-y-3 text-xs">
+      <div class="border-b pb-2"><h3 class="font-bold text-sm text-amber-900">⏳ Solicitar Prórroga de Actividad</h3></div>
+      <input type="hidden" id="prTaskIndex">
+      <div class="bg-slate-50 p-2 border rounded font-mono text-[11px] text-slate-700 mb-2">Fecha actual: <span id="prFechaActual" class="font-bold text-rose-700"></span></div>
+      <div><label class="block font-semibold mb-1">Nueva Fecha Propuesta *</label><input type="date" id="prNuevaFecha" class="w-full p-2 border rounded font-mono font-bold" /></div>
+      <div><label class="block font-semibold mb-1">Justificación Técnica *</label><textarea id="prJustificacion" rows="3" class="w-full p-2 border rounded" placeholder="Motivo del retraso y plan de mitigación..."></textarea></div>
+      <div class="flex justify-end space-x-2 pt-2 border-t">
+        <button type="button" onclick="window.toggleModal('modalCapaProrroga', false)" class="px-3 py-1.5 border rounded">Cancelar</button>
+        <button type="button" onclick="window.guardarProrroga()" class="px-4 py-1.5 bg-amber-600 text-white rounded font-bold">Registrar Prórroga</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: FIRMA PART 11 CAPA -->
+  <div id="modalFirmaCapa" class="modal-backdrop fixed inset-0 bg-slate-900/70 backdrop-blur-sm items-center justify-center p-4 z-[60]">
+    <div class="bg-white rounded-xl max-w-md w-full p-5 border shadow-2xl space-y-4 text-xs">
+      <div class="border-b pb-2"><h3 class="font-bold text-sm text-cyan-900">✍️ Firma Electrónica GxP (CAPA)</h3></div>
+      <div class="space-y-3">
+        <input type="hidden" id="firmaCapaFaseDestino">
+        <div class="bg-cyan-50 border border-cyan-200 p-2 rounded text-[11px] font-mono text-cyan-800">Usted está a punto de firmar y autorizar el paso a la fase: <br><strong id="lblFaseDestino" class="text-xs"></strong></div>
+        <div><label class="block font-semibold mb-1">Correo Corporativo</label><input type="email" id="firmaCapaEmail" class="w-full p-2 border rounded font-mono bg-slate-50" /></div>
+        <div>
+          <label class="block font-semibold mb-1">Contraseña</label>
+          <div class="relative">
+            <input type="password" id="firmaCapaPass" class="w-full p-2 pr-10 border rounded font-mono bg-slate-50" />
+            <button type="button" onclick="window.togglePasswordVisibility('firmaCapaPass', 'iconFirmaCapaPass')" class="absolute inset-y-0 right-0 pr-2 flex items-center text-slate-400">
+              <span id="iconFirmaCapaPass" class="text-sm">👁️</span>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="flex justify-end space-x-2 pt-3 border-t">
+        <button type="button" onclick="window.toggleModal('modalFirmaCapa', false)" class="px-3 py-1.5 border rounded cursor-pointer">Cancelar</button>
+        <button type="button" onclick="window.ejecutarFirmaCapa()" class="px-4 py-1.5 bg-cyan-600 text-white rounded font-bold shadow cursor-pointer">Autenticar & Firmar (Part 11)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODALES AUXILIARES -->
+  <div id="modalExportPdf" class="modal-backdrop fixed inset-0 bg-slate-900/80 backdrop-blur-sm items-center justify-center p-4 z-[90]"><div class="bg-white rounded-xl max-w-5xl w-full p-4 border shadow-2xl flex flex-col h-[90vh]"><div class="border-b pb-2 flex justify-between"><h3 class="font-bold text-sm text-slate-800" id="pdfViewerTitle">Visor</h3><button onclick="window.toggleModal('modalExportPdf', false)" class="text-slate-400 font-bold px-2">✕</button></div><div id="pdfViewerArea" class="w-full flex-grow relative bg-slate-200 rounded border overflow-hidden mt-2"></div></div></div>
+  <div id="modalNotifications" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-[90]"><div class="bg-white rounded-xl max-w-sm w-full p-5 border shadow-xl space-y-3 text-xs"><div class="border-b pb-2 flex justify-between items-center"><h3 class="font-bold">🔔 Notificaciones</h3><span id="modalNotiBadge" class="bg-cyan-100 text-cyan-800 px-2 rounded-full font-bold">0</span></div><div id="notificationsList" class="py-4 text-center bg-slate-50 rounded-lg max-h-64 overflow-y-auto"></div><div class="flex justify-end pt-2 border-t"><button onclick="window.toggleModal('modalNotifications', false)" class="px-4 py-1.5 bg-slate-800 text-white rounded font-bold">Cerrar</button></div></div></div>
 
   <script>
     const SUPABASE_URL = 'https://wmtvlxjzzwwhtybccrpe.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_i4A7rEjukekMlaCKjXWaNA_ze54EVjl';
     const HEADERS = { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' };
 
-    window.cachedAreas = [ { id: 'ar_qa', nombre: 'Aseguramiento de Calidad (QA)' } ];
+    window.MATRIZ_GXP_ESTANDAR = { 
+      'rol_admin': { lectura: true, crearEdicion: true, revision: true, aprobacionFirma: true, administracion: true },
+      'rol_autor': { lectura: true, crearEdicion: true, revision: false, aprobacionFirma: false, administracion: false },
+      'rol_revisor': { lectura: true, crearEdicion: false, revision: true, aprobacionFirma: false, administracion: false },
+      'rol_aprobador': { lectura: true, crearEdicion: false, revision: false, aprobacionFirma: true, administracion: false },
+      'rol_emisor': { lectura: true, crearEdicion: false, revision: false, aprobacionFirma: false, administracion: true },
+      'rol_viewer': { lectura: true, crearEdicion: false, revision: false, aprobacionFirma: false, administracion: false } 
+    };
+
+    window.cachedAreas = [ { id: 'ar_qa', nombre: 'Aseguramiento de Calidad (QA)' }, { id: 'ar_qc', nombre: 'Control de Calidad (QC)' }, { id: 'ar_prod', nombre: 'Planta de Producción' } ];
     window.cachedProcesos = [ { id: 'pr_gestion', nombre: 'Gestión de Aseguramiento', areaId: 'ar_qa' } ];
-    window.cachedEmpleados = [ { id: 1, nombres: 'Johan S.', apellidos: 'Aguilar', cargo: 'QA Lead', correo: 'j.aguilar@pharmor.com.co', areaId: 'ar_qa', estado: 'Activo' } ];
-    window.cachedUsuarios = [ { id: 1, empleadoId: 1, correo: 'j.aguilar@pharmor.com.co', password: '123', rolesIds: ['rol_admin'], estado: 'Activo' } ];
+    window.cachedRoles = [ { id: 'rol_admin', nombre: 'Administrador (QA)', desc: '' }, { id: 'rol_autor', nombre: 'Autor', desc: '' }, { id: 'rol_revisor', nombre: 'Revisor', desc: '' }, { id: 'rol_aprobador', nombre: 'Aprobador', desc: '' }, { id: 'rol_emisor', nombre: 'Emisor', desc: '' }, { id: 'rol_viewer', nombre: 'Lector', desc: '' } ];
+    window.cachedMatrizPermisos = JSON.parse(JSON.stringify(window.MATRIZ_GXP_ESTANDAR));
+    window.cachedEmpleados = [ { id: 1, nombres: 'Johan S.', apellidos: 'Aguilar', cargo: 'QA Lead', correo: 'j.aguilar@pharmor.com.co', areaId: 'ar_qa', estado: 'Activo', avatar: null } ];
+    window.cachedUsuarios = [ { id: 1, empleadoId: 1, correo: 'j.aguilar@pharmor.com.co', password: '123', rolesIds: ['rol_admin'], areasAsignadas: ['ar_qa', 'ar_qc', 'ar_prod'], estado: 'Activo' } ];
     
-    window.cachedDocs = []; window.cachedCopias = []; window.auditTrailLogs = [];
-    window.cachedEquipos = []; window.cachedCapas = []; window.currentCapaTasks = [];
+    window.cachedDocs = []; window.cachedCopias = []; window.cachedObsoletos = []; window.auditTrailLogs = [];
+    window.cachedEquipos = []; window.cachedCalibraciones = []; window.cachedMantenimientos = []; window.cachedInfraestructura = []; window.cachedMantenimientosInfra = [];
+    window.cachedCapas = [];
+    window.currentCapaTasks = [];
 
     window.togglePasswordVisibility = function(id, iconId) { const input = document.getElementById(id); const icon = document.getElementById(iconId); if (input) { input.type = input.type === 'password' ? 'text' : 'password'; if (icon) icon.innerText = input.type === 'password' ? '👁️' : '🙈'; } };
+    window.actualizarAvatarUI = function(emp) { document.getElementById('userBadge').innerText = `${emp ? emp.nombres + ' ' + emp.apellidos : ''}`; const av = document.getElementById('userAvatarCircle'); if(av) { av.innerHTML = (emp && emp.avatar) ? `<img src="${emp.avatar}" class="w-full h-full object-cover" />` : `👤`; } };
+    window.actualizarEstadoNube = function(est, msj) { const led = document.getElementById('cloudLed'); const txt = document.getElementById('cloudStatusText'); if(!led) return; if(est==='guardando'){ led.className='w-2 h-2 rounded-full bg-amber-400 animate-ping'; txt.className='text-amber-400 font-semibold'; txt.innerText=msj||'Guardando...'; } else if(est==='sincronizando'){ led.className='w-2 h-2 rounded-full bg-cyan-400 animate-spin'; txt.className='text-cyan-400 font-semibold'; txt.innerText=msj||'Sinc...'; } else if(est==='error'){ led.className='w-2 h-2 rounded-full bg-rose-500'; txt.className='text-rose-400 font-semibold'; txt.innerText=msj||'Error'; } else { led.className='w-2 h-2 rounded-full bg-emerald-400 animate-pulse'; txt.className='text-emerald-400 font-semibold'; txt.innerText=msj||'Conectado'; } };
+
+    window.saveData = async function() {
+      window.actualizarEstadoNube('guardando', 'Guardando...');
+      const dbState = { areas: window.cachedAreas, procesos: window.cachedProcesos, roles: window.cachedRoles, matriz: window.cachedMatrizPermisos, empleados: window.cachedEmpleados, usuarios: window.cachedUsuarios, docs: window.cachedDocs, copias: window.cachedCopias, obsoletos: window.cachedObsoletos, audit: window.auditTrailLogs, equipos: window.cachedEquipos, calibraciones: window.cachedCalibraciones, mantenimientos: window.cachedMantenimientos, infraestructura: window.cachedInfraestructura, mantenimientosInfra: window.cachedMantenimientosInfra, capas: window.cachedCapas };
+      try { const res = await fetch(`${SUPABASE_URL}/rest/v1/erp_state`, { method: 'POST', headers: { ...HEADERS, 'Prefer': 'resolution=merge-duplicates' }, body: JSON.stringify({ id: 1, app_data: dbState }) }); if (res.ok) { window.actualizarEstadoNube('conectado', 'Guardado'); setTimeout(() => window.actualizarEstadoNube('conectado', 'Conectado'), 2000); } else { window.actualizarEstadoNube('error', 'Fallo'); } } catch (err) { window.actualizarEstadoNube('error', 'Sin red'); }
+    };
+
+    window.loadData = async function() {
+      try { const response = await fetch(`${SUPABASE_URL}/rest/v1/erp_state?id=eq.1&select=app_data`, { method: 'GET', headers: HEADERS }); if (response.ok) { const json = await response.json(); if (json && json.length > 0 && json[0].app_data) { const dbState = json[0].app_data; if (dbState.areas) window.cachedAreas = dbState.areas; if (dbState.procesos) window.cachedProcesos = dbState.procesos; if (dbState.empleados) window.cachedEmpleados = dbState.empleados; if (dbState.usuarios) window.cachedUsuarios = dbState.usuarios; if (dbState.docs) window.cachedDocs = dbState.docs; if (dbState.audit) window.auditTrailLogs = dbState.audit; if (dbState.equipos) window.cachedEquipos = dbState.equipos; if (dbState.infraestructura) window.cachedInfraestructura = dbState.infraestructura; if (dbState.capas) window.cachedCapas = dbState.capas; } } } catch(e) { } finally { const btn = document.getElementById('btnLogin'); if(btn){ btn.innerText = "Iniciar Sesión Segura"; btn.disabled = false; btn.classList.remove('bg-slate-400'); btn.classList.add('bg-cyan-600'); } }
+    };
+
+    window.sincronizarConNube = async function() { window.actualizarEstadoNube('sincronizando'); await window.loadData(); window.renderAllData(); if(window.activeGxpUser){ window.actualizarAvatarUI(window.cachedEmpleados.find(e => e.id === window.activeGxpUser.empleadoId)); } window.actualizarEstadoNube('conectado'); };
+    window.loadData();
+
+    window.activeGxpUser = null;
+    window.esAdminMaster = function(usr) { return usr && (usr.correo || '').trim().toLowerCase() === 'j.aguilar@pharmor.com.co'; };
     window.toggleModal = function(id, show) { const m = document.getElementById(id); if (m) { show ? m.classList.add('active') : m.classList.remove('active'); } };
     
     window.switchTab = function(tabId, btn) {
+      if (tabId === 'admin' && !window.esAdminMaster(window.activeGxpUser)) { alert("Acceso Denegado (Solo Master QA)"); return; }
       document.querySelectorAll('.tab-content').forEach(v => v.classList.remove('active'));
-      document.querySelectorAll('.nav-btn').forEach(b => { b.classList.remove('bg-cyan-600', 'text-white'); });
-      document.getElementById('view-' + tabId).classList.add('active');
-      if(btn) btn.classList.add('bg-cyan-600', 'text-white');
+      document.querySelectorAll('.nav-btn').forEach(b => { b.classList.remove('bg-cyan-600', 'text-white'); if (!b.classList.contains('bg-slate-700')) b.classList.add('hover:bg-slate-700'); });
+      const t = document.getElementById('view-' + tabId); if(t) t.classList.add('active');
+      if(btn) { btn.classList.add('bg-cyan-600', 'text-white'); btn.classList.remove('hover:bg-slate-700', 'bg-slate-700'); }
       if(tabId === 'capa') window.renderCapaData();
     };
 
+    window.switchDocSubtab = function(tabId, btn) { document.querySelectorAll('.doc-subtab-content').forEach(v => v.classList.remove('active')); document.querySelectorAll('.doc-subtab-btn').forEach(b => { b.classList.remove('bg-cyan-600', 'text-white'); b.classList.add('bg-slate-100', 'text-slate-700'); }); document.getElementById('subtab-' + tabId).classList.add('active'); btn.classList.add('bg-cyan-600', 'text-white'); };
+    window.switchMetroSubtab = function(tabId, btn) { document.querySelectorAll('.metro-subtab-content').forEach(v => v.classList.remove('active')); document.querySelectorAll('.metro-subtab-btn').forEach(b => { b.classList.remove('bg-emerald-600', 'text-white'); b.classList.add('bg-slate-100', 'text-slate-700'); }); document.getElementById('metro-' + tabId).classList.add('active'); btn.classList.add('bg-emerald-600', 'text-white'); };
+    window.switchConfigSubtab = function(tabId, btn) { document.querySelectorAll('.config-subtab-content').forEach(v => v.classList.remove('active')); document.querySelectorAll('.config-subtab-btn').forEach(b => { b.classList.remove('bg-slate-800', 'text-white'); b.classList.add('bg-slate-100', 'text-slate-700'); }); document.getElementById('configsub-' + tabId).classList.add('active'); btn.classList.add('bg-slate-800', 'text-white'); };
     window.switchCapaSubtab = function(tabId, btn) {
       document.querySelectorAll('.capa-subtab-content').forEach(v => v.classList.remove('active'));
       document.querySelectorAll('.capa-subtab-btn').forEach(b => { b.classList.remove('bg-rose-600', 'text-white'); b.classList.add('bg-slate-100', 'text-slate-700'); });
@@ -391,139 +669,446 @@
     };
 
     window.ejecutarLoginPrincipal = function() {
-      const email = document.getElementById('loginEmail').value.trim().toLowerCase(); 
-      const pass = document.getElementById('loginPassword').value.trim();
+      const email = document.getElementById('loginEmail').value.trim().toLowerCase(); const pass = document.getElementById('loginPassword').value.trim();
       let usrData = window.cachedUsuarios.find(u => u.correo.toLowerCase() === email);
-      if(!usrData && email === 'j.aguilar@pharmor.com.co') { 
-        usrData = { id: 1, empleadoId: 1, correo: email, password: pass, rolesIds: ['rol_admin'], estado: 'Activo' }; 
-        window.cachedUsuarios.push(usrData); 
-      }
-      if(!usrData || usrData.password !== pass) { alert("Credenciales incorrectas."); return; }
-      window.activeGxpUser = usrData;
-      document.getElementById('view-login').classList.add('hidden'); 
-      document.getElementById('app-portal').classList.remove('hidden');
-      window.switchTab('dashboard', document.querySelector('[data-tab="dashboard"]'));
+      if(!usrData && email === 'j.aguilar@pharmor.com.co') { usrData = { id: 1, empleadoId: 1, correo: email, password: pass, rolesIds: ['rol_admin'], areasAsignadas: ['ar_qa'], estado: 'Activo' }; window.cachedUsuarios.push(usrData); }
+      if(!usrData || usrData.password !== pass || usrData.estado !== 'Activo') { alert("Credenciales incorrectas o inactivo."); return; }
+      window.activeGxpUser = usrData; window.registrarAuditTrail(usrData.correo, 'LOGIN', 'Inicio de sesión.');
+      document.getElementById('view-login').classList.add('hidden'); document.getElementById('app-portal').classList.remove('hidden');
+      window.actualizarAvatarUI(window.cachedEmpleados.find(e => e.id === usrData.empleadoId));
+      window.renderAllData(); window.switchTab('dashboard', document.querySelector('[data-tab="dashboard"]'));
     };
 
     window.registrarAuditTrail = function(user, accion, detalle) {
       const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 19);
       window.auditTrailLogs.unshift({ fecha: timestamp, usuario: user, accion: accion, detalle: detalle });
-      const auditDiv = document.getElementById('list-auds'); 
-      if(auditDiv) auditDiv.innerHTML = window.auditTrailLogs.map(l => `[${l.fecha}] <strong>${l.usuario}</strong> [${l.accion}]: ${l.detalle}`).join('<br>');
+      const auditDiv = document.getElementById('list-auds'); if(auditDiv) auditDiv.innerHTML = window.auditTrailLogs.map(l => `[${l.fecha}] <strong>${l.usuario}</strong> [${l.accion}]: ${l.detalle}`).join('<br><hr class="border-slate-100">');
     };
 
+    window.exportarAuditTrailPDF = function() { alert("Simulando exportación PDF..."); };
+    window.toggleUserMenu = function() { const m = document.getElementById('userDropdown'); if(m) m.classList.toggle('hidden'); };
+
+    // LÓGICA CAPA & NC
     window.renderCapaData = function() {
       const capas = window.cachedCapas || [];
+      const fEstado = document.getElementById('filtroCapaEstado')?.value || '';
+      const fCrit = document.getElementById('filtroCapaCriticidad')?.value || '';
+      const fText = (document.getElementById('filtroCapaInput')?.value || '').toLowerCase();
+
+      let abiertas = 0; let vencidas = 0; let evaluando = 0;
+      const hoy = new Date(); hoy.setHours(0,0,0,0);
+
       const tbody = document.getElementById('table-maestro-capa');
-      tbody.innerHTML = capas.map(c => `<tr><td class="p-2 border font-mono font-bold text-rose-800">${c.codigo}</td><td class="p-2 border">${c.descripcion}</td><td class="p-2 border text-center">${c.estado}</td><td class="p-2 border text-center"><button onclick="window.abrirModalEditarCapa('${c.id}')" class="bg-slate-100 border px-2 py-1 rounded">Abrir</button></td></tr>`).join('') || `<tr><td colspan="4" class="p-4 text-center text-slate-400">Sin expedientes CAPA.</td></tr>`;
+      let htmlRows = '';
+
+      capas.forEach(c => {
+        if (['BORRADOR','EN ANÁLISIS Y PLAN','PLAN APROBADO','EN EJECUCIÓN'].includes(c.estado)) abiertas++;
+        if (c.estado === 'EN EVALUACIÓN DE EFECTIVIDAD') evaluando++;
+        if (c.estado === 'EN EJECUCIÓN') {
+           const tieneVencidas = c.planAccion.some(t => t.estado !== 'Cumple' && new Date(t.fechaCompromiso) < hoy);
+           if(tieneVencidas) vencidas++;
+        }
+
+        if (fEstado && c.estado !== fEstado) return;
+        if (fCrit && c.criticidad !== fCrit) return;
+        if (fText && !(`${c.codigo} ${c.descripcion}`.toLowerCase().includes(fText))) return;
+
+        const pOrigen = window.cachedProcesos.find(p => p.id === c.procesoOrigen);
+        const respEmp = window.cachedEmpleados.find(e => e.id === c.responsableId);
+        
+        let badgeEst = 'bg-slate-100 text-slate-800';
+        if(c.estado === 'EN EJECUCIÓN') badgeEst = 'bg-amber-100 text-amber-800';
+        if(c.estado === 'CERRADO DEFINITIVO') badgeEst = 'bg-emerald-100 text-emerald-800';
+        if(c.estado === 'EN EVALUACIÓN DE EFECTIVIDAD') badgeEst = 'bg-indigo-100 text-indigo-800';
+        if(c.estado === 'REABIERTO') badgeEst = 'bg-rose-100 text-rose-800 animate-pulse';
+
+        htmlRows += `<tr class="hover:bg-slate-50">
+          <td class="p-2 border font-mono font-bold text-rose-800">${c.codigo}</td>
+          <td class="p-2 border font-semibold truncate max-w-xs" title="${c.descripcion}">${c.descripcion.substring(0, 60)}...</td>
+          <td class="p-2 border text-[11px] text-slate-600">${pOrigen ? pOrigen.nombre : c.procesoOrigen}</td>
+          <td class="p-2 border text-center font-bold ${c.criticidad==='Crítico'?'text-rose-600':(c.criticidad==='Mayor'?'text-amber-600':'text-slate-600')}">${c.criticidad || '-'}</td>
+          <td class="p-2 border font-sans">${respEmp ? respEmp.nombres + ' ' + respEmp.apellidos : c.responsableId}</td>
+          <td class="p-2 border text-center"><span class="${badgeEst} px-2 py-0.5 rounded text-[10px] font-bold border">${c.estado}</span></td>
+          <td class="p-2 border text-center font-bold ${c.efectividad?.eficaz==='Sí'?'text-emerald-600':(c.efectividad?.eficaz==='No'?'text-rose-600':'text-slate-400')}">${c.efectividad?.eficaz || '-'}</td>
+          <td class="p-2 border text-center"><button onclick="window.abrirModalEditarCapa('${c.id}')" class="bg-slate-100 border border-slate-300 px-3 py-1 rounded font-bold text-slate-700 cursor-pointer shadow-sm">👁️ Abrir</button></td>
+        </tr>`;
+      });
+
+      tbody.innerHTML = htmlRows || `<tr><td colspan="8" class="p-4 text-center text-slate-400">Sin expedientes CAPA.</td></tr>`;
+
       document.getElementById('cnt-capa-total').innerText = capas.length;
+      document.getElementById('cnt-capas').innerText = abiertas;
       document.getElementById('kpi-capa-total').innerText = capas.length;
+      document.getElementById('kpi-capa-abiertas').innerText = abiertas;
+      document.getElementById('kpi-capa-vencidas').innerText = vencidas;
+      document.getElementById('kpi-capa-eval').innerText = evaluando;
+
+      const tblAlertas = document.getElementById('tablaAlertasCapa');
+      const capasAlertas = capas.filter(c => c.estado === 'EN EVALUACIÓN DE EFECTIVIDAD' || (c.estado === 'EN EJECUCIÓN' && c.planAccion.some(t => t.estado !== 'Cumple' && new Date(t.fechaCompromiso) < hoy)));
+      
+      if(capasAlertas.length > 0) {
+        tblAlertas.innerHTML = `<table class="w-full text-left text-xs bg-white border"><tr class="bg-rose-50 border-b"><th class="p-2 border">ID CAPA</th><th class="p-2 border">Alerta</th><th class="p-2 border">Acción</th></tr>` + 
+        capasAlertas.map(c => `<tr><td class="p-2 border font-bold text-rose-800">${c.codigo}</td><td class="p-2 border font-semibold text-rose-700">${c.estado === 'EN EVALUACIÓN DE EFECTIVIDAD' ? 'Evaluación de efectividad pendiente/activa.' : '⚠️ Plan de Acción con tareas VENCIDAS.'}</td><td class="p-2 border"><button onclick="window.abrirModalEditarCapa('${c.id}')" class="text-blue-700 font-bold underline">Revisar</button></td></tr>`).join('') + `</table>`;
+      } else {
+        tblAlertas.innerHTML = `<div class="p-3 text-center text-slate-500 italic bg-white rounded border">✅ Todo al día. No hay planes vencidos ni evaluaciones críticas pendientes.</div>`;
+      }
     };
 
     window.poblarSelectsCapa = function() {
       document.getElementById('capaProcesoOrigen').innerHTML = `<option value="">Seleccione...</option>` + window.cachedProcesos.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
-      const empOpts = window.cachedEmpleados.map(e => `<option value="${e.id}">${e.nombres} ${e.apellidos}</option>`).join('');
+      const empOpts = window.cachedEmpleados.map(e => `<option value="${e.id}">${e.nombres} ${e.apellidos} - ${e.cargo}</option>`).join('');
       document.getElementById('capaResponsable').innerHTML = `<option value="">Seleccione...</option>` + empOpts;
       document.getElementById('ntResp').innerHTML = empOpts;
+      document.getElementById('capaPreviaId').innerHTML = `<option value="">Seleccione...</option>` + window.cachedCapas.map(c => `<option value="${c.id}">${c.codigo}</option>`).join('');
+      document.getElementById('capaDocs').innerHTML = window.cachedDocs.map(d => `<option value="${d.codigo}">${d.codigo} v${d.version} - ${d.titulo}</option>`).join('');
+      document.getElementById('capaEquipos').innerHTML = window.cachedEquipos.map(eq => `<option value="${eq.tag}">${eq.tag} - ${eq.nombre}</option>`).join('');
+      document.getElementById('capaAreas').innerHTML = window.cachedAreas.map(a => `<option value="${a.id}">${a.nombre}</option>`).join('');
+    };
+
+    window.toggleCapaReincidente = function() {
+      const val = document.getElementById('capaReincidente').value;
+      const div = document.getElementById('divCapaPrevia');
+      val === 'Sí' ? div.classList.remove('hidden') : div.classList.add('hidden');
+    };
+
+    window.aplicarReglasInterfazFases = function(estado) {
+      document.querySelectorAll('.capa-section-borrador').forEach(el => el.style.pointerEvents = (['BORRADOR', 'REABIERTO'].includes(estado)) ? 'auto' : 'none');
+      
+      const secAnalisis = document.getElementById('secAnalisis');
+      if (['EN ANÁLISIS Y PLAN', 'BORRADOR', 'REABIERTO'].includes(estado)) { secAnalisis.classList.remove('opacity-50', 'pointer-events-none'); } else { secAnalisis.classList.add('opacity-50', 'pointer-events-none'); }
+      
+      const secPlan = document.getElementById('secPlan');
+      if (['EN ANÁLISIS Y PLAN', 'PLAN APROBADO', 'EN EJECUCIÓN', 'CERRADO OPERATIVO'].includes(estado)) { secPlan.classList.remove('opacity-50', 'pointer-events-none'); } else { secPlan.classList.add('opacity-50', 'pointer-events-none'); }
+
+      const secEfect = document.getElementById('secEfectividad');
+      if (['CERRADO OPERATIVO', 'EN EVALUACIÓN DE EFECTIVIDAD', 'CERRADO DEFINITIVO'].includes(estado)) { secEfect.classList.remove('opacity-50', 'pointer-events-none'); } else { secEfect.classList.add('opacity-50', 'pointer-events-none'); }
+
+      document.getElementById('divBtnFirmarBorrador').classList.toggle('hidden', !['BORRADOR', 'REABIERTO'].includes(estado));
+      document.getElementById('divBtnFirmarPlan').classList.toggle('hidden', estado !== 'EN ANÁLISIS Y PLAN');
+      document.getElementById('divBtnIniciarEjecucion').classList.toggle('hidden', estado !== 'PLAN APROBADO');
+      document.getElementById('divCierreOperativo').classList.toggle('hidden', estado !== 'EN EJECUCIÓN');
+      document.getElementById('divBtnProgEval').classList.toggle('hidden', estado !== 'CERRADO OPERATIVO');
+      document.getElementById('divEvaluacionFinal').classList.toggle('hidden', estado !== 'EN EVALUACIÓN DE EFECTIVIDAD');
+      document.getElementById('formAddTarea').classList.toggle('hidden', !['EN ANÁLISIS Y PLAN', 'REABIERTO'].includes(estado));
+
+      document.getElementById('btnGuardarBorradorCapa').classList.toggle('hidden', estado === 'CERRADO DEFINITIVO');
+      
+      if(estado === 'EN EJECUCIÓN') document.getElementById('detPlan').open = true;
+      if(estado === 'CERRADO OPERATIVO' || estado === 'EN EVALUACIÓN DE EFECTIVIDAD') document.getElementById('detEfectividad').open = true;
+
+      const badge = document.getElementById('capaBadgeEstado');
+      badge.innerText = estado;
+      badge.className = `px-3 py-1 rounded text-xs font-bold font-mono ${estado==='BORRADOR'?'bg-slate-600 text-slate-200':(estado==='CERRADO DEFINITIVO'?'bg-emerald-600 text-white':(estado==='REABIERTO'?'bg-rose-600 text-white':'bg-amber-500 text-white'))}`;
     };
 
     window.abrirModalNuevaCapa = function() {
       window.poblarSelectsCapa();
       document.getElementById('capaEditId').value = '';
       const nro = String(window.cachedCapas.length + 1).padStart(3, '0');
-      document.getElementById('capaCodigo').value = `NC-${new Date().getFullYear()}-${nro}`; // Editable
+      
+      // Consecutivo sugerido pero completamente editable por ti
+      document.getElementById('capaCodigo').value = `NC-${new Date().getFullYear()}-${nro}`;
       document.getElementById('capaEstadoActual').value = 'BORRADOR';
-      ['capaDescripcion', 'capaCausaRaiz', 'ntDesc'].forEach(id => document.getElementById(id).value = '');
+      
+      ['capaProcesoOrigen', 'capaResponsable', 'capaFuente', 'capaPreviaId', 'capaDescripcion', 'capaLotes', 'capaContencion', 'capaMetodologia', 'capaDesarrolloAnalisis', 'capaCausaRaiz', 'ntDesc', 'capaObsCierre', 'capaCriterioEf', 'capaFechaEval', 'capaAccionEjecutadaEf', 'capaEficaz'].forEach(id => document.getElementById(id).value = '');
+      
+      document.getElementById('capaReincidente').value = 'No'; window.toggleCapaReincidente();
+      document.getElementById('impCalidad').value = 'Ninguno';
+      document.getElementById('impSeguridad').value = 'Sin riesgo';
+      document.getElementById('impValidacion').value = 'No afecta';
+      document.getElementById('capaIncumpleBpm').value = 'No Aplica';
+      document.getElementById('capaCriticidad').value = 'No Aplica';
+      
+      ['capaDocs', 'capaEquipos', 'capaAreas'].forEach(id => { const sel = document.getElementById(id); for(let i=0; i<sel.options.length; i++) sel.options[i].selected = false; });
+      
       window.currentCapaTasks = [];
       window.renderCapaPlanAccion();
+      window.aplicarReglasInterfazFases('BORRADOR');
       window.toggleModal('modalCapa', true);
     };
+
+    window.getMultiSelectValues = function(id) { const sel = document.getElementById(id); const res = []; for(let i=0; i<sel.options.length; i++) { if(sel.options[i].selected) res.push(sel.options[i].value); } return res; };
+    window.setMultiSelectValues = function(id, vals) { const sel = document.getElementById(id); for(let i=0; i<sel.options.length; i++) { sel.options[i].selected = vals.includes(sel.options[i].value); } };
 
     window.abrirModalEditarCapa = function(id) {
       window.poblarSelectsCapa();
       const c = window.cachedCapas.find(x => x.id === id);
       if(!c) return;
+
       document.getElementById('capaEditId').value = c.id;
-      document.getElementById('capaCodigo').value = c.codigo; // Editable
+      document.getElementById('capaCodigo').value = c.codigo; // Mantiene el código personalizado que guardaste
       document.getElementById('capaEstadoActual').value = c.estado;
+      
       document.getElementById('capaProcesoOrigen').value = c.procesoOrigen || '';
       document.getElementById('capaResponsable').value = c.responsableId || '';
       document.getElementById('capaFuente').value = c.fuente || '';
+      document.getElementById('capaReincidente').value = c.reincidente ? 'Sí' : 'No';
+      window.toggleCapaReincidente();
+      document.getElementById('capaPreviaId').value = c.ncPreviaId || '';
       document.getElementById('capaDescripcion').value = c.descripcion || '';
+      
+      document.getElementById('capaLotes').value = c.alcance?.lotes || '';
+      window.setMultiSelectValues('capaDocs', c.alcance?.docs || []);
+      window.setMultiSelectValues('capaEquipos', c.alcance?.equipos || []);
+      window.setMultiSelectValues('capaAreas', c.alcance?.areas || []);
+
+      document.getElementById('impCalidad').value = c.impacto?.calidad || 'Ninguno';
+      document.getElementById('impSeguridad').value = c.impacto?.seguridad || 'Sin riesgo';
+      document.getElementById('impValidacion').value = c.impacto?.validacion || 'No afecta';
+      document.getElementById('capaIncumpleBpm').value = c.incumplimientoBpm || 'No Aplica';
+      document.getElementById('capaCriticidad').value = c.criticidad || 'No Aplica';
+
+      document.getElementById('capaContencion').value = c.correccionInmediata || '';
+      document.getElementById('capaMetodologia').value = c.metodologiaCausa || '';
+      document.getElementById('capaDesarrolloAnalisis').value = c.analisisCausa || '';
       document.getElementById('capaCausaRaiz').value = c.causaRaiz || '';
+      
       window.currentCapaTasks = JSON.parse(JSON.stringify(c.planAccion || []));
       window.renderCapaPlanAccion();
+      
+      document.getElementById('capaObsCierre').value = c.observacionesCierre || '';
+      
+      document.getElementById('capaCriterioEf').value = c.efectividad?.criterio || '';
+      document.getElementById('capaFechaEval').value = c.efectividad?.fechaEvaluacion || '';
+      document.getElementById('capaAccionEjecutadaEf').value = c.efectividad?.accion || '';
+      document.getElementById('capaEficaz').value = c.efectividad?.eficaz || '';
+
+      window.aplicarReglasInterfazFases(c.estado);
       window.toggleModal('modalCapa', true);
     };
 
     window.guardarCapa = async function(silencioso = false) {
       const editId = document.getElementById('capaEditId').value;
-      const codigo = document.getElementById('capaCodigo').value.trim();
+      const codigo = document.getElementById('capaCodigo').value.trim(); // Captura tu código personalizado
+      const procOrig = document.getElementById('capaProcesoOrigen').value;
+      const respId = parseInt(document.getElementById('capaResponsable').value);
       const desc = document.getElementById('capaDescripcion').value.trim();
 
-      if(!silencioso && (!codigo || !desc)) { alert("Faltan datos obligatorios (Código y Descripción)."); return null; }
+      if(!silencioso && (!codigo || !procOrig || !respId || !desc)) { alert("Faltan datos obligatorios de Identificación (incluyendo el Consecutivo)."); return null; }
 
       const capaObj = {
         id: editId || `CAPA-${Date.now()}`,
         codigo: codigo,
         estado: document.getElementById('capaEstadoActual').value,
-        procesoOrigen: document.getElementById('capaProcesoOrigen').value,
-        responsableId: parseInt(document.getElementById('capaResponsable').value) || 1,
+        procesoOrigen: procOrig,
+        responsableId: respId,
         fuente: document.getElementById('capaFuente').value,
+        reincidente: document.getElementById('capaReincidente').value === 'Sí',
+        ncPreviaId: document.getElementById('capaPreviaId').value,
         descripcion: desc,
+        alcance: { lotes: document.getElementById('capaLotes').value, docs: window.getMultiSelectValues('capaDocs'), equipos: window.getMultiSelectValues('capaEquipos'), areas: window.getMultiSelectValues('capaAreas') },
+        impacto: { calidad: document.getElementById('impCalidad').value, seguridad: document.getElementById('impSeguridad').value, validacion: document.getElementById('impValidacion').value },
+        incumplimientoBpm: document.getElementById('capaIncumpleBpm').value,
+        criticidad: document.getElementById('capaCriticidad').value,
+        correccionInmediata: document.getElementById('capaContencion').value,
+        metodologiaCausa: document.getElementById('capaMetodologia').value,
+        analisisCausa: document.getElementById('capaDesarrolloAnalisis').value,
         causaRaiz: document.getElementById('capaCausaRaiz').value,
         planAccion: window.currentCapaTasks,
-        efectividad: { eficaz: '' }
+        observacionesCierre: document.getElementById('capaObsCierre').value,
+        efectividad: { criterio: document.getElementById('capaCriterioEf').value, fechaEvaluacion: document.getElementById('capaFechaEval').value, accion: document.getElementById('capaAccionEjecutadaEf').value, eficaz: document.getElementById('capaEficaz').value }
       };
 
       if (!editId) {
         window.cachedCapas.unshift(capaObj);
         document.getElementById('capaEditId').value = capaObj.id;
-        window.registrarAuditTrail('j.aguilar@pharmor.com.co', 'CREATE_CAPA', `Registró NC/CAPA con código [${codigo}]`);
+        window.registrarAuditTrail(window.activeGxpUser.correo, 'CREATE_CAPA', `Registró nueva NC/CAPA: ${codigo}`);
       } else {
         const idx = window.cachedCapas.findIndex(c => c.id === editId);
-        if(idx > -1) window.cachedCapas[idx] = capaObj;
+        if(idx > -1) {
+          window.cachedCapas[idx] = { ...window.cachedCapas[idx], ...capaObj };
+          if(!silencioso) window.registrarAuditTrail(window.activeGxpUser.correo, 'UPDATE_CAPA', `Actualizó NC/CAPA: ${codigo}`);
+        }
       }
+
+      await window.saveData();
       if(!silencioso) { alert("Progreso guardado."); window.renderCapaData(); }
       return capaObj;
     };
 
     window.firmarCapaFase = function(faseDestino) {
+      if(faseDestino === 'EN ANÁLISIS Y PLAN') {
+        const i1 = document.getElementById('capaIncumpleBpm').value;
+        if(i1 === '') { alert("Debe completar la Evaluación de Impacto y Criticidad."); return; }
+      }
+      if(faseDestino === 'PLAN APROBADO') {
+        if(!document.getElementById('capaCausaRaiz').value) { alert("Debe definir la Causa Raíz formalmente."); return; }
+        if(window.currentCapaTasks.length === 0) { alert("El Plan de Acción debe tener al menos una actividad."); return; }
+      }
+      if(faseDestino === 'CERRADO OPERATIVO') {
+        const incompletas = window.currentCapaTasks.filter(t => t.estado !== 'Cumple');
+        if(incompletas.length > 0) { alert("No puede cerrar operativamente si hay tareas sin cumplir."); return; }
+      }
+      if(faseDestino === 'CERRADO DEFINITIVO') {
+        if(!document.getElementById('capaEficaz').value) { alert("Debe definir si fue eficaz o no."); return; }
+      }
+
       document.getElementById('firmaCapaFaseDestino').value = faseDestino;
+      document.getElementById('lblFaseDestino').innerText = faseDestino;
+      document.getElementById('firmaCapaEmail').value = window.activeGxpUser.correo;
+      document.getElementById('firmaCapaPass').value = '';
       window.toggleModal('modalFirmaCapa', true);
     };
 
     window.ejecutarFirmaCapa = async function() {
+      const email = document.getElementById('firmaCapaEmail').value.trim();
       const pass = document.getElementById('firmaCapaPass').value.trim();
       const faseDest = document.getElementById('firmaCapaFaseDestino').value;
-      if(pass !== '123') { alert("Contraseña incorrecta (Part 11). Use '123'"); return; }
+
+      const user = window.cachedUsuarios.find(u => u.correo.toLowerCase() === email.toLowerCase() && u.password === pass);
+      if(!user) { alert("⛔ Credenciales inválidas Part 11."); return; }
+
+      const esAdmin = user.rolesIds.includes('rol_admin');
+      if (faseDest === 'PLAN APROBADO' && !user.rolesIds.includes('rol_revisor') && !esAdmin) { alert("Solo un Revisor Técnico o QA puede aprobar el Plan."); return; }
+      if (faseDest === 'CERRADO DEFINITIVO' && !esAdmin) { alert("Solo Aseguramiento de Calidad (QA Master) puede firmar el Cierre Definitivo."); return; }
+
       document.getElementById('capaEstadoActual').value = faseDest;
       await window.guardarCapa(true);
-      window.registrarAuditTrail('j.aguilar@pharmor.com.co', 'SIGN_CAPA', `Firmó fase a [${faseDest}]`);
+      window.registrarAuditTrail(user.correo, 'SIGN_CAPA', `Firmó transición de fase a [${faseDest}] en CAPA ${document.getElementById('capaCodigo').value}`);
+      
+      window.aplicarReglasInterfazFases(faseDest);
       window.renderCapaData();
       window.toggleModal('modalFirmaCapa', false);
-      alert("✅ Transacción firmada.");
+      alert(`✅ Trámite firmado con éxito. CAPA avanzada a: ${faseDest}`);
+    };
+
+    window.pasarFaseCapaSilencioso = async function(faseDest) {
+      document.getElementById('capaEstadoActual').value = faseDest;
+      await window.guardarCapa(true);
+      window.registrarAuditTrail(window.activeGxpUser.correo, 'CAPA_PHASE', `Cambió CAPA ${document.getElementById('capaCodigo').value} a ${faseDest}`);
+      window.aplicarReglasInterfazFases(faseDest);
+      window.renderCapaData();
     };
 
     window.agregarActividadCAPA = function() {
       const desc = document.getElementById('ntDesc').value.trim();
-      if(!desc) return;
-      window.currentCapaTasks.push({ descripcion: desc, responsableId: 1, fechaCompromiso: '2026-12-31', estado: 'Pendiente' });
+      const fecha = document.getElementById('ntFecha').value;
+      const resp = document.getElementById('ntResp').value;
+      if(!desc || !fecha || !resp) { alert("Faltan datos de la actividad."); return; }
+      
+      window.currentCapaTasks.push({
+        id: Date.now(),
+        descripcion: desc,
+        tipo: document.getElementById('ntTipo').value,
+        responsableId: parseInt(resp),
+        fechaCompromiso: fecha,
+        estado: 'Pendiente',
+        revisadoPor: '', fechaVerificacion: '', comentarios: '', prorrogas: []
+      });
+      
       document.getElementById('ntDesc').value = '';
+      document.getElementById('ntFecha').value = '';
       window.renderCapaPlanAccion();
     };
 
     window.renderCapaPlanAccion = function() {
       const tbody = document.getElementById('tbodyCapaPlan');
-      tbody.innerHTML = window.currentCapaTasks.map(t => `<tr><td class="p-2 border">${t.descripcion}</td><td class="p-2 border">Johan S.</td><td class="p-2 border">${t.fechaCompromiso}</td><td class="p-2 border">${t.estado}</td></tr>`).join('') || `<tr><td colspan="4" class="p-2 text-center text-slate-400">Sin actividades.</td></tr>`;
+      const estadoCapa = document.getElementById('capaEstadoActual').value;
+      const puedeVerificar = estadoCapa === 'EN EJECUCIÓN';
+
+      tbody.innerHTML = window.currentCapaTasks.map((t, idx) => {
+        const rEmp = window.cachedEmpleados.find(e => e.id === t.responsableId);
+        const stBadge = t.estado === 'Cumple' ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : (t.estado === 'No Cumple' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800');
+        
+        let btnAccion = '';
+        if(puedeVerificar) {
+           btnAccion = `<button type="button" onclick="window.abrirModalVerificarTarea(${idx})" class="bg-blue-600 text-white px-2 py-0.5 rounded shadow text-[10px] font-bold mt-1 block w-full">✅ Verificar</button>
+                        <button type="button" onclick="window.abrirModalProrroga(${idx})" class="bg-amber-100 text-amber-800 border border-amber-300 px-2 py-0.5 rounded shadow text-[10px] font-bold mt-1 block w-full">⏳ Prórroga</button>`;
+        }
+        
+        const prHtml = (t.prorrogas && t.prorrogas.length > 0) ? `<div class="text-[9px] text-amber-600 mt-1 font-mono leading-tight">Prórrogas: ${t.prorrogas.map(p=>p.fecha).join(', ')}</div>` : '';
+
+        return `<tr class="hover:bg-slate-50 border-b">
+          <td class="p-2 border font-semibold">${t.descripcion}</td>
+          <td class="p-2 border font-bold text-slate-600">${t.tipo}</td>
+          <td class="p-2 border">${rEmp ? rEmp.nombres : t.responsableId}</td>
+          <td class="p-2 border text-center font-mono font-bold">${t.fechaCompromiso}${prHtml}</td>
+          <td class="p-2 border text-center"><span class="${stBadge} px-2 py-0.5 rounded text-[10px] font-bold border block mb-1">${t.estado}</span><span class="text-[9px] text-slate-500">${t.revisadoPor ? 'Por: '+t.revisadoPor : ''}</span></td>
+          <td class="p-2 border text-center align-middle">${btnAccion}</td>
+        </tr>`;
+      }).join('') || `<tr><td colspan="6" class="p-3 text-center text-slate-400 italic">No hay actividades registradas en el plan.</td></tr>`;
+    };
+
+    window.abrirModalVerificarTarea = function(idx) {
+      document.getElementById('vtIndex').value = idx;
+      const t = window.currentCapaTasks[idx];
+      document.getElementById('vtDescText').innerText = `Actividad: ${t.descripcion}`;
+      document.getElementById('vtEstado').value = t.estado !== 'Pendiente' ? t.estado : 'Cumple';
+      document.getElementById('vtComentarios').value = t.comentarios || '';
+      window.toggleModal('modalCapaTarea', true);
+    };
+
+    window.guardarVerificacionTarea = async function() {
+      const idx = document.getElementById('vtIndex').value;
+      const t = window.currentCapaTasks[idx];
+      t.estado = document.getElementById('vtEstado').value;
+      t.comentarios = document.getElementById('vtComentarios').value;
+      t.revisadoPor = window.activeGxpUser.correo;
+      t.fechaVerificacion = new Date().toISOString().split('T')[0];
+      
+      await window.guardarCapa(true);
+      window.registrarAuditTrail(window.activeGxpUser.correo, 'VERIFY_TASK', `Verificó tarea del plan CAPA: ${t.estado}`);
+      window.renderCapaPlanAccion();
+      window.toggleModal('modalCapaTarea', false);
+    };
+
+    window.abrirModalProrroga = function(idx) {
+      document.getElementById('prTaskIndex').value = idx;
+      const t = window.currentCapaTasks[idx];
+      document.getElementById('prFechaActual').innerText = t.fechaCompromiso;
+      document.getElementById('prNuevaFecha').value = '';
+      document.getElementById('prJustificacion').value = '';
+      window.toggleModal('modalCapaProrroga', true);
+    };
+
+    window.guardarProrroga = async function() {
+      const idx = document.getElementById('prTaskIndex').value;
+      const t = window.currentCapaTasks[idx];
+      const nuevaF = document.getElementById('prNuevaFecha').value;
+      const just = document.getElementById('prJustificacion').value;
+      
+      if(!nuevaF || !just) { alert("Datos incompletos para la prórroga."); return; }
+      
+      if(!t.prorrogas) t.prorrogas = [];
+      t.prorrogas.push({ fechaPrevia: t.fechaCompromiso, fecha: nuevaF, justificacion: just, aprobadaPor: window.activeGxpUser.correo });
+      t.fechaCompromiso = nuevaF;
+
+      await window.guardarCapa(true);
+      window.registrarAuditTrail(window.activeGxpUser.correo, 'CAPA_EXTENSION', `Aprobó prórroga en CAPA hasta ${nuevaF}. Justificación: ${just}`);
+      window.renderCapaPlanAccion();
+      window.toggleModal('modalCapaProrroga', false);
+    };
+
+    window.setEvalDate = function(dias) {
+      const d = new Date(); d.setDate(d.getDate() + dias);
+      document.getElementById('capaFechaEval').value = d.toISOString().split('T')[0];
+    };
+
+    window.alertaIneficaciaCAPA = function(val) {
+      if(val === 'No') { alert("⚠️ ALERTA GxP: Al marcar la CAPA como NO EFICAZ, el sistema automáticamente cambiará el estado a REABIERTO al guardar, exigiendo un nuevo análisis de causa raíz y plan de acción."); }
+    };
+
+    window.exportarExcelCAPA = function() {
+      let html = `<table><thead><tr><th>ID</th><th>Descripción</th><th>Proceso</th><th>Fuente</th><th>Criticidad</th><th>Responsable</th><th>Estado</th><th>Causa Raíz</th><th>Eficaz</th></tr></thead><tbody>`;
+      window.cachedCapas.forEach(c => {
+        const pOrigen = window.cachedProcesos.find(p => p.id === c.procesoOrigen);
+        const respEmp = window.cachedEmpleados.find(e => e.id === c.responsableId);
+        html += `<tr><td>${c.codigo}</td><td>${c.descripcion}</td><td>${pOrigen?pOrigen.nombre:''}</td><td>${c.fuente}</td><td>${c.criticidad}</td><td>${respEmp?respEmp.nombres:''}</td><td>${c.estado}</td><td>${c.causaRaiz||''}</td><td>${c.efectividad?.eficaz||''}</td></tr>`;
+      });
+      html += `</tbody></table>`;
+      const blob = new Blob(['\ufeff' + html], { type: 'application/vnd.ms-excel' });
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `Matriz_CAPA_${new Date().toISOString().split('T')[0]}.xls`; a.click();
+    };
+
+    window.renderAllData = function() {
+      if(window.renderConfigTablas) window.renderConfigTablas();
+      if(window.renderMetrologiaData) window.renderMetrologiaData();
+      window.renderCapaData();
     };
 
     document.addEventListener('DOMContentLoaded', () => { 
-      const btn = document.getElementById('btnLogin');
-      btn.innerText = "Iniciar Sesión Segura"; 
-      btn.disabled = false; 
-      btn.classList.remove('bg-slate-400'); 
-      btn.classList.add('bg-cyan-600');
+      document.getElementById('loginPassword').addEventListener('keypress', function (e) { if (e.key === 'Enter') window.ejecutarLoginPrincipal(); }); 
+      document.getElementById('loginEmail').addEventListener('keypress', function (e) { if (e.key === 'Enter') document.getElementById('loginPassword').focus(); }); 
     });
   </script>
 </body>
