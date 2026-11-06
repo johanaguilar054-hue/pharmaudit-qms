@@ -117,7 +117,7 @@
       <button data-tab="copias" onclick="window.switchTab('copias', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 text-amber-300 font-bold cursor-pointer emisor-only">📋 Copias Controladas</button>
       <button data-tab="desviaciones" onclick="window.switchTab('desviaciones', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">⚠️ Desviaciones & NC</button>
       <button data-tab="capa" onclick="window.switchTab('capa', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">☑️ Módulo CAPA</button>
-      <button data-tab="metrologia" onclick="window.switchTab('metrologia', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 text-emerald-300 font-bold cursor-pointer">🛠️ Equipos & Calibración</button>
+      <button data-tab="metrologia" onclick="window.switchTab('metrologia', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 text-emerald-300 font-bold cursor-pointer">🛠️ Mantenimiento & Metrología</button>
       <button data-tab="firmas" onclick="window.switchTab('firmas', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">✍️ Firmas Part 11</button>
       <button data-tab="audit" onclick="window.switchTab('audit', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 cursor-pointer">📜 Audit Trail</button>
       <button data-tab="admin" onclick="window.switchTab('admin', this)" class="nav-btn px-3 py-2 rounded-lg transition whitespace-nowrap hover:bg-slate-700 bg-slate-700 text-cyan-300 cursor-pointer master-only">⚙️ Configuraciones GxP</button>
@@ -218,13 +218,14 @@
       <div id="view-desviaciones" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-3"><h2 class="font-bold text-sm">Desviaciones & NC</h2></div>
       <div id="view-capa" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4"><h2 class="font-bold text-sm">Planes CAPA</h2></div>
 
-      <!-- MÓDULO: EQUIPOS & CALIBRACIÓN (METROLOGÍA) -->
+      <!-- MÓDULO: EQUIPOS, CALIBRACIÓN & INFRAESTRUCTURA -->
       <div id="view-metrologia" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-4">
         <div class="flex space-x-1 border-b pb-2 overflow-x-auto text-xs font-semibold">
-          <button onclick="window.switchMetroSubtab('dashboard', this)" class="metro-subtab-btn px-3 py-1.5 rounded-lg bg-emerald-600 text-white cursor-pointer">📊 Dashboard Equipos</button>
+          <button onclick="window.switchMetroSubtab('dashboard', this)" class="metro-subtab-btn px-3 py-1.5 rounded-lg bg-emerald-600 text-white cursor-pointer">📊 Dashboard Equipos &amp; Infra</button>
           <button onclick="window.switchMetroSubtab('maestro', this)" class="metro-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">🖥️ Maestro de Equipos (<span id="cnt-metro-total">0</span>)</button>
           <button onclick="window.switchMetroSubtab('calibraciones', this)" class="metro-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">📐 Calibraciones (<span id="cnt-metro-calib">0</span>)</button>
-          <button onclick="window.switchMetroSubtab('mantenimiento', this)" class="metro-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">🛠️ Mantenimiento (<span id="cnt-metro-maint">0</span>)</button>
+          <button onclick="window.switchMetroSubtab('mantenimiento', this)" class="metro-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">🛠️ Mantenimiento Equipos (<span id="cnt-metro-maint">0</span>)</button>
+          <button onclick="window.switchMetroSubtab('infraestructura', this)" class="metro-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer text-cyan-800">🏛️ Mantenimiento Infraestructura (<span id="cnt-metro-infra">0</span>)</button>
         </div>
 
         <!-- SUBTAB: DASHBOARD Y ALERTAS METROLOGÍA -->
@@ -234,7 +235,7 @@
             <div class="bg-rose-50 p-3 rounded-xl border border-rose-200 shadow-xs"><div class="text-rose-700 font-sans font-semibold">Calib. Vencidas / OOT</div><div id="kpi-eq-cal-vencidas" class="text-xl font-bold text-rose-700 mt-1">0</div></div>
             <div class="bg-amber-50 p-3 rounded-xl border border-amber-200 shadow-xs"><div class="text-amber-800 font-sans font-semibold">Calib. Por Vencer (&lt;30d)</div><div id="kpi-eq-cal-porvencer" class="text-xl font-bold text-amber-700 mt-1">0</div></div>
             <div class="bg-purple-50 p-3 rounded-xl border border-purple-200 shadow-xs"><div class="text-purple-800 font-sans font-semibold">Mantenimiento Vencido</div><div id="kpi-eq-maint-vencidos" class="text-xl font-bold text-purple-700 mt-1">0</div></div>
-            <div class="bg-emerald-50 p-3 rounded-xl border border-emerald-200 shadow-xs"><div class="text-emerald-800 font-sans font-semibold">Equipos Operativos</div><div id="kpi-eq-operativos" class="text-xl font-bold text-emerald-700 mt-1">0</div></div>
+            <div class="bg-cyan-50 p-3 rounded-xl border border-cyan-200 shadow-xs"><div class="text-cyan-800 font-sans font-semibold">Áreas Infraestructura</div><div id="kpi-infra-operativos" class="text-xl font-bold text-cyan-700 mt-1">0</div></div>
           </div>
 
           <div class="border rounded-xl p-3.5 bg-slate-50 space-y-2">
@@ -311,10 +312,10 @@
           </div>
         </div>
 
-        <!-- SUBTAB: MANTENIMIENTO -->
+        <!-- SUBTAB: MANTENIMIENTO EQUIPOS -->
         <div id="metro-mantenimiento" class="metro-subtab-content space-y-3">
           <div class="flex justify-between items-center flex-wrap gap-2 text-xs">
-            <button type="button" onclick="window.abrirModalNuevoMantenimiento()" class="bg-purple-700 hover:bg-purple-800 text-white px-3 py-1.5 rounded-lg font-bold shadow cursor-pointer">+ Registrar Mantenimiento</button>
+            <button type="button" onclick="window.abrirModalNuevoMantenimiento()" class="bg-purple-700 hover:bg-purple-800 text-white px-3 py-1.5 rounded-lg font-bold shadow cursor-pointer">+ Registrar Mantenimiento Equipo</button>
             <button type="button" onclick="window.exportarExcelMantenimientos()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow cursor-pointer">📊 Exportar Mantenimientos</button>
           </div>
           <div class="overflow-x-auto">
@@ -332,6 +333,61 @@
               </thead>
               <tbody id="table-mantenimientos" class="divide-y divide-slate-100"></tbody>
             </table>
+          </div>
+        </div>
+
+        <!-- SUBTAB: MANTENIMIENTO DE INFRAESTRUCTURA (NUEVO) -->
+        <div id="metro-infraestructura" class="metro-subtab-content space-y-4">
+          <div class="flex justify-between items-center flex-wrap gap-2 text-xs">
+            <div class="flex space-x-2">
+              <button type="button" onclick="window.abrirModalNuevaInfraestructura()" class="bg-cyan-700 hover:bg-cyan-800 text-white px-3 py-1.5 rounded-lg font-bold shadow cursor-pointer">+ Registrar Elemento de Infraestructura</button>
+              <button type="button" onclick="window.abrirModalNuevoMantenimientoInfra()" class="bg-blue-700 hover:bg-blue-800 text-white px-3 py-1.5 rounded-lg font-bold shadow cursor-pointer">🛠️ Reportar Reparación / Mantenimiento Infraestructura</button>
+            </div>
+            <button type="button" onclick="window.exportarExcelInfraestructura()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow cursor-pointer">📊 Exportar Infraestructura Excel</button>
+          </div>
+
+          <!-- Tabla 1: Listado Maestro de Infraestructura por Código de Área -->
+          <div class="border rounded-xl p-3 bg-slate-50 space-y-2">
+            <h3 class="font-bold text-xs text-slate-800 flex items-center space-x-1.5"><span>🏛️</span><span>Maestro de Infraestructura y Servicios Críticos por Área</span></h3>
+            <div class="overflow-x-auto">
+              <table class="w-full border-collapse text-left text-xs bg-white">
+                <thead>
+                  <tr class="bg-slate-100 text-slate-700 border-b font-bold">
+                    <th class="p-2 border">Código Infra.</th>
+                    <th class="p-2 border">Área / Proceso (Código Maestro)</th>
+                    <th class="p-2 border">Elemento / Instalación</th>
+                    <th class="p-2 border">Ubicación Física</th>
+                    <th class="p-2 border">Frecuencia Maint.</th>
+                    <th class="p-2 border">Próximo Maint.</th>
+                    <th class="p-2 border text-center">Estado GxP</th>
+                    <th class="p-2 border text-center">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="table-maestro-infraestructura" class="divide-y divide-slate-100"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Tabla 2: Historial de Reparaciones y Mantenimientos de Infraestructura -->
+          <div class="border rounded-xl p-3 bg-slate-50 space-y-2">
+            <h3 class="font-bold text-xs text-slate-800 flex items-center space-x-1.5"><span>📜</span><span>Historial de Intervenciones &amp; Reparaciones de Infraestructura</span></h3>
+            <div class="overflow-x-auto">
+              <table class="w-full border-collapse text-left text-xs bg-white">
+                <thead>
+                  <tr class="bg-slate-100 text-slate-700 border-b font-bold">
+                    <th class="p-2 border">ID Registro</th>
+                    <th class="p-2 border">Código Infraestructura / Área</th>
+                    <th class="p-2 border">Tipo Intervención</th>
+                    <th class="p-2 border">Fecha Intervención</th>
+                    <th class="p-2 border">Técnico / Proveedor</th>
+                    <th class="p-2 border">Detalles de Reparación</th>
+                    <th class="p-2 border text-center">Evidencia Fotográfica</th>
+                    <th class="p-2 border text-center">Estado</th>
+                  </tr>
+                </thead>
+                <tbody id="table-mantenimientos-infraestructura" class="divide-y divide-slate-100"></tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
@@ -764,7 +820,7 @@
     </div>
   </div>
 
-  <!-- MODAL: REGISTRAR MANTENIMIENTO CON SUBIDA DE FOTOS -->
+  <!-- MODAL: REGISTRAR MANTENIMIENTO EQUIPOS -->
   <div id="modalMantenimiento" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
     <div class="bg-white rounded-xl max-w-lg w-full p-5 border shadow-2xl space-y-4 text-xs max-h-[90vh] overflow-y-auto">
       <div class="border-b pb-2 flex justify-between items-center">
@@ -819,11 +875,97 @@
     </div>
   </div>
 
-  <!-- MODAL: GALERÍA DE FOTOS DE MANTENIMIENTO -->
+  <!-- MODAL: REGISTRAR / EDITAR INFRAESTRUCTURA (NUEVO) -->
+  <div id="modalInfraestructura" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl max-w-lg w-full p-5 border shadow-2xl space-y-4 text-xs max-h-[90vh] overflow-y-auto">
+      <div class="border-b pb-2 flex justify-between items-center">
+        <h3 class="font-bold text-sm text-cyan-900" id="modalInfraTitle">🏛️ Registrar / Editar Elemento de Infraestructura</h3>
+        <button onclick="window.toggleModal('modalInfraestructura', false)" class="text-slate-400 font-bold text-lg">✕</button>
+      </div>
+      <input type="hidden" id="infraEditId" value="">
+      <div class="space-y-3">
+        <div class="grid grid-cols-2 gap-2">
+          <div><label class="block font-semibold mb-1">Código ID *</label><input type="text" id="infraCodigo" placeholder="INF-QA-01" class="w-full p-2 border rounded font-mono font-bold bg-slate-50 uppercase" /></div>
+          <div><label class="block font-semibold mb-1">Área Perteneciente (Maestro) *</label><select id="infraAreaSelect" class="w-full p-2 border rounded bg-slate-50 font-mono"></select></div>
+        </div>
+        <div><label class="block font-semibold mb-1">Nombre / Instalación / Servicio *</label><input type="text" id="infraNombre" placeholder="Sistema HVAC Sala Limpia QC" class="w-full p-2 border rounded" /></div>
+        <div><label class="block font-semibold mb-1">Ubicación Física *</label><input type="text" id="infraUbicacion" placeholder="Planta 2 - Zona QC" class="w-full p-2 border rounded" /></div>
+        <div class="grid grid-cols-2 gap-2">
+          <div><label class="block font-semibold mb-1">Frecuencia Maint. (Meses)</label><input type="number" id="infraFrecuencia" min="1" value="6" class="w-full p-2 border rounded font-mono" /></div>
+          <div><label class="block font-semibold mb-1">Último Mantenimiento</label><input type="date" id="infraLastDate" class="w-full p-2 border rounded font-mono" /></div>
+        </div>
+        <div>
+          <label class="block font-semibold mb-1">Estado GxP *</label>
+          <select id="infraEstadoSelect" class="w-full p-2 border rounded font-bold">
+            <option value="Operativo">Operativo</option>
+            <option value="En Mantenimiento">En Mantenimiento</option>
+            <option value="En Reparación">En Reparación</option>
+            <option value="Fuera de Servicio">Fuera de Servicio</option>
+          </select>
+        </div>
+      </div>
+      <div class="flex justify-end space-x-2 pt-3 border-t">
+        <button type="button" onclick="window.toggleModal('modalInfraestructura', false)" class="px-3 py-1.5 border rounded cursor-pointer">Cancelar</button>
+        <button type="button" onclick="window.guardarInfraestructuraCompleta()" class="px-4 py-1.5 bg-cyan-700 text-white rounded font-bold shadow cursor-pointer">Guardar Infraestructura</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: REPORTAR REPARACIÓN / MANTENIMIENTO INFRAESTRUCTURA (NUEVO) -->
+  <div id="modalMantenimientoInfra" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl max-w-lg w-full p-5 border shadow-2xl space-y-4 text-xs max-h-[90vh] overflow-y-auto">
+      <div class="border-b pb-2 flex justify-between items-center">
+        <h3 class="font-bold text-sm text-blue-900">🛠️ Reporte de Mantenimiento / Reparación de Infraestructura</h3>
+        <button onclick="window.toggleModal('modalMantenimientoInfra', false)" class="text-slate-400 font-bold text-lg">✕</button>
+      </div>
+      <div class="space-y-3">
+        <div>
+          <label class="block font-semibold mb-1">Elemento de Infraestructura *</label>
+          <select id="mntInfraSelect" class="w-full p-2 border rounded font-mono bg-slate-50 font-bold"></select>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block font-semibold mb-1">Tipo Intervención *</label>
+            <select id="mntInfraTipo" class="w-full p-2 border rounded font-bold">
+              <option value="Preventivo">Preventivo Programado</option>
+              <option value="Correctivo">Reparación Correctiva</option>
+              <option value="Mejora Locativa">Mejora Locativa</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-semibold mb-1">Estado Intervención *</label>
+            <select id="mntInfraEstado" class="w-full p-2 border rounded font-bold">
+              <option value="Completado">Completado</option>
+              <option value="En Ejecución">En Ejecución</option>
+              <option value="Pendiente">Pendiente</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div><label class="block font-semibold mb-1">Fecha Intervención *</label><input type="date" id="mntInfraFecha" class="w-full p-2 border rounded font-mono" /></div>
+          <div><label class="block font-semibold mb-1">Técnico / Empresa Contratista *</label><input type="text" id="mntInfraTecnico" placeholder="Servicios Generales / Contratista" class="w-full p-2 border rounded" /></div>
+        </div>
+        <div><label class="block font-semibold mb-1">Detalles de la Reparación / Obra Ejecutada *</label><textarea id="mntInfraDetalles" rows="3" class="w-full p-2 border rounded bg-slate-50" placeholder="Descripción detallada del trabajo realizado..."></textarea></div>
+        
+        <!-- SUBIDA DE FOTOS EVIDENCIA INFRAESTRUCTURA -->
+        <div class="border-t pt-2 bg-blue-50/50 p-2.5 rounded-lg border border-blue-200">
+          <label class="block font-bold text-blue-900 mb-1">📷 Fotos Evidencia Reparación (Subir Fotos &lt; 1MB c/u)</label>
+          <input type="file" id="mntInfraFotosFile" accept="image/*" multiple class="w-full p-1.5 border rounded bg-white font-mono text-[11px]" />
+          <p class="text-[10px] text-blue-700 mt-1">Adjunte fotos antes/después del trabajo locativo o técnico.</p>
+        </div>
+      </div>
+      <div class="flex justify-end space-x-2 pt-3 border-t">
+        <button type="button" onclick="window.toggleModal('modalMantenimientoInfra', false)" class="px-3 py-1.5 border rounded cursor-pointer">Cancelar</button>
+        <button type="button" onclick="window.guardarMantenimientoInfraCompleto()" class="px-4 py-1.5 bg-blue-700 text-white rounded font-bold shadow cursor-pointer">Guardar Reporte Infraestructura</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: GALERÍA DE FOTOS -->
   <div id="modalGaleriaFotos" class="modal-backdrop fixed inset-0 bg-slate-900/80 backdrop-blur-sm items-center justify-center p-4 z-50">
     <div class="bg-white rounded-xl max-w-2xl w-full p-4 border shadow-2xl space-y-3 flex flex-col max-h-[85vh]">
       <div class="border-b pb-2 flex justify-between items-center shrink-0">
-        <h3 class="font-bold text-sm text-slate-800" id="galeriaTitle">📷 Evidencia Fotográfica de Mantenimiento</h3>
+        <h3 class="font-bold text-sm text-slate-800" id="galeriaTitle">📷 Evidencia Fotográfica</h3>
         <button type="button" onclick="window.toggleModal('modalGaleriaFotos', false)" class="text-slate-400 font-bold text-xl px-2 cursor-pointer">✕</button>
       </div>
       <div id="galeriaBody" class="grid grid-cols-1 md:grid-cols-2 gap-3 overflow-y-auto p-2"></div>
@@ -935,10 +1077,10 @@
   <div id="modalAbout" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
     <div class="bg-white rounded-xl max-w-sm w-full p-5 border shadow-xl space-y-3 text-xs text-center">
       <div class="text-3xl font-extrabold text-slate-900 tracking-tight mt-2">🛡️ PharmAudit</div>
-      <p class="text-slate-500 font-mono mb-2">v1.3.0 (Authenticated QR &amp; Maintenance Photos)</p>
+      <p class="text-slate-500 font-mono mb-2">v1.4.0 (Infraestructure Maintenance &amp; Equipment QMS)</p>
       <div class="bg-slate-50 p-3 rounded text-left space-y-2 border text-slate-700">
         <p><strong>Licencia:</strong> Pharmor S.A.S.</p>
-        <p><strong>Módulo:</strong> eQMS, Document Control, QR Verification &amp; Metrology ERP</p>
+        <p><strong>Módulo:</strong> eQMS, Document Control, Metrology &amp; Infrastructure ERP</p>
         <p><strong>Cumplimiento Normativo:</strong></p>
         <ul class="list-disc pl-5">
           <li>FDA 21 CFR Part 11 (Firmas y Audit Trail)</li>
@@ -981,7 +1123,7 @@
       });
     };
 
-    // FUNCIÓN HELPER: GENERACIÓN DE QR EN BASE64
+    // GENERACIÓN DE QR EN BASE64
     window.generarQRCodeBase64 = function(texto) {
       return new Promise((resolve) => {
         const container = document.createElement('div');
@@ -1027,7 +1169,7 @@
     window.cachedUsuarios = [ { id: 1, empleadoId: 1, correo: 'j.aguilar@pharmor.com.co', password: '123', rolesIds: ['rol_admin'], areasAsignadas: ['ar_qa', 'ar_qc', 'ar_prod'], estado: 'Activo' } ];
     window.cachedDocs = []; window.cachedCopias = []; window.cachedObsoletos = []; window.auditTrailLogs = [];
 
-    // DATOS MAESTROS DE METROLOGÍA Y EQUIPOS
+    // DATOS MAESTROS DE METROLOGÍA, EQUIPOS E INFRAESTRUCTURA
     window.cachedEquipos = [
       { id: 'EQ-001', tag: 'EQ-001', nombre: 'Balanza Analítica Sartorius', tipo: 'Instrumento', criticidad: 'Crítico', fabricante: 'Sartorius', modelo: 'Cubis II', serie: 'SN-987654', areaId: 'ar_qc', procesoId: 'pr_gestion', ubicacion: 'Lab QC - Sala 2', responsable: 'Johan Aguilar', estado: 'Operativo', requiereCalibracion: true, intervaloCalMonths: 6, requiereMantenimiento: true, intervaloMantenimientoMonths: 12, fechaUltimaCal: '2026-05-10', fechaProximaCal: '2026-11-10', fechaUltimoMaint: '2026-01-15', fechaProximoMaint: '2027-01-15', adjuntoUrl: null }
     ];
@@ -1036,6 +1178,14 @@
     ];
     window.cachedMantenimientos = [
       { id: 'MNT-001', equipoId: 'EQ-001', tipo: 'Preventivo', estado: 'Completado', fechaProgramada: '2026-01-15', fechaEjecucion: '2026-01-15', realizadoPor: 'Servicio Técnico Sartorius', tiempoParo: 2, causaFalla: '', repuestos: 'Filtro de aire, celda de peso', observaciones: 'Mantenimiento preventivo anual verificado.', fotosUrls: [] }
+    ];
+
+    // INFRAESTRUCTURA Y MANTENIMIENTO LOCATIVO
+    window.cachedInfraestructura = [
+      { id: 'INF-001', codigo: 'INF-QC-01', areaId: 'ar_qc', nombre: 'Sistema HVAC Sala Limpia QC', ubicacion: 'Planta 2 - Lab QC', frecuenciaMonths: 6, fechaUltimoMaint: '2026-02-10', estado: 'Operativo' }
+    ];
+    window.cachedMantenimientosInfra = [
+      { id: 'MNT-INF-001', infraId: 'INF-001', tipo: 'Preventivo', fecha: '2026-02-10', tecnico: 'Mantenimiento HVAC S.A.S.', detalles: 'Cambio de filtros HEPA y calibración de caudal de aire en sala QC.', estado: 'Completado', fotosUrls: [] }
     ];
 
     window.togglePasswordVisibility = function(inputId, iconId) {
@@ -1103,7 +1253,9 @@
         audit: window.auditTrailLogs,
         equipos: window.cachedEquipos,
         calibraciones: window.cachedCalibraciones,
-        mantenimientos: window.cachedMantenimientos
+        mantenimientos: window.cachedMantenimientos,
+        infraestructura: window.cachedInfraestructura,
+        mantenimientosInfra: window.cachedMantenimientosInfra
       };
       try {
         const res = await fetch(`${SUPABASE_URL}/rest/v1/erp_state`, { method: 'POST', headers: { ...HEADERS, 'Prefer': 'resolution=merge-duplicates' }, body: JSON.stringify({ id: 1, app_data: dbState }) });
@@ -1153,6 +1305,8 @@
             if (dbState.equipos) window.cachedEquipos = dbState.equipos;
             if (dbState.calibraciones) window.cachedCalibraciones = dbState.calibraciones;
             if (dbState.mantenimientos) window.cachedMantenimientos = dbState.mantenimientos;
+            if (dbState.infraestructura) window.cachedInfraestructura = dbState.infraestructura;
+            if (dbState.mantenimientosInfra) window.cachedMantenimientosInfra = dbState.mantenimientosInfra;
           }
         }
       } catch(e) { console.error("Accediendo en modo local por fallo de red:", e); } finally { window.activarBotonLogin(); }
@@ -1226,7 +1380,7 @@
       window.actualizarAvatarUI(emp);
       window.renderAllData();
 
-      // Redirección si se inició sesión desde un escaneo QR de equipo
+      // Redirección si se inició sesión desde un escaneo QR
       if (window.pendingScanEquipoId) {
         const eqToOpen = window.pendingScanEquipoId;
         window.pendingScanEquipoId = null;
@@ -1404,7 +1558,7 @@
       window.toggleModal('modalNotifications', true); 
     };
 
-    // LOGICA PRINCIPAL DEL MÓDULO METROLOGÍA Y EQUIPOS
+    // LOGICA DEL MÓDULO METROLOGÍA, EQUIPOS E INFRAESTRUCTURA
     window.calcularEstadoCalibracion = function(eq) {
       if (!eq.requiereCalibracion) return { label: 'N/A', badge: 'bg-slate-100 text-slate-600 border-slate-300' };
       if (!eq.fechaProximaCal) return { label: 'Sin Programar', badge: 'bg-amber-100 text-amber-800 border-amber-300' };
@@ -1440,10 +1594,13 @@
       const equipos = window.cachedEquipos || [];
       const calibraciones = window.cachedCalibraciones || [];
       const mantenimientos = window.cachedMantenimientos || [];
+      const infra = window.cachedInfraestructura || [];
+      const maintsInfra = window.cachedMantenimientosInfra || [];
 
       document.getElementById('cnt-metro-total').innerText = equipos.length;
       document.getElementById('cnt-metro-calib').innerText = calibraciones.length;
       document.getElementById('cnt-metro-maint').innerText = mantenimientos.length;
+      document.getElementById('cnt-metro-infra').innerText = infra.length;
 
       let calVencidasCount = 0;
       let calPorVencerCount = 0;
@@ -1464,7 +1621,7 @@
       document.getElementById('kpi-eq-cal-vencidas').innerText = calVencidasCount;
       document.getElementById('kpi-eq-cal-porvencer').innerText = calPorVencerCount;
       document.getElementById('kpi-eq-maint-vencidos').innerText = maintVencidosCount;
-      document.getElementById('kpi-eq-operativos').innerText = operativosCount;
+      document.getElementById('kpi-infra-operativos').innerText = infra.length;
 
       // Render Alertas
       const alertas = equipos.filter(eq => {
@@ -1513,7 +1670,7 @@
         return `<tr class="hover:bg-slate-50"><td class="p-2 border font-bold text-slate-700">${c.id}</td><td class="p-2 border font-bold text-cyan-800">${eq ? eq.tag + ' - ' + eq.nombre : c.equipoId}</td><td class="p-2 border">${c.fecha}</td><td class="p-2 border font-sans">${c.realizadaPor}</td><td class="p-2 border"><span class="${resBadge} px-2 py-0.5 rounded text-[10px] border">${c.resultado}</span></td><td class="p-2 border font-mono">${c.proximaFecha}</td><td class="p-2 border text-center">${certBtn}</td><td class="p-2 border text-center font-sans text-[11px] text-cyan-800 font-bold">✍️ ${c.firmadaPor || 'Part 11'}</td></tr>`;
       }).join('') : `<tr><td colspan="8" class="p-4 text-center text-slate-400">Sin calibraciones registradas.</td></tr>`;
 
-      // Render Mantenimientos
+      // Render Mantenimientos Equipos
       document.getElementById('table-mantenimientos').innerHTML = mantenimientos.length ? mantenimientos.map(m => {
         const eq = equipos.find(e => e.id === m.equipoId);
         const fotosBtn = (m.fotosUrls && m.fotosUrls.length > 0)
@@ -1522,6 +1679,189 @@
 
         return `<tr class="hover:bg-slate-50 text-xs"><td class="p-2 border font-mono font-bold text-purple-900">${m.id}</td><td class="p-2 border font-semibold text-slate-800">${eq ? eq.tag + ' - ' + eq.nombre : m.equipoId}</td><td class="p-2 border"><span class="bg-purple-100 text-purple-800 px-2 py-0.5 rounded text-[10px] font-bold border border-purple-200">${m.tipo}</span></td><td class="p-2 border font-mono text-[11px]">Prog: ${m.fechaProgramada || '-'}<br>Ejec: ${m.fechaEjecucion || '-'}</td><td class="p-2 border">${m.realizadoPor}</td><td class="p-2 border text-[11px]">Paro: ${m.tiempoParo}h<br><span class="text-slate-500">${m.repuestos ? 'Repuestos: ' + m.repuestos : ''}</span>${fotosBtn}</td><td class="p-2 border text-center"><span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-[10px] font-bold border border-emerald-300">${m.estado}</span></td></tr>`;
       }).join('') : `<tr><td colspan="7" class="p-4 text-center text-slate-400">Sin mantenimientos registrados.</td></tr>`;
+
+      // Render Maestro de Infraestructura
+      document.getElementById('table-maestro-infraestructura').innerHTML = infra.length ? infra.map(item => {
+        const area = window.cachedAreas.find(a => a.id === item.areaId);
+        let proxDateStr = 'N/A';
+        if (item.fechaUltimoMaint && item.frecuenciaMonths) {
+          const d = new Date(item.fechaUltimoMaint); d.setMonth(d.getMonth() + parseInt(item.frecuenciaMonths));
+          proxDateStr = d.toISOString().split('T')[0];
+        }
+        return `<tr class="hover:bg-slate-50"><td class="p-2 border font-mono font-bold text-cyan-800">${item.codigo}</td><td class="p-2 border font-semibold">${area ? area.nombre + ' ('+area.id+')' : 'N/A'}</td><td class="p-2 border font-bold text-slate-800">${item.nombre}</td><td class="p-2 border">${item.ubicacion}</td><td class="p-2 border font-mono">${item.frecuenciaMonths} meses</td><td class="p-2 border font-mono text-cyan-800 font-bold">${proxDateStr}</td><td class="p-2 border text-center"><span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-[10px] font-bold border border-emerald-300">${item.estado}</span></td><td class="p-2 border text-center space-x-1"><button onclick="window.abrirModalNuevoMantenimientoInfra('${item.id}')" class="bg-blue-600 text-white px-2 py-1 rounded font-bold text-[10px] cursor-pointer">🛠️ Reparar</button><button onclick="window.abrirModalEditarInfraestructura('${item.id}')" class="bg-cyan-50 border border-cyan-300 px-2 py-1 rounded font-bold text-cyan-800 text-[10px] cursor-pointer">✏️</button></td></tr>`;
+      }).join('') : `<tr><td colspan="8" class="p-4 text-center text-slate-400">Sin elementos de infraestructura registrados.</td></tr>`;
+
+      // Render Mantenimiento / Reparaciones de Infraestructura
+      document.getElementById('table-mantenimientos-infraestructura').innerHTML = maintsInfra.length ? maintsInfra.map(mi => {
+        const itemInfra = infra.find(i => i.id === mi.infraId);
+        const area = itemInfra ? window.cachedAreas.find(a => a.id === itemInfra.areaId) : null;
+        const fotosBtn = (mi.fotosUrls && mi.fotosUrls.length > 0)
+          ? `<button onclick="window.verFotosMantenimientoInfra('${mi.id}')" class="bg-blue-100 hover:bg-blue-200 border border-blue-300 text-blue-900 px-2 py-0.5 rounded font-bold text-[10px] flex items-center space-x-1 mx-auto cursor-pointer"><span>📷</span><span>Ver Fotos (${mi.fotosUrls.length})</span></button>`
+          : `<span class="text-slate-400 text-[10px]">Sin fotos</span>`;
+
+        return `<tr class="hover:bg-slate-50 text-xs"><td class="p-2 border font-mono font-bold text-blue-900">${mi.id}</td><td class="p-2 border font-semibold text-slate-800">${itemInfra ? itemInfra.codigo + ' - ' + itemInfra.nombre : mi.infraId}<br><span class="text-[10px] text-cyan-800 font-mono">${area ? area.nombre : ''}</span></td><td class="p-2 border"><span class="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-[10px] font-bold border border-blue-200">${mi.tipo}</span></td><td class="p-2 border font-mono text-[11px]">${mi.fecha}</td><td class="p-2 border font-sans">${mi.tecnico}</td><td class="p-2 border text-slate-700">${mi.detalles}</td><td class="p-2 border text-center">${fotosBtn}</td><td class="p-2 border text-center"><span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-[10px] font-bold border border-emerald-300">${mi.estado}</span></td></tr>`;
+      }).join('') : `<tr><td colspan="8" class="p-4 text-center text-slate-400">Sin historial de reparaciones de infraestructura.</td></tr>`;
+    };
+
+    // FUNCIONES MAESTRO DE INFRAESTRUCTURA
+    window.abrirModalNuevaInfraestructura = function() {
+      document.getElementById('modalInfraTitle').innerText = '🏛️ Registrar Elemento de Infraestructura';
+      document.getElementById('infraEditId').value = '';
+      document.getElementById('infraCodigo').value = `INF-${String(window.cachedInfraestructura.length + 1).padStart(3, '0')}`;
+      document.getElementById('infraAreaSelect').innerHTML = window.cachedAreas.map(a => `<option value="${a.id}">${a.nombre} (${a.id})</option>`).join('');
+      document.getElementById('infraNombre').value = '';
+      document.getElementById('infraUbicacion').value = '';
+      document.getElementById('infraFrecuencia').value = '6';
+      document.getElementById('infraLastDate').value = new Date().toISOString().split('T')[0];
+      document.getElementById('infraEstadoSelect').value = 'Operativo';
+      window.toggleModal('modalInfraestructura', true);
+    };
+
+    window.abrirModalEditarInfraestructura = function(id) {
+      const item = window.cachedInfraestructura.find(i => i.id === id);
+      if (!item) return;
+      document.getElementById('modalInfraTitle').innerText = `✏️ Editar Infraestructura ${item.codigo}`;
+      document.getElementById('infraEditId').value = item.id;
+      document.getElementById('infraCodigo').value = item.codigo;
+      document.getElementById('infraAreaSelect').innerHTML = window.cachedAreas.map(a => `<option value="${a.id}" ${a.id===item.areaId?'selected':''}>${a.nombre} (${a.id})</option>`).join('');
+      document.getElementById('infraNombre').value = item.nombre;
+      document.getElementById('infraUbicacion').value = item.ubicacion;
+      document.getElementById('infraFrecuencia').value = item.frecuenciaMonths || 6;
+      document.getElementById('infraLastDate').value = item.fechaUltimoMaint || '';
+      document.getElementById('infraEstadoSelect').value = item.estado || 'Operativo';
+      window.toggleModal('modalInfraestructura', true);
+    };
+
+    window.guardarInfraestructuraCompleta = async function() {
+      const editId = document.getElementById('infraEditId').value;
+      const codigo = document.getElementById('infraCodigo').value.trim().toUpperCase();
+      const nombre = document.getElementById('infraNombre').value.trim();
+      const areaId = document.getElementById('infraAreaSelect').value;
+      const ubicacion = document.getElementById('infraUbicacion').value.trim();
+
+      if (!codigo || !nombre || !ubicacion) {
+        alert("Complete los campos obligatorios: Código, Nombre y Ubicación.");
+        return;
+      }
+
+      const infraObj = {
+        id: editId || `INF-${Date.now()}`,
+        codigo: codigo,
+        areaId: areaId,
+        nombre: nombre,
+        ubicacion: ubicacion,
+        frecuenciaMonths: parseInt(document.getElementById('infraFrecuencia').value) || 6,
+        fechaUltimoMaint: document.getElementById('infraLastDate').value,
+        estado: document.getElementById('infraEstadoSelect').value
+      };
+
+      if (!editId) {
+        window.cachedInfraestructura.push(infraObj);
+        window.registrarAuditTrail(window.activeGxpUser.correo, 'CREATE_INFRASTRUCTURE', `Registró elemento de infraestructura: ${codigo} - ${nombre}`);
+      } else {
+        const idx = window.cachedInfraestructura.findIndex(i => i.id === editId);
+        if (idx > -1) {
+          window.cachedInfraestructura[idx] = { ...window.cachedInfraestructura[idx], ...infraObj };
+          window.registrarAuditTrail(window.activeGxpUser.correo, 'UPDATE_INFRASTRUCTURE', `Actualizó infraestructura: ${codigo}`);
+        }
+      }
+
+      await window.saveData();
+      window.toggleModal('modalInfraestructura', false);
+      window.renderAllData();
+    };
+
+    // FUNCIONES REPARACIONES / MANTENIMIENTO DE INFRAESTRUCTURA
+    window.abrirModalNuevoMantenimientoInfra = function(infraId = null) {
+      const selectInfra = document.getElementById('mntInfraSelect');
+      selectInfra.innerHTML = window.cachedInfraestructura.map(i => `<option value="${i.id}">${i.codigo} - ${i.nombre}</option>`).join('');
+      if (infraId) selectInfra.value = infraId;
+      document.getElementById('mntInfraTipo').value = 'Preventivo';
+      document.getElementById('mntInfraEstado').value = 'Completado';
+      document.getElementById('mntInfraFecha').value = new Date().toISOString().split('T')[0];
+      document.getElementById('mntInfraTecnico').value = 'Servicios Generales & Mantenimiento Locativo';
+      document.getElementById('mntInfraDetalles').value = '';
+      document.getElementById('mntInfraFotosFile').value = '';
+      window.toggleModal('modalMantenimientoInfra', true);
+    };
+
+    window.guardarMantenimientoInfraCompleto = async function() {
+      const infraId = document.getElementById('mntInfraSelect').value;
+      const tipo = document.getElementById('mntInfraTipo').value;
+      const fecha = document.getElementById('mntInfraFecha').value;
+      const tecnico = document.getElementById('mntInfraTecnico').value.trim();
+      const detalles = document.getElementById('mntInfraDetalles').value.trim();
+
+      if (!infraId || !fecha || !tecnico || !detalles) {
+        alert("Complete todos los campos obligatorios del reporte.");
+        return;
+      }
+
+      const fotosFiles = document.getElementById('mntInfraFotosFile').files;
+      const fotosUrls = [];
+      if (fotosFiles && fotosFiles.length > 0) {
+        for (let i = 0; i < fotosFiles.length; i++) {
+          if (fotosFiles[i].size > 1048576) {
+            alert(`⛔ La fotografía "${fotosFiles[i].name}" supera el límite de 1MB.`);
+            return;
+          }
+          try {
+            const b64 = await window.readFileAsBase64(fotosFiles[i]);
+            fotosUrls.push(b64);
+          } catch(e) { console.error("Error al convertir imagen Base64:", e); }
+        }
+      }
+
+      const infraItem = window.cachedInfraestructura.find(i => i.id === infraId);
+      if (infraItem && fecha) {
+        infraItem.fechaUltimoMaint = fecha;
+      }
+
+      const mntInfraObj = {
+        id: `MNT-INF-${String(window.cachedMantenimientosInfra.length + 1).padStart(3, '0')}`,
+        infraId: infraId,
+        tipo: tipo,
+        estado: document.getElementById('mntInfraEstado').value,
+        fecha: fecha,
+        tecnico: tecnico,
+        detalles: detalles,
+        fotosUrls: fotosUrls
+      };
+
+      window.cachedMantenimientosInfra.unshift(mntInfraObj);
+      window.registrarAuditTrail(window.activeGxpUser.correo, 'MAINTENANCE_INFRASTRUCTURE', `Registró mantenimiento de infraestructura (${tipo}) para ${infraItem ? infraItem.codigo : infraId}`);
+
+      await window.saveData();
+      window.toggleModal('modalMantenimientoInfra', false);
+      window.renderAllData();
+    };
+
+    window.verFotosMantenimientoInfra = function(mntInfraId) {
+      const mi = window.cachedMantenimientosInfra.find(m => m.id === mntInfraId);
+      if (!mi || !mi.fotosUrls || mi.fotosUrls.length === 0) {
+        alert("No hay fotografías adjuntas a esta intervención de infraestructura.");
+        return;
+      }
+      document.getElementById('galeriaTitle').innerText = `📷 Evidencia Reparación Infraestructura ${mi.id}`;
+      const galeriaBody = document.getElementById('galeriaBody');
+      galeriaBody.innerHTML = mi.fotosUrls.map((fotoB64, idx) => `
+        <div class="border rounded-lg p-2 bg-slate-50 flex flex-col items-center">
+          <img src="${fotoB64}" class="max-h-60 rounded object-contain mb-2 cursor-pointer border hover:opacity-90 shadow-sm" onclick="window.viewDocBase64('${fotoB64}')" title="Haga clic para ampliar imagen" />
+          <span class="text-[10px] font-mono text-slate-500">Fotografía Evidencia #${idx + 1}</span>
+        </div>
+      `).join('');
+      window.toggleModal('modalGaleriaFotos', true);
+    };
+
+    window.exportarExcelInfraestructura = function() {
+      let html = `<table><thead><tr><th>Código</th><th>Área</th><th>Nombre Infraestructura</th><th>Ubicación</th><th>Frecuencia (Meses)</th><th>Último Mantenimiento</th><th>Estado</th></tr></thead><tbody>`;
+      window.cachedInfraestructura.forEach(i => {
+        const area = window.cachedAreas.find(a => a.id === i.areaId);
+        html += `<tr><td>${i.codigo}</td><td>${area ? area.nombre : i.areaId}</td><td>${i.nombre}</td><td>${i.ubicacion}</td><td>${i.frecuenciaMonths}</td><td>${i.fechaUltimoMaint||'-'}</td><td>${i.estado}</td></tr>`;
+      });
+      html += `</tbody></table>`;
+      const blob = new Blob(['\ufeff' + html], { type: 'application/vnd.ms-excel' });
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `Maestro_Infraestructura_${new Date().toISOString().split('T')[0]}.xls`; a.click();
     };
 
     window.poblarProcesosEquipoSelect = function() {
@@ -1881,7 +2221,6 @@
 
       if (!eqId || !realizadoPor) { alert("Complete los campos requeridos."); return; }
 
-      // Procesar Fotos de Evidencia
       const fotosFiles = document.getElementById('mntFotosFile').files;
       const fotosUrls = [];
       if (fotosFiles && fotosFiles.length > 0) {
@@ -2042,7 +2381,7 @@
       const newId = document.getElementById('inputAreaId').value.trim(); const nom = document.getElementById('inputAreaNombre').value.trim();
       if(!newId || !nom) { alert("Complete ID y Nombre."); return; }
       if(editIdx === -1) { if(window.cachedAreas.find(a => a.id === newId)) { alert("ID duplicado."); return; } window.cachedAreas.push({ id: newId, nombre: nom }); window.registrarAuditTrail(window.activeGxpUser.correo, 'CREATE_AREA', `Creó área: ${nom}`); } 
-      else { const oldId = window.cachedAreas[editIdx].id; window.cachedAreas[editIdx].nombre = nom; if(oldId !== newId) { window.cachedAreas[editIdx].id = newId; window.cachedProcesos.forEach(p => { if(p.areaId === oldId) p.areaId = newId; }); window.cachedEmpleados.forEach(e => { if(e.areaId === oldId) e.areaId = newId; }); window.cachedUsuarios.forEach(u => { const idx = u.areasAsignadas.indexOf(oldId); if(idx > -1) u.areasAsignadas[idx] = newId; }); window.cachedDocs.forEach(d => { if(d.areaId === oldId) d.areaId = newId; }); window.cachedEquipos.forEach(eq => { if(eq.areaId === oldId) eq.areaId = newId; }); } window.registrarAuditTrail(window.activeGxpUser.correo, 'UPDATE_AREA', `Actualizó área: ${newId}`); }
+      else { const oldId = window.cachedAreas[editIdx].id; window.cachedAreas[editIdx].nombre = nom; if(oldId !== newId) { window.cachedAreas[editIdx].id = newId; window.cachedProcesos.forEach(p => { if(p.areaId === oldId) p.areaId = newId; }); window.cachedEmpleados.forEach(e => { if(e.areaId === oldId) e.areaId = newId; }); window.cachedUsuarios.forEach(u => { const idx = u.areasAsignadas.indexOf(oldId); if(idx > -1) u.areasAsignadas[idx] = newId; }); window.cachedDocs.forEach(d => { if(d.areaId === oldId) d.areaId = newId; }); window.cachedEquipos.forEach(eq => { if(eq.areaId === oldId) eq.areaId = newId; }); window.cachedInfraestructura.forEach(inf => { if(inf.areaId === oldId) inf.areaId = newId; }); } window.registrarAuditTrail(window.activeGxpUser.correo, 'UPDATE_AREA', `Actualizó área: ${newId}`); }
       await window.saveData(); window.toggleModal('modalArea', false); window.renderAllData();
     };
 
@@ -2320,7 +2659,7 @@
       document.getElementById('loginPassword').addEventListener('keypress', function (e) { if (e.key === 'Enter') window.ejecutarLoginPrincipal(); }); 
       document.getElementById('loginEmail').addEventListener('keypress', function (e) { if (e.key === 'Enter') document.getElementById('loginPassword').focus(); }); 
 
-      // LÓGICA DE ROUTER, AUTENTICACIÓN Y AUTO-VALIDACIÓN POR ESCANEO DE QR
+      // ROUTER Y VALIDACIÓN DE QR
       const urlParams = new URLSearchParams(window.location.search);
       const validarDocCode = urlParams.get('validarDoc');
       const copiaId = urlParams.get('copia');
