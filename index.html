@@ -126,20 +126,26 @@
 
       <!-- GESTIÓN DOCUMENTAL -->
       <div id="view-documentos" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-4">
-        <div class="flex space-x-1 border-b pb-2 overflow-x-auto text-xs font-semibold">
-          <button onclick="window.switchDocSubtab('vigente', this)" class="doc-subtab-btn px-3 py-1.5 rounded-lg bg-cyan-600 text-white cursor-pointer">Vigente (<span id="count-vigente">0</span>)</button>
-          <button onclick="window.switchDocSubtab('proceso', this)" class="doc-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">En Proceso / Flujo (<span id="count-proceso">0</span>)</button>
-          <button onclick="window.switchDocSubtab('obsoleto', this)" class="doc-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">Documentos Obsoletos (<span id="count-obsoleto">0</span>)</button>
+        <div class="flex justify-between items-center border-b pb-2">
+          <div class="flex space-x-1 overflow-x-auto text-xs font-semibold">
+            <button onclick="window.switchDocSubtab('vigente', this)" class="doc-subtab-btn px-3 py-1.5 rounded-lg bg-cyan-600 text-white cursor-pointer">Vigente (<span id="count-vigente">0</span>)</button>
+            <button onclick="window.switchDocSubtab('proceso', this)" class="doc-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">En Proceso / Flujo (<span id="count-proceso">0</span>)</button>
+            <button onclick="window.switchDocSubtab('obsoleto', this)" class="doc-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">Documentos Obsoletos (<span id="count-obsoleto">0</span>)</button>
+          </div>
+          <button type="button" onclick="window.abrirModalNuevoDocumento()" class="bg-cyan-700 hover:bg-cyan-800 text-white px-3 py-1.5 rounded-lg font-bold text-xs shadow cursor-pointer">+ Crear Documento GxP</button>
         </div>
-        <div id="subtab-vigente" class="doc-subtab-content active overflow-x-auto"><table class="w-full border-collapse text-left text-xs"><thead><tr class="bg-slate-100 text-slate-700 border-b"><th class="p-2 border font-bold text-center w-12">#</th><th class="p-2 border font-bold">Código</th><th class="p-2 border font-bold">Versión</th><th class="p-2 border font-bold">Título</th><th class="p-2 border font-bold">Área / Proceso</th></tr></thead><tbody id="table-vigente" class="divide-y divide-slate-100"></tbody></table></div>
-        <div id="subtab-proceso" class="doc-subtab-content overflow-x-auto"><table class="w-full border-collapse text-left text-xs"><thead><tr class="bg-slate-100 text-slate-700 border-b"><th class="p-2 border font-bold text-center w-12">#</th><th class="p-2 border font-bold">Código</th><th class="p-2 border font-bold">Versión</th><th class="p-2 border font-bold">Título</th></tr></thead><tbody id="table-proceso" class="divide-y divide-slate-100"></tbody></table></div>
-        <div id="subtab-obsoleto" class="doc-subtab-content overflow-x-auto"><table class="w-full border-collapse text-left text-xs"><thead><tr class="bg-slate-100 text-slate-700 border-b"><th class="p-2 border font-bold text-center w-12">#</th><th class="p-2 border font-bold">Código</th><th class="p-2 border font-bold">Versión</th><th class="p-2 border font-bold">Título</th></tr></thead><tbody id="table-obsoleto" class="divide-y divide-slate-100"></tbody></table></div>
+        <div id="subtab-vigente" class="doc-subtab-content active overflow-x-auto"><table class="w-full border-collapse text-left text-xs"><thead><tr class="bg-slate-100 text-slate-700 border-b"><th class="p-2 border font-bold text-center w-12">#</th><th class="p-2 border font-bold">Código</th><th class="p-2 border font-bold">Versión</th><th class="p-2 border font-bold">Título</th><th class="p-2 border font-bold">Área / Proceso</th><th class="p-2 border text-center">Acciones</th></tr></thead><tbody id="table-vigente" class="divide-y divide-slate-100"></tbody></table></div>
+        <div id="subtab-proceso" class="doc-subtab-content overflow-x-auto"><table class="w-full border-collapse text-left text-xs"><thead><tr class="bg-slate-100 text-slate-700 border-b"><th class="p-2 border font-bold text-center w-12">#</th><th class="p-2 border font-bold">Código</th><th class="p-2 border font-bold">Versión</th><th class="p-2 border font-bold">Título</th><th class="p-2 border text-center">Estado Flujo</th><th class="p-2 border text-center">Acciones</th></tr></thead><tbody id="table-proceso" class="divide-y divide-slate-100"></tbody></table></div>
+        <div id="subtab-obsoleto" class="doc-subtab-content overflow-x-auto"><table class="w-full border-collapse text-left text-xs"><thead><tr class="bg-slate-100 text-slate-700 border-b"><th class="p-2 border font-bold text-center w-12">#</th><th class="p-2 border font-bold">Código</th><th class="p-2 border font-bold">Versión</th><th class="p-2 border font-bold">Título</th><th class="p-2 border text-center">Fecha Retiro</th></tr></thead><tbody id="table-obsoleto" class="divide-y divide-slate-100"></tbody></table></div>
       </div>
 
       <!-- COPIAS CONTROLADAS -->
       <div id="view-copias" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-4">
-        <h2 class="font-bold text-slate-800 text-sm">📋 Control de Copias Físicas Oficiales</h2>
-        <div class="overflow-x-auto"><table class="w-full border-collapse text-left text-xs font-mono"><thead><tr class="bg-slate-100 text-slate-700 border-b"><th class="p-2 border">Copia (ID)</th><th class="p-2 border">Documento</th><th class="p-2 border">Área Destino</th><th class="p-2 border">Custodio</th><th class="p-2 border">Estado</th></tr></thead><tbody id="list-copias-body" class="divide-y divide-slate-100"></tbody></table></div>
+        <div class="flex justify-between items-center border-b pb-2">
+          <h2 class="font-bold text-slate-800 text-sm">📋 Control de Copias Físicas Oficiales</h2>
+          <button type="button" onclick="window.abrirModalEmitirCopia()" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-lg font-bold text-xs shadow cursor-pointer">+ Emitir Copia Controlada</button>
+        </div>
+        <div class="overflow-x-auto"><table class="w-full border-collapse text-left text-xs font-mono"><thead><tr class="bg-slate-100 text-slate-700 border-b"><th class="p-2 border">Copia (ID)</th><th class="p-2 border">Documento</th><th class="p-2 border">Área Destino</th><th class="p-2 border">Custodio</th><th class="p-2 border">Estado</th><th class="p-2 border text-center">Acciones</th></tr></thead><tbody id="list-copias-body" class="divide-y divide-slate-100"></tbody></table></div>
       </div>
 
       <!-- MÓDULO: NO CONFORMIDADES Y CAPA -->
