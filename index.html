@@ -368,7 +368,8 @@
             </div>
           </div>
 
-          <!-- Tabla 2: Historial de Reparaciones y Mantenimientos de Infraestructura -->
+          <!-- Tabla 2: Historial de Reparaciones y Manteni
+mientos de Infraestructura -->
           <div class="border rounded-xl p-3 bg-slate-50 space-y-2">
             <h3 class="font-bold text-xs text-slate-800 flex items-center space-x-1.5"><span>📜</span><span>Historial de Intervenciones &amp; Reparaciones de Infraestructura</span></h3>
             <div class="overflow-x-auto">
@@ -734,7 +735,8 @@
           </label>
           <div id="groupCalibInputs" class="space-y-2">
             <div><label class="block mb-1">Frecuencia (Meses)</label><input type="number" id="eqCalibInterval" min="1" value="6" class="w-full p-1.5 border rounded font-mono" /></div>
-            <div><label class="block mb-1">Última Calibración</label><input type="date" id="eqLastCalibDate" class="w-full p-1.5 border rounded font-mono" /></div>
+            <div><label class="block mb-1">Última Calibración</label><input type="date" id="eqLastCalibDate" class="w-full p-1.5 border rou
+nded font-mono" /></div>
           </div>
         </div>
 
@@ -1173,7 +1175,8 @@
     window.cachedEquipos = [
       { id: 'EQ-001', tag: 'EQ-001', nombre: 'Balanza Analítica Sartorius', tipo: 'Instrumento', criticidad: 'Crítico', fabricante: 'Sartorius', modelo: 'Cubis II', serie: 'SN-987654', areaId: 'ar_qc', procesoId: 'pr_gestion', ubicacion: 'Lab QC - Sala 2', responsable: 'Johan Aguilar', estado: 'Operativo', requiereCalibracion: true, intervaloCalMonths: 6, requiereMantenimiento: true, intervaloMantenimientoMonths: 12, fechaUltimaCal: '2026-05-10', fechaProximaCal: '2026-11-10', fechaUltimoMaint: '2026-01-15', fechaProximoMaint: '2027-01-15', adjuntoUrl: null }
     ];
-    window.cachedCalibraciones = [
+    window.cachedCalibraciones
+ = [
       { id: 'CAL-001', equipoId: 'EQ-001', fecha: '2026-05-10', realizadaPor: 'Metrología Externa S.A.S.', asFound: 'Dentro de especificación', asLeft: 'Calibrado y ajustado', estandares: 'Pesas Patrón E2 Cert #9988', resultado: 'Conforme', certificadoUrl: null, observaciones: 'Calibración semestral ejecutada sin desviaciones.', proximaFecha: '2026-11-10', firmadaPor: 'j.aguilar@pharmor.com.co' }
     ];
     window.cachedMantenimientos = [
@@ -1364,7 +1367,9 @@
       } else {
         if (!window.cachedUsuarios || window.cachedUsuarios.length === 0) { alert("Base de datos no disponible."); return; }
         usrData = window.cachedUsuarios.find(u => (u.correo || '').trim().toLowerCase() === email);
-        if (!usrData) { const empleadoSinUsuario = window.cachedEmpleados.find(e => (e.correo || '').trim().toLowerCase() === email); if (empleadoSinUsuario) { alert(`⚠️ ALERTA DEL SISTEMA GxP:\n\nEl correo ${email} pertenece a un Empleado registrado, pero aún no tiene cuenta de "Usuario GxP".`); } else { alert("Credenciales incorrectas o usuario no registrado en la Nube."); } return; }
+        if (!usrData) { const empleadoSinUsuario = window.cachedEmpleados.find(e => (e.correo || '').trim().toLowerCase() === email); if (empleadoSinUsuario) { alert(`⚠️ ALERTA DEL SISTEMA GxP:
+
+El correo ${email} pertenece a un Empleado registrado, pero aún no tiene cuenta de "Usuario GxP".`); } else { alert("Credenciales incorrectas o usuario no registrado en la Nube."); } return; }
         if ((usrData.password || '').trim() !== pass) { alert("❌ Contraseña incorrecta. Por favor, inténtelo de nuevo."); return; }
         if (usrData.estado !== 'Activo') { alert("Acceso denegado: Usuario INACTIVO."); return; }
       }
@@ -1407,7 +1412,7 @@
       const vigentes = window.cachedDocs.filter(d => d.estado === 'VIGENTE');
       let htmlTabla = `<table><thead><tr><th>#</th><th>Código</th><th>Versión</th><th>Título del Documento</th><th>Proceso</th><th>Fecha de Aprobación</th><th>Fecha de Vencimiento</th><th>Estado GxP</th></tr></thead><tbody>`;
       vigentes.forEach((d, idx) => { const p = window.cachedProcesos.find(x => x.id === d.procesoId); htmlTabla += `<tr><td>${idx + 1}</td><td>${d.codigo}</td><td>v${d.version}</td><td>${d.titulo}</td><td>${p ? p.nombre : 'N/A'}</td><td>${d.fechaAprob || 'N/A'}</td><td>${d.fechaVenc || 'N/A'}</td><td>${d.estado}</td></tr>`; });
-      htmlTabla += `</tbody></table>`; const blob = new Blob(['\ufeff' + htmlTabla], { type: 'application/vnd.ms-excel' });
+      htmlTabla += `</tbody></table>`; const blob = new Blob(['' + htmlTabla], { type: 'application/vnd.ms-excel' });
       const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `Listado_Maestro_Pharmor_${new Date().toISOString().split('T')[0]}.xls`;
       document.body.appendChild(a); a.click(); document.body.removeChild(a);
     };
@@ -1659,7 +1664,8 @@
         const area = window.cachedAreas.find(a => a.id === e.areaId);
         const stC = window.calcularEstadoCalibracion(e);
         const stM = window.calcularEstadoMantenimiento(e);
-        return `<tr class="hover:bg-slate-50"><td class="p-2 border font-mono font-bold text-cyan-800">${e.tag}</td><td class="p-2 border font-semibold">${e.nombre}<br><span class="text-[10px] font-mono text-slate-500">SN: ${e.serie || 'N/A'}</span></td><td class="p-2 border text-[11px]">${e.tipo}<br><span class="font-bold ${e.criticidad==='Crítico'?'text-rose-600':'text-slate-500'}">${e.criticidad}</span></td><td class="p-2 border text-[11px]">${area ? area.nombre : 'N/A'}<br><span class="text-slate-500">${e.ubicacion}</span></td><td class="p-2 border"><span class="${stC.badge} px-2 py-0.5 rounded text-[10px] border block text-center">${stC.label}</span><span class="text-[10px] font-mono block text-center mt-0.5">${e.fechaProximaCal || '-'}</span></td><td class="p-2 border"><span class="${stM.badge} px-2 py-0.5 rounded text-[10px] border block text-center">${stM.label}</span><span class="text-[10px] font-mono block text-center mt-0.5">${e.fechaProximoMaint || '-'}</span></td><td class="p-2 border text-center"><span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-[10px] font-bold border border-emerald-300">${e.estado}</span></td><td class="p-2 border text-center space-x-1"><button onclick="window.verHistorialEquipo('${e.id}')" class="bg-slate-100 border px-2 py-1 rounded font-bold text-slate-700 cursor-pointer">👁️ Hoja Vida</button><button onclick="window.abrirModalEditarEquipo('${e.id}')" class="bg-cyan-50 border border-cyan-300 px-2 py-1 rounded font-bold text-cyan-800 cursor-pointer">✏️</button></td></tr>`;
+        return `<tr class="hover:bg-slate-50"><td class="p-2 border font-mono font-bold text-cyan-800">${e.tag}</td><td class="p-2 border font-semibold">${e.nombre}<br><span c
+lass="text-[10px] font-mono text-slate-500">SN: ${e.serie || 'N/A'}</span></td><td class="p-2 border text-[11px]">${e.tipo}<br><span class="font-bold ${e.criticidad==='Crítico'?'text-rose-600':'text-slate-500'}">${e.criticidad}</span></td><td class="p-2 border text-[11px]">${area ? area.nombre : 'N/A'}<br><span class="text-slate-500">${e.ubicacion}</span></td><td class="p-2 border"><span class="${stC.badge} px-2 py-0.5 rounded text-[10px] border block text-center">${stC.label}</span><span class="text-[10px] font-mono block text-center mt-0.5">${e.fechaProximaCal || '-'}</span></td><td class="p-2 border"><span class="${stM.badge} px-2 py-0.5 rounded text-[10px] border block text-center">${stM.label}</span><span class="text-[10px] font-mono block text-center mt-0.5">${e.fechaProximoMaint || '-'}</span></td><td class="p-2 border text-center"><span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-[10px] font-bold border border-emerald-300">${e.estado}</span></td><td class="p-2 border text-center space-x-1"><button onclick="window.verHistorialEquipo('${e.id}')" class="bg-slate-100 border px-2 py-1 rounded font-bold text-slate-700 cursor-pointer">👁️ Hoja Vida</button><button onclick="window.abrirModalEditarEquipo('${e.id}')" class="bg-cyan-50 border border-cyan-300 px-2 py-1 rounded font-bold text-cyan-800 cursor-pointer">✏️</button></td></tr>`;
       }).join('') : `<tr><td colspan="8" class="p-4 text-center text-slate-400">Sin equipos registrados.</td></tr>`;
 
       // Render Calibraciones
@@ -1860,7 +1866,7 @@
         html += `<tr><td>${i.codigo}</td><td>${area ? area.nombre : i.areaId}</td><td>${i.nombre}</td><td>${i.ubicacion}</td><td>${i.frecuenciaMonths}</td><td>${i.fechaUltimoMaint||'-'}</td><td>${i.estado}</td></tr>`;
       });
       html += `</tbody></table>`;
-      const blob = new Blob(['\ufeff' + html], { type: 'application/vnd.ms-excel' });
+      const blob = new Blob(['' + html], { type: 'application/vnd.ms-excel' });
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `Maestro_Infraestructura_${new Date().toISOString().split('T')[0]}.xls`; a.click();
     };
 
@@ -2075,7 +2081,8 @@
     };
 
     window.verFotosMantenimiento = function(mntId) {
-      const mnt = window.cachedMantenimientos.find(m => m.id === mntId);
+      const mnt = window.cachedMa
+ntenimientos.find(m => m.id === mntId);
       if (!mnt || !mnt.fotosUrls || mnt.fotosUrls.length === 0) {
         alert("No hay fotografías de evidencia adjuntas a este registro de mantenimiento.");
         return;
@@ -2283,7 +2290,7 @@
         html += `<tr><td>${e.tag}</td><td>${e.nombre}</td><td>${e.tipo}</td><td>${e.criticidad}</td><td>${e.fabricante||''}</td><td>${e.modelo||''}</td><td>${e.serie||''}</td><td>${e.ubicacion||''}</td><td>${e.fechaProximaCal||'-'}</td><td>${e.fechaProximoMaint||'-'}</td><td>${e.estado}</td></tr>`;
       });
       html += `</tbody></table>`;
-      const blob = new Blob(['\ufeff' + html], { type: 'application/vnd.ms-excel' });
+      const blob = new Blob(['' + html], { type: 'application/vnd.ms-excel' });
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `Maestro_Equipos_${new Date().toISOString().split('T')[0]}.xls`; a.click();
     };
 
@@ -2294,7 +2301,7 @@
         html += `<tr><td>${c.id}</td><td>${eq ? eq.tag : c.equipoId}</td><td>${c.fecha}</td><td>${c.realizadaPor}</td><td>${c.resultado}</td><td>${c.proximaFecha}</td><td>${c.firmadaPor}</td></tr>`;
       });
       html += `</tbody></table>`;
-      const blob = new Blob(['\ufeff' + html], { type: 'application/vnd.ms-excel' });
+      const blob = new Blob(['' + html], { type: 'application/vnd.ms-excel' });
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `Historial_Calibraciones_${new Date().toISOString().split('T')[0]}.xls`; a.click();
     };
 
@@ -2305,7 +2312,7 @@
         html += `<tr><td>${m.id}</td><td>${eq ? eq.tag : m.equipoId}</td><td>${m.tipo}</td><td>${m.estado}</td><td>${m.fechaProgramada}</td><td>${m.fechaEjecucion}</td><td>${m.realizadoPor}</td><td>${m.tiempoParo}</td><td>${m.fotosUrls ? m.fotosUrls.length : 0}</td></tr>`;
       });
       html += `</tbody></table>`;
-      const blob = new Blob(['\ufeff' + html], { type: 'application/vnd.ms-excel' });
+      const blob = new Blob(['' + html], { type: 'application/vnd.ms-excel' });
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `Registro_Mantenimientos_${new Date().toISOString().split('T')[0]}.xls`; a.click();
     };
 
@@ -2401,7 +2408,8 @@
       document.getElementById('usrPasswordInput').value = '123'; 
       document.getElementById('usrEstadoSelect').value = 'Activo'; 
       window.poblarCheckboxesModalUsuario(['rol_viewer'], [window.cachedAreas[0] ? window.cachedAreas[0].id : '']); 
-      window.toggleModal('modalUsuario', true); 
+      wi
+ndow.toggleModal('modalUsuario', true); 
     };
 
     window.abrirModalEditarUsuario = function(idx) { 
@@ -2440,12 +2448,24 @@
       window.toggleModal('modalUsuario', false); 
       window.renderAllData(); 
       
-      const btnMailto = confirm("✅ Usuario guardado correctamente en la Nube.\n\n¿Deseas abrir tu cliente de correo para enviar la notificación de acceso a este usuario?");
+      const btnMailto = confirm("✅ Usuario guardado correctamente en la Nube.
+
+¿Deseas abrir tu cliente de correo para enviar la notificación de acceso a este usuario?");
       if(btnMailto) {
           const selectEmp = document.getElementById('usrEmpSelect');
           const empName = selectEmp.options[selectEmp.selectedIndex].text.split('(')[0].trim();
           const subject = encodeURIComponent("🛡️ Credenciales de Acceso - PharmAudit ERP");
-          const body = encodeURIComponent(`Hola ${empName},\n\nSe ha configurado tu acceso oficial al portal de Calidad GxP (PharmAudit).\n\nUsuario: ${data.correo}\nContraseña Temporal: ${data.password}\n\nPor favor, ingresa y cambia tu contraseña inmediatamente para garantizar el cumplimiento de la política de seguridad (21 CFR Part 11).\n\nAtentamente,\nAdministrador del Sistema.`);
+          const body = encodeURIComponent(`Hola ${empName},
+
+Se ha configurado tu acceso oficial al portal de Calidad GxP (PharmAudit).
+
+Usuario: ${data.correo}
+Contraseña Temporal: ${data.password}
+
+Por favor, ingresa y cambia tu contraseña inmediatamente para garantizar el cumplimiento de la política de seguridad (21 CFR Part 11).
+
+Atentamente,
+Administrador del Sistema.`);
           window.location.href = `mailto:${data.correo}?subject=${subject}&body=${body}`;
       }
     };
@@ -2580,7 +2600,7 @@
           const qrImageEmbed = await mergedPdf.embedPng(qrDataUrl);
 
           const copiedPages = await mergedPdf.copyPages(srcPdf, srcIndices);
-          copiedPages.forEach(page => { 
+          pages.forEach(page => { 
             mergedPdf.addPage(page); 
             const { width, height } = page.getSize(); 
             page.drawText('COPIA CONTROLADA', { x: width / 2 - 220, y: height / 2 + 40, size: 50, color: rgb(0.8, 0, 0), rotate: degrees(-30), opacity: 0.25 }); 
@@ -2644,7 +2664,9 @@
       const rolesHTML = window.activeGxpUser.rolesIds.map(rolId => { const rolObj = window.cachedRoles.find(r => r.id === rolId); return `<span class="bg-cyan-100 text-cyan-800 px-2 py-0.5 rounded text-[11px] font-bold border border-cyan-200">${rolObj ? rolObj.nombre : rolId}</span>`; }).join(''); document.getElementById('profRoles').innerHTML = rolesHTML; window.toggleModal('modalProfile', true);
     };
 
-    window.translateToEnglish = function() { alert("⚠️ El módulo de internacionalización (i18n) está programado para la siguiente fase de validación del sistema.\n\nPara mantener la integridad de los datos GxP, los cambios de idioma requieren una validación OQ (Operational Qualification) independiente."); };
+    window.translateToEnglish = function() { alert("⚠️ El módulo de internacionalización (i18n) está programado para la siguiente fase de validación del sistema.
+
+Para mantener la integridad de los datos GxP, los cambios de idioma requieren una validación OQ (Operational Qualification) independiente."); };
     window.abrirModalPassword = function() { document.getElementById('myPassOld').value = ''; document.getElementById('myPassNew').value = ''; document.getElementById('myPassConfirm').value = ''; window.toggleModal('modalPassword', true); };
     window.guardarPassword = async function() {
       const oldP = document.getElementById('myPassOld').value; const newP = document.getElementById('myPassNew').value; const confP = document.getElementById('myPassConfirm').value;
@@ -2669,9 +2691,16 @@
         setTimeout(() => {
           const doc = (window.cachedDocs || []).find(d => d.codigo === validarDocCode && d.estado === 'VIGENTE');
           if (doc) {
-            alert(`🟢 VERIFICACIÓN GxP EXITOSA\n\nEl documento ${doc.codigo} (Versión ${doc.version}) se encuentra actualmente VIGENTE.\nCopia verificada: ${copiaId || 'N/A'}`);
+            alert(`🟢 VERIFICACIÓN GxP EXITOSA
+
+El documento ${doc.codigo} (Versión ${doc.version}) se encuentra actualmente VIGENTE.
+Copia verificada: ${copiaId || 'N/A'}`);
           } else {
-            alert(`🚨 ALERTA CRÍTICA GxP - DOCUMENTO NO VIGENTE\n\nEl documento ${validarDocCode} asociado a la copia ${copiaId || 'N/A'} es OBSOLETO o NO EXISTE.\n\nFavor retirar esta copia impresa del área de trabajo inmediatamente.`);
+            alert(`🚨 ALERTA CRÍTICA GxP - DOCUMENTO NO VIGENTE
+
+El documento ${validarDocCode} asociado a la copia ${copiaId || 'N/A'} es OBSOLETO o NO EXISTE.
+
+Favor retirar esta copia impresa del área de trabajo inmediatamente.`);
           }
         }, 1200);
       } else if (eqIdScan) {
