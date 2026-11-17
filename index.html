@@ -2720,35 +2720,40 @@
 
       if (!significado) { alert("⛔ Control GxP: Es obligatorio seleccionar la intención o el significado de la firma."); return; }
 
-    window.procesarFirmaElectronica = function() {
- 
+    window.procesarFirmaElectronica = async function() {
+      const doc = window.cachedDocs.find(x => x.id === document.getElementById('firmaDocId').value);
+      const email = document.getElementById('firmaUserEmail').value.trim();
+      const pass = document.getElementById('firmaUserPassword').value.trim();
+      const significado = document.getElementById('firmaSignificado').value;
+
+      if (!significado) { alert("⛔ Control GxP: Es obligatorio seleccionar la intención o el significado de la firma."); return; }
+
+      // --- LÓGICA PARA FIRMAR NCS (NUEVO) ---
       const targetId = document.getElementById('firmaDocId').value;
       
       if (targetId.startsWith('NC:')) {
         const ncId = targetId.split(':')[1];
         const nc = window.cachedNCs.find(n => n.id === ncId);
-        const email = document.getElementById('firmaUserEmail').value;
-        const pass = document.getElementById('firmaUserPassword').value;
-        const significado = document.getElementById('firmaSignificado').value;
-
-        if (!email || !pass || !significado) { alert("Complete todos los campos de firma."); return; }
-        const usr = window.cachedUsuarios.find(u => u.correo === email && u.password === pass);
-        if (!usr) { alert("Credenciales inválidas."); return; }
+        
+        const usr = window.cachedUsuarios.find(u => u.correo.toLowerCase() === email.toLowerCase() && u.password === pass);
+        if (!usr) { alert("⛔ Credenciales inválidas."); return; }
 
         if (significado === 'Creación / Edición') nc.firmas.elaborado = email;
         else if (significado === 'Revisión Técnica') nc.firmas.revisado = email;
         else if (significado === 'Aprobación' || significado === 'Autorización Final de Versión Vigente') nc.firmas.aprobado = email;
 
-        window.saveData();
+        window.saveData(); // <--- AQUÍ QUITAMOS EL AWAIT
         window.renderNCs();
         window.toggleModal('modalFirmaPart11', false);
         window.logAudit('FIRMA_NC', `NC ${nc.consecutivo} firmada por ${email} como ${significado}`);
-        return; // Detenemos la ejecución aquí para que no siga con la lógica de documentos
+        return; // Detiene la ejecución para no firmar documentos
       }
-      
-      const user = window.cachedUsuarios.find(u => u.correo.toLowerCase() === email.toLowerCase() && u.password === pass);
-      if(!user) { alert("⛔ Credenciales inválidas."); return; }
+      // ----------------------------------------
 
+      // --- LÓGICA ORIGINAL PARA FIRMAR DOCUMENTOS ---
+      const user = window.cachedUsuarios.find(u => u.correo.toLowerCase() === email.toLowerCase() && u.password === pass);
+      if (!user) { alert("⛔ Credenciales inválidas."); return; }
+      
       const isAdmin = user.rolesIds.includes('rol_admin');
       const isQA = user.areasAsignadas && user.areasAsignadas.includes('ar_qa');
 
