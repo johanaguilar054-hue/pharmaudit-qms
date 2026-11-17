@@ -1510,7 +1510,9 @@
           calibraciones: window.cachedCalibraciones,
           mantenimientos: window.cachedMantenimientos,
           infraestructura: window.cachedInfraestructura,
-          mantenimientosInfra: window.cachedMantenimientosInfra
+          mantenimientosInfra: window.cachedMantenimientosInfra,
+          ncs: window.cachedNCs,
+          capas: window.cachedCAPAs
         };
         try {
           const res = await fetch(`${SUPABASE_URL}/rest/v1/erp_state`, { method: 'POST', headers: { ...HEADERS, 'Prefer': 'resolution=merge-duplicates' }, body: JSON.stringify({ id: 1, app_data: dbState }) });
@@ -1562,6 +1564,8 @@
               if (dbState.mantenimientos) window.cachedMantenimientos = dbState.mantenimientos;
               if (dbState.infraestructura) window.cachedInfraestructura = dbState.infraestructura;
               if (dbState.mantenimientosInfra) window.cachedMantenimientosInfra = dbState.mantenimientosInfra;
+              if (dbState.ncs) window.cachedNCs = dbState.ncs;
+              if (dbState.capas) window.cachedCAPAs = dbState.capas;
             }
           }
         } catch(e) { console.error("Accediendo en modo local por fallo de red:", e); } finally { window.activarBotonLogin(); }
