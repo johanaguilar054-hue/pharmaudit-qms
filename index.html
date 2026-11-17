@@ -1062,7 +1062,7 @@
         </div>
         <input type="hidden" id="ncEditId">
         <div class="grid grid-cols-2 gap-3">
-          <div><label class="block font-semibold mb-1">Consecutivo *</label><input type="text" id="ncConsecutivo" readonly class="w-full p-2 border rounded font-mono font-bold bg-slate-100 text-amber-900" /></div>
+          <div><label class="block font-semibold mb-1">Consecutivo *</label><input type="text" id="ncConsecutivo" class="w-full p-2 border rounded font-mono font-bold bg-amber-50 text-amber-900" /></div>
           <div><label class="block font-semibold mb-1">Fecha de Identificación *</label><input type="date" id="ncFecha" class="w-full p-2 border rounded font-mono" /></div>
           <div><label class="block font-semibold mb-1">Proceso Origen *</label><select id="ncProcesoOrigen" class="w-full p-2 border rounded bg-slate-50"></select></div>
           <div><label class="block font-semibold mb-1">Responsable de la NC *</label><select id="ncResponsable" class="w-full p-2 border rounded bg-slate-50"></select></div>
@@ -1116,7 +1116,7 @@
         </div>
         <input type="hidden" id="capaEditId">
         <div class="grid grid-cols-2 gap-3">
-          <div><label class="block font-semibold mb-1">Consecutivo *</label><input type="text" id="capaConsecutivo" readonly class="w-full p-2 border rounded font-mono font-bold bg-slate-100 text-purple-900" /></div>
+          <div><label class="block font-semibold mb-1">Consecutivo *</label><input type="text" id="capaConsecutivo" class="w-full p-2 border rounded font-mono font-bold bg-purple-50 text-purple-900" /></div>
           <div><label class="block font-semibold mb-1">NC / Origen Asociado *</label><select id="capaNCSelect" class="w-full p-2 border rounded bg-slate-50"></select></div>
         </div>
         
@@ -2964,8 +2964,10 @@
       };
   
       window.guardarNCCompleta = function() {
-        const id = document.getElementById('ncEditId').value;
-        const ncData = {
+      const id = document.getElementById('ncEditId').value;
+      const consecutivoInput = document.getElementById('ncConsecutivo').value.trim();
+      
+      const ncData = {
           consecutivo: document.getElementById('ncConsecutivo').value,
           fecha: document.getElementById('ncFecha').value,
           procesoId: document.getElementById('ncProcesoOrigen').value,
@@ -2984,7 +2986,12 @@
         if (!ncData.descripcion || !ncData.alcance || !ncData.correccion) {
           alert("Complete los campos obligatorios (*)"); return;
         }
-  
+
+        const existeDuplicado = window.cachedNCs.some(nc => nc.consecutivo === ncData.consecutivo && nc.id !== id);
+      if (existeDuplicado) {
+        alert(`⚠️ Error GxP: Ya existe una No Conformidad registrada con el consecutivo ${ncData.consecutivo}. Por favor verifique.`);
+        return;
+      }
         if (id) {
           const idx = window.cachedNCs.findIndex(n => n.id === id);
           window.cachedNCs[idx] = { ...window.cachedNCs[idx], ...ncData };
@@ -3105,7 +3112,13 @@
         if (!capaData.analisis || actividades.length === 0) {
           alert("Complete el análisis y agregue al menos una actividad al plan."); return;
         }
-  
+
+         // Validación de duplicados para CAPA
+      const existeDuplicadoCAPA = window.cachedCAPAs.some(c => c.consecutivo === capaData.consecutivo && c.id !== id);
+      if (existeDuplicadoCAPA) {
+        alert(`⚠️ Error GxP: Ya existe un plan CAPA con el consecutivo ${capaData.consecutivo}.`);
+        return;
+      }
         if (id) {
           const idx = window.cachedCAPAs.findIndex(c => c.id === id);
           window.cachedCAPAs[idx] = { ...window.cachedCAPAs[idx], ...capaData };
