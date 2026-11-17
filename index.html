@@ -1169,6 +1169,34 @@
         </div>
       </div>
     </div>
+
+      <!-- MODAL: VER DETALLE NC -->
+  <div id="modalVerDetalleNC" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl max-w-2xl w-full p-5 border shadow-2xl space-y-4 text-xs max-h-[90vh] overflow-y-auto">
+      <div class="border-b pb-2 flex justify-between items-center">
+        <h3 class="font-bold text-sm text-amber-900" id="viewNCTitle">Detalle de la NC</h3>
+        <button onclick="window.toggleModal('modalVerDetalleNC', false)" class="text-slate-400 font-bold text-lg">✕</button>
+      </div>
+      <div id="viewNCBody" class="space-y-3"></div>
+      <div class="flex justify-end pt-3 border-t">
+        <button onclick="window.toggleModal('modalVerDetalleNC', false)" class="px-4 py-1.5 bg-slate-800 text-white rounded font-bold cursor-pointer">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: VER DETALLE CAPA -->
+  <div id="modalVerDetalleCAPA" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl max-w-2xl w-full p-5 border shadow-2xl space-y-4 text-xs max-h-[90vh] overflow-y-auto">
+      <div class="border-b pb-2 flex justify-between items-center">
+        <h3 class="font-bold text-sm text-purple-900" id="viewCAPATitle">Detalle del Plan CAPA</h3>
+        <button onclick="window.toggleModal('modalVerDetalleCAPA', false)" class="text-slate-400 font-bold text-lg">✕</button>
+      </div>
+      <div id="viewCAPABody" class="space-y-3"></div>
+      <div class="flex justify-end pt-3 border-t">
+        <button onclick="window.toggleModal('modalVerDetalleCAPA', false)" class="px-4 py-1.5 bg-slate-800 text-white rounded font-bold cursor-pointer">Cerrar</button>
+      </div>
+    </div>
+  </div>
     
     <!-- MODAL: GALERÍA DE FOTOS -->
     <div id="modalGaleriaFotos" class="modal-backdrop fixed inset-0 bg-slate-900/80 backdrop-blur-sm items-center justify-center p-4 z-50">
@@ -3006,198 +3034,238 @@
         window.logAudit('NC_GUARDADA', `Se registró/actualizó la NC ${ncData.consecutivo}`);
       };
   
-      window.renderNCs = function() {
-        const tbody = document.getElementById('table-ncs');
-        if (!tbody) return;
-        const filtro = document.getElementById('filtroNCInput').value.toLowerCase();
-        const estadoFiltro = document.getElementById('filtroNCEstado').value;
-  
-        const filtered = window.cachedNCs.filter(nc => {
-          const matchFiltro = nc.consecutivo.toLowerCase().includes(filtro) || nc.descripcion.toLowerCase().includes(filtro);
-          const matchEstado = estadoFiltro ? nc.estado === estadoFiltro : true;
-          return matchFiltro && matchEstado;
-        });
-  
-        tbody.innerHTML = filtered.map(nc => {
-          const proc = window.cachedProcesos.find(p => p.id === nc.procesoId)?.nombre || 'N/A';
-          const resp = window.cachedEmpleados.find(e => e.id === nc.responsableId);
-          const respName = resp ? `${resp.nombres} ${resp.apellidos}` : 'N/A';
-          
-          let colorEstado = 'bg-slate-100 text-slate-700';
-          if (nc.estado.includes('Cerrado')) colorEstado = 'bg-emerald-100 text-emerald-700';
-          else if (nc.estado === 'En Ejecución') colorEstado = 'bg-amber-100 text-amber-700';
-  
-          const firmas = nc.firmas || {};
-          const fElab = firmas.elaborado ? '<span class="text-emerald-600" title="Elaborado">✅</span>' : '<span class="text-slate-300">⬜</span>';
-          const fRev = firmas.revisado ? '<span class="text-emerald-600" title="Revisado">✅</span>' : '<span class="text-slate-300">⬜</span>';
-          const fApr = firmas.aprobado ? '<span class="text-emerald-600" title="Aprobado">✅</span>' : '<span class="text-slate-300">⬜</span>';
-  
-          return `<tr class="hover:bg-slate-50 transition">
-            <td class="p-2 border font-mono font-bold text-amber-700">${nc.consecutivo}</td>
-            <td class="p-2 border">${proc}</td>
-            <td class="p-2 border">${respName}</td>
-            <td class="p-2 border font-semibold ${nc.criticidad === 'Crítica' ? 'text-rose-600' : (nc.criticidad === 'Mayor' ? 'text-amber-600' : 'text-slate-600')}">${nc.criticidad}</td>
-            <td class="p-2 border"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${colorEstado}">${nc.estado}</span></td>
-            <td class="p-2 border text-center space-x-1 font-mono text-xs">${fElab}${fRev}${fApr}</td>
-            <td class="p-2 border text-center space-x-1">
-              <button onclick="window.abrirModalFirmaPart11NC('${nc.id}')" class="bg-cyan-100 text-cyan-700 px-2 py-1 rounded text-[10px] font-bold hover:bg-cyan-200 cursor-pointer" title="Firmar Part 11">✍️ Firmar</button>
-              <button onclick="window.avanzarEstadoNC('${nc.id}')" class="bg-slate-100 text-slate-700 px-2 py-1 rounded text-[10px] font-bold hover:bg-slate-200 cursor-pointer" title="Avanzar Estado">⏭️</button>
-            </td>
-          </tr>`;
-        }).join('');
-      };
-  
-      window.abrirModalNuevaCAPA = function() {
-        document.getElementById('modalCAPATitle').innerText = '☑️ Plan CAPA';
-        document.getElementById('capaEditId').value = '';
-        document.getElementById('capaConsecutivo').value = window.generarConsecutivo('CAPA', window.cachedCAPAs);
-        
-        const selNC = document.getElementById('capaNCSelect');
-        selNC.innerHTML = window.cachedNCs.map(nc => `<option value="${nc.id}">${nc.consecutivo} - ${nc.descripcion.substring(0, 30)}...</option>`).join('');
-        
-        document.getElementById('capaMetodologia').value = '5 Porqués';
-        document.getElementById('capaAnalisis').value = '';
-        document.getElementById('contenedorPlanAccion').innerHTML = '';
-        window.agregarActividadPlan();
-  
-        window.toggleModal('modalCAPA', true);
-      };
-  
-      window.agregarActividadPlan = function(act = null) {
-        const container = document.getElementById('contenedorPlanAccion');
-        const div = document.createElement('div');
-        div.className = 'flex space-x-2 items-center bg-white p-2 border rounded shadow-sm';
-        
-        const id = act ? act.id : 'act_' + Date.now() + Math.random().toString(36).substr(2, 5);
-        
-        div.innerHTML = `
-          <input type="text" class="act-id" value="${id}" hidden>
-          <input type="text" placeholder="Actividad" value="${act ? act.actividad : ''}" class="act-desc w-1/2 p-1.5 border rounded text-xs">
-          <input type="text" placeholder="Responsable" value="${act ? act.responsable : ''}" class="act-resp w-1/4 p-1.5 border rounded text-xs">
-          <input type="date" value="${act ? act.fecha : ''}" class="act-fecha w-1/4 p-1.5 border rounded text-xs font-mono">
-          <select class="act-estado p-1.5 border rounded text-xs">
-            <option value="Pendiente" ${act && act.estado === 'Pendiente' ? 'selected' : ''}>Pendiente</option>
-            <option value="Completado" ${act && act.estado === 'Completado' ? 'selected' : ''}>Completado</option>
-          </select>
-          <button type="button" onclick="this.parentElement.remove()" class="text-rose-500 font-bold px-1 hover:text-rose-700">✕</button>
-        `;
-        container.appendChild(div);
-      };
-  
-      window.guardarCAPACompleta = function() {
-        const id = document.getElementById('capaEditId').value;
-        const ncId = document.getElementById('capaNCSelect').value;
-        
-        const actividades = [];
-        document.querySelectorAll('#contenedorPlanAccion > div').forEach(div => {
-          actividades.push({
-            id: div.querySelector('.act-id').value,
-            actividad: div.querySelector('.act-desc').value,
-            responsable: div.querySelector('.act-resp').value,
-            fecha: div.querySelector('.act-fecha').value,
-            estado: div.querySelector('.act-estado').value
-          });
-        });
-  
-        const capaData = {
-          consecutivo: document.getElementById('capaConsecutivo').value,
-          ncId: ncId,
-          metodologia: document.getElementById('capaMetodologia').value,
-          analisis: document.getElementById('capaAnalisis').value,
-          plan: actividades,
-          estado: 'Borrador',
-          efectividad: null
-        };
-  
-        if (!capaData.analisis || actividades.length === 0) {
-          alert("Complete el análisis y agregue al menos una actividad al plan."); return;
-        }
+          window.renderNCs = function() {
+      const tbody = document.getElementById('table-ncs');
+      if (!tbody) return;
+      const filtro = document.getElementById('filtroNCInput').value.toLowerCase();
+      const estadoFiltro = document.getElementById('filtroNCEstado').value;
 
-         // Validación de duplicados para CAPA
-      const existeDuplicadoCAPA = window.cachedCAPAs.some(c => c.consecutivo === capaData.consecutivo && c.id !== id);
-      if (existeDuplicadoCAPA) {
-        alert(`⚠️ Error GxP: Ya existe un plan CAPA con el consecutivo ${capaData.consecutivo}.`);
+      const filtered = window.cachedNCs.filter(nc => {
+        const matchFiltro = nc.consecutivo.toLowerCase().includes(filtro) || nc.descripcion.toLowerCase().includes(filtro);
+        const matchEstado = estadoFiltro ? nc.estado === estadoFiltro : true;
+        return matchFiltro && matchEstado;
+      });
+
+      tbody.innerHTML = filtered.map(nc => {
+        const proc = window.cachedProcesos.find(p => p.id === nc.procesoId)?.nombre || 'N/A';
+        const resp = window.cachedEmpleados.find(e => e.id === nc.responsableId);
+        const respName = resp ? `${resp.nombres} ${resp.apellidos}` : 'N/A';
+        
+        let colorEstado = 'bg-slate-100 text-slate-700';
+        if (nc.estado.includes('Cerrado')) colorEstado = 'bg-emerald-100 text-emerald-700';
+        else if (nc.estado === 'En Ejecución') colorEstado = 'bg-amber-100 text-amber-700';
+
+        const firmas = nc.firmas || {};
+        const fElab = firmas.elaborado ? '<span class="text-emerald-600" title="Elaborado">✅</span>' : '<span class="text-slate-300">⬜</span>';
+        const fRev = firmas.revisado ? '<span class="text-emerald-600" title="Revisado">✅</span>' : '<span class="text-slate-300">⬜</span>';
+        const fApr = firmas.aprobado ? '<span class="text-emerald-600" title="Aprobado">✅</span>' : '<span class="text-slate-300">⬜</span>';
+
+        return `<tr class="hover:bg-slate-50 transition">
+          <td class="p-2 border font-mono font-bold text-amber-700">${nc.consecutivo}</td>
+          <td class="p-2 border">${proc}</td>
+          <td class="p-2 border">${respName}</td>
+          <td class="p-2 border font-semibold ${nc.criticidad === 'Crítica' ? 'text-rose-600' : (nc.criticidad === 'Mayor' ? 'text-amber-600' : 'text-slate-600')}">${nc.criticidad}</td>
+          <td class="p-2 border"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${colorEstado}">${nc.estado}</span></td>
+          <td class="p-2 border text-center space-x-1 font-mono text-xs">${fElab}${fRev}${fApr}</td>
+          <td class="p-2 border text-center space-x-1">
+            <button onclick="window.verDetalleNC('${nc.id}')" class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-[10px] font-bold hover:bg-blue-200 cursor-pointer" title="Ver Detalle">👁️ Ver</button>
+            <button onclick="window.abrirModalFirmaPart11NC('${nc.id}')" class="bg-cyan-100 text-cyan-700 px-2 py-1 rounded text-[10px] font-bold hover:bg-cyan-200 cursor-pointer" title="Firmar Part 11">✍️</button>
+            <button onclick="window.avanzarEstadoNC('${nc.id}')" class="bg-slate-100 text-slate-700 px-2 py-1 rounded text-[10px] font-bold hover:bg-slate-200 cursor-pointer" title="Avanzar Estado">⏭️</button>
+          </td>
+        </tr>`;
+      }).join('');
+    };
+
+    window.renderCAPAs = function() {
+      const tbody = document.getElementById('table-capas');
+      if (!tbody) return;
+      
+      const kpiTotal = document.getElementById('kpi-capa-total');
+      const kpiEjec = document.getElementById('kpi-capa-ejecucion');
+      const kpiEfec = document.getElementById('kpi-capa-efectividad');
+      const kpiCerr = document.getElementById('kpi-capa-cerradas');
+
+      if (kpiTotal) kpiTotal.innerText = window.cachedCAPAs.length;
+      if (kpiEjec) kpiEjec.innerText = window.cachedCAPAs.filter(c => c.estado === 'En Ejecución').length;
+      if (kpiEfec) kpiEfec.innerText = window.cachedCAPAs.filter(c => c.estado === 'En Evaluación de Efectividad').length;
+      if (kpiCerr) kpiCerr.innerText = window.cachedCAPAs.filter(c => c.estado === 'Cerrado Definitivo').length;
+
+      const filtro = document.getElementById('filtroCAPAInput').value.toLowerCase();
+      const estadoFiltro = document.getElementById('filtroCAPAEstado').value;
+
+      const filtered = window.cachedCAPAs.filter(capa => {
+        const matchFiltro = capa.consecutivo.toLowerCase().includes(filtro) || (capa.ncId && capa.ncId.toLowerCase().includes(filtro));
+        const matchEstado = estadoFiltro ? capa.estado === estadoFiltro : true;
+        return matchFiltro && matchEstado;
+      });
+
+      tbody.innerHTML = filtered.map(capa => {
+        const nc = window.cachedNCs.find(n => n.id === capa.ncId);
+        const ncStr = nc ? nc.consecutivo : 'N/A';
+        
+        let colorEstado = 'bg-slate-100 text-slate-700';
+        if (capa.estado.includes('Cerrado')) colorEstado = 'bg-emerald-100 text-emerald-700';
+        else if (capa.estado === 'En Ejecución') colorEstado = 'bg-amber-100 text-amber-700';
+
+        const totalActs = capa.plan ? capa.plan.length : 0;
+        const compActs = capa.plan ? capa.plan.filter(a => a.estado === 'Completado').length : 0;
+        const pct = totalActs > 0 ? Math.round((compActs / totalActs) * 100) : 0;
+
+        return `<tr class="hover:bg-slate-50 transition">
+          <td class="p-2 border font-mono font-bold text-purple-700">${capa.consecutivo}</td>
+          <td class="p-2 border font-mono text-slate-600">${ncStr}</td>
+          <td class="p-2 border">${capa.metodologia}</td>
+          <td class="p-2 border"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${colorEstado}">${capa.estado}</span></td>
+          <td class="p-2 border">
+            <div class="flex items-center space-x-2">
+              <div class="w-full bg-slate-200 rounded-full h-2">
+                <div class="bg-purple-600 h-2 rounded-full" style="width: ${pct}%"></div>
+              </div>
+              <span class="text-[10px] font-mono font-bold">${pct}%</span>
+            </div>
+          </td>
+          <td class="p-2 border text-center space-x-1">
+            <button onclick="window.verDetalleCAPA('${capa.id}')" class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-[10px] font-bold hover:bg-blue-200 cursor-pointer" title="Ver Detalle">👁️ Ver</button>
+            <button onclick="window.avanzarEstadoCAPA('${capa.id}')" class="bg-slate-100 text-slate-700 px-2 py-1 rounded text-[10px] font-bold hover:bg-slate-200 cursor-pointer" title="Avanzar Estado / Ejecutar">⏭️ Avanzar</button>
+          </td>
+        </tr>`;
+      }).join('');
+    };
+
+    window.verDetalleNC = function(id) {
+      const nc = window.cachedNCs.find(n => n.id === id);
+      if (!nc) return;
+      const proc = window.cachedProcesos.find(p => p.id === nc.procesoId)?.nombre || 'N/A';
+      const resp = window.cachedEmpleados.find(e => e.id === nc.responsableId);
+      const respName = resp ? `${resp.nombres} ${resp.apellidos}` : 'N/A';
+      
+      document.getElementById('viewNCTitle').innerText = `Detalle NC: ${nc.consecutivo}`;
+      document.getElementById('viewNCBody').innerHTML = `
+        <div class="grid grid-cols-2 gap-2 bg-slate-50 p-3 rounded border">
+          <div><strong>Proceso:</strong> ${proc}</div>
+          <div><strong>Responsable:</strong> ${respName}</div>
+          <div><strong>Fecha:</strong> ${nc.fecha}</div>
+          <div><strong>Fuente:</strong> ${nc.fuente} | <strong>Reincidencia:</strong> ${nc.reincidencia}</div>
+          <div><strong>Criticidad:</strong> <span class="font-bold text-rose-600">${nc.criticidad}</span></div>
+          <div><strong>Estado Actual:</strong> ${nc.estado}</div>
+        </div>
+        <div><strong>Descripción del Hallazgo:</strong><br><p class="p-2 bg-white border rounded mt-1">${nc.descripcion}</p></div>
+        <div><strong>Delimitación de Alcance:</strong><br><p class="p-2 bg-white border rounded mt-1">${nc.alcance}</p></div>
+        <div><strong>Evaluación de Impacto:</strong><br><p class="p-2 bg-white border rounded mt-1">${nc.impacto}</p></div>
+        <div><strong>Corrección Inmediata:</strong><br><p class="p-2 bg-amber-50 border border-amber-200 rounded mt-1">${nc.correccion}</p></div>
+        <div class="border-t pt-2 mt-2">
+          <strong>Firmas Electrónicas (Part 11):</strong>
+          <ul class="list-disc pl-5 mt-1 text-slate-600">
+            <li>Elaborado: ${nc.firmas.elaborado || 'Pendiente'}</li>
+            <li>Revisado: ${nc.firmas.revisado || 'Pendiente'}</li>
+            <li>Aprobado: ${nc.firmas.aprobado || 'Pendiente'}</li>
+          </ul>
+        </div>
+      `;
+      window.toggleModal('modalVerDetalleNC', true);
+    };
+
+    window.verDetalleCAPA = function(id) {
+      const capa = window.cachedCAPAs.find(c => c.id === id);
+      if (!capa) return;
+      const nc = window.cachedNCs.find(n => n.id === capa.ncId);
+      
+      const planHtml = capa.plan.map(a => `
+        <tr class="border-b">
+          <td class="p-1">${a.actividad}</td>
+          <td class="p-1">${a.responsable}</td>
+          <td class="p-1 font-mono">${a.fecha}</td>
+          <td class="p-1"><span class="px-1.5 py-0.5 rounded text-[10px] font-bold ${a.estado === 'Completado' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}">${a.estado}</span></td>
+        </tr>
+      `).join('');
+
+      document.getElementById('viewCAPATitle').innerText = `Detalle CAPA: ${capa.consecutivo}`;
+      document.getElementById('viewCAPABody').innerHTML = `
+        <div class="grid grid-cols-2 gap-2 bg-slate-50 p-3 rounded border">
+          <div><strong>NC Asociada:</strong> ${nc ? nc.consecutivo : 'N/A'}</div>
+          <div><strong>Metodología:</strong> ${capa.metodologia}</div>
+          <div><strong>Estado:</strong> ${capa.estado}</div>
+        </div>
+        <div><strong>Análisis de Causa Raíz:</strong><br><p class="p-2 bg-purple-50 border border-purple-200 rounded mt-1">${capa.analisis}</p></div>
+        <div>
+          <strong>Plan de Acción:</strong>
+          <table class="w-full border-collapse text-left mt-1 bg-white border">
+            <thead><tr class="bg-slate-100"><th class="p-1 border">Actividad</th><th class="p-1 border">Responsable</th><th class="p-1 border">Fecha</th><th class="p-1 border">Estado</th></tr></thead>
+            <tbody>${planHtml}</tbody>
+          </table>
+        </div>
+        ${capa.efectividad ? `
+        <div class="border-t pt-2 mt-2">
+          <strong>Evaluación de Efectividad:</strong><br>
+          <p class="text-xs mt-1">Resultados: ${capa.efectividad.resultados}</p>
+          <p class="text-xs">Conclusión: <span class="font-bold">${capa.efectividad.conclusion}</span></p>
+        </div>` : ''}
+      `;
+      window.toggleModal('modalVerDetalleCAPA', true);
+    };
+
+    window.avanzarEstadoNC = function(id) {
+      const nc = window.cachedNCs.find(n => n.id === id);
+      if (!nc) return;
+
+      const isAdmin = window.activeGxpUser.rolesIds.includes('rol_admin') || window.esAdminMaster(window.activeGxpUser);
+      const isResponsable = window.activeGxpUser.empleadoId === nc.responsableId;
+      
+      if (!isAdmin && !isResponsable) {
+        alert("⛔ Control GxP: Acceso Denegado. Solo el Administrador o el Responsable asignado a esta NC pueden cambiar su estado.");
         return;
       }
-        if (id) {
-          const idx = window.cachedCAPAs.findIndex(c => c.id === id);
-          window.cachedCAPAs[idx] = { ...window.cachedCAPAs[idx], ...capaData };
-        } else {
-          capaData.id = 'capa_' + Date.now();
-          window.cachedCAPAs.push(capaData);
+
+      const flujo = ['Borrador', 'En Análisis', 'Plan Aprobado', 'En Ejecución', 'Cerrado Operativo', 'En Evaluación de Efectividad', 'Cerrado Definitivo'];
+      const idx = flujo.indexOf(nc.estado);
+      
+      if (idx < flujo.length - 1) {
+        if (nc.estado === 'Borrador' && (!nc.firmas.elaborado || !nc.firmas.revisado || !nc.firmas.aprobado)) {
+          alert("⚠️ Se requieren las 3 firmas Part 11 (Elaborado, Revisado, Aprobado) para avanzar del estado Borrador."); return;
         }
-  
-        window.saveData();
-        window.renderCAPAs();
-        window.toggleModal('modalCAPA', false);
-        window.logAudit('CAPA_GUARDADA', `Se registró/actualizó el CAPA ${capaData.consecutivo}`);
-      };
-  
-      window.renderCAPAs = function() {
-        const tbody = document.getElementById('table-capas');
-        if (!tbody) return;
-        
-        document.getElementById('kpi-capa-total').innerText = window.cachedCAPAs.length;
-        document.getElementById('kpi-capa-ejecucion').innerText = window.cachedCAPAs.filter(c => c.estado === 'En Ejecución').length;
-        document.getElementById('kpi-capa-efectividad').innerText = window.cachedCAPAs.filter(c => c.estado === 'En Evaluación de Efectividad').length;
-        document.getElementById('kpi-capa-cerradas').innerText = window.cachedCAPAs.filter(c => c.estado === 'Cerrado Definitivo').length;
-  
-        const filtro = document.getElementById('filtroCAPAInput').value.toLowerCase();
-        const estadoFiltro = document.getElementById('filtroCAPAEstado').value;
-  
-        const filtered = window.cachedCAPAs.filter(capa => {
-          const matchFiltro = capa.consecutivo.toLowerCase().includes(filtro) || (capa.ncId && capa.ncId.toLowerCase().includes(filtro));
-          const matchEstado = estadoFiltro ? capa.estado === estadoFiltro : true;
-          return matchFiltro && matchEstado;
-        });
-  
-        tbody.innerHTML = filtered.map(capa => {
-          const nc = window.cachedNCs.find(n => n.id === capa.ncId);
-          const ncStr = nc ? nc.consecutivo : 'N/A';
-          
-          let colorEstado = 'bg-slate-100 text-slate-700';
-          if (capa.estado.includes('Cerrado')) colorEstado = 'bg-emerald-100 text-emerald-700';
-          else if (capa.estado === 'En Ejecución') colorEstado = 'bg-amber-100 text-amber-700';
-  
-          const totalActs = capa.plan ? capa.plan.length : 0;
-          const compActs = capa.plan ? capa.plan.filter(a => a.estado === 'Completado').length : 0;
-          const pct = totalActs > 0 ? Math.round((compActs / totalActs) * 100) : 0;
-  
-          return `<tr class="hover:bg-slate-50 transition">
-            <td class="p-2 border font-mono font-bold text-purple-700">${capa.consecutivo}</td>
-            <td class="p-2 border font-mono text-slate-600">${ncStr}</td>
-            <td class="p-2 border">${capa.metodologia}</td>
-            <td class="p-2 border"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${colorEstado}">${capa.estado}</span></td>
-            <td class="p-2 border">
-              <div class="flex items-center space-x-2">
-                <div class="w-full bg-slate-200 rounded-full h-2">
-                  <div class="bg-purple-600 h-2 rounded-full" style="width: ${pct}%"></div>
-                </div>
-                <span class="text-[10px] font-mono font-bold">${pct}%</span>
-              </div>
-            </td>
-            <td class="p-2 border text-center space-x-1">
-              <button onclick="window.avanzarEstadoCAPA('${capa.id}')" class="bg-slate-100 text-slate-700 px-2 py-1 rounded text-[10px] font-bold hover:bg-slate-200 cursor-pointer" title="Avanzar Estado / Ejecutar">⏭️ Avanzar</button>
-            </td>
-          </tr>`;
-        }).join('');
-      };
-  
-      window.avanzarEstadoNC = function(id) {
-        const nc = window.cachedNCs.find(n => n.id === id);
-        if (!nc) return;
-        const flujo = ['Borrador', 'En Análisis', 'Plan Aprobado', 'En Ejecución', 'Cerrado Operativo', 'En Evaluación de Efectividad', 'Cerrado Definitivo'];
-        const idx = flujo.indexOf(nc.estado);
-        
+        nc.estado = flujo[idx + 1];
+        window.saveData(); window.renderNCs();
+        window.logAudit('NC_ESTADO', `NC ${nc.consecutivo} avanzó a ${nc.estado}`);
+      }
+    };
+
+    window.avanzarEstadoCAPA = function(id) {
+      const capa = window.cachedCAPAs.find(c => c.id === id);
+      if (!capa) return;
+
+      const isAdmin = window.activeGxpUser.rolesIds.includes('rol_admin') || window.esAdminMaster(window.activeGxpUser);
+      if (!isAdmin) {
+         const esParticipante = capa.plan.some(a => {
+            const emp = window.cachedEmpleados.find(e => e.nombres + ' ' + e.apellidos === a.responsable);
+            return emp && emp.id === window.activeGxpUser.empleadoId;
+         });
+         if (!esParticipante) {
+            alert("⛔ Control GxP: Solo el Administrador o un participante del Plan de Acción pueden avanzar este CAPA.");
+            return;
+         }
+      }
+      
+      if (capa.estado === 'En Ejecución') {
+        const total = capa.plan.length;
+        const comp = capa.plan.filter(a => a.estado === 'Completado').length;
+        if (comp < total) {
+          alert("⚠️ Debe completar todas las actividades del plan antes de cerrar operativamente."); return;
+        }
+        capa.estado = 'En Evaluación de Efectividad';
+        document.getElementById('efecCapaId').value = capa.id;
+        document.getElementById('efecResultados').value = '';
+        document.getElementById('efecConclusion').value = 'Efectivo';
+        window.toggleModal('modalEfectividad', true);
+      } else {
+        const flujo = ['Borrador', 'En Análisis', 'Plan Aprobado', 'En Ejecución'];
+        const idx = flujo.indexOf(capa.estado);
         if (idx < flujo.length - 1) {
-          if (nc.estado === 'Borrador' && (!nc.firmas.elaborado || !nc.firmas.revisado || !nc.firmas.aprobado)) {
-            alert("⚠️ Se requieren las 3 firmas Part 11 (Elaborado, Revisado, Aprobado) para avanzar del estado Borrador."); return;
-          }
-          nc.estado = flujo[idx + 1];
-          window.saveData(); window.renderNCs();
-          window.logAudit('NC_ESTADO', `NC ${nc.consecutivo} avanzó a ${nc.estado}`);
+          capa.estado = flujo[idx + 1];
+          window.saveData(); window.renderCAPAs();
+          window.logAudit('CAPA_ESTADO', `CAPA ${capa.consecutivo} avanzó a ${capa.estado}`);
         }
-      };
+      }
+    };
   
       window.avanzarEstadoCAPA = function(id) {
         const capa = window.cachedCAPAs.find(c => c.id === id);
