@@ -221,8 +221,12 @@
               <h2 class="font-bold text-sm text-slate-800">⚠️ Gestión de Desviaciones y No Conformidades (NC)</h2>
               <p class="text-[11px] text-slate-500 font-mono">Registro y evaluación de eventos GxP</p>
             </div>
-            <button type="button" onclick="window.abrirModalNuevaNC()" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow cursor-pointer">+ Registrar NC / Desviación</button>
-          </div>
+            <div class="flex space-x-2">
+  <button type="button" onclick="window.abrirModalNuevaNC()" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow cursor-pointer">+ Registrar NC / Desviación</button>
+  <button type="button" onclick="window.exportarExcelNC()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow cursor-pointer flex items-center space-x-1">
+    <span>📊</span><span>Exportar Excel</span>
+  </button>
+</div>
   
           <div class="flex justify-between items-center flex-wrap gap-2 text-xs">
             <div class="relative">
@@ -266,8 +270,12 @@
               <h2 class="font-bold text-sm text-slate-800">☑️ Planes CAPA (Acciones Correctivas y Preventivas)</h2>
               <p class="text-[11px] text-slate-500 font-mono">Análisis de causa raíz y seguimiento de efectividad</p>
             </div>
-            <button type="button" onclick="window.abrirModalNuevaCAPA()" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow cursor-pointer">+ Crear Plan CAPA</button>
-          </div>
+            <div class="flex space-x-2">
+  <button type="button" onclick="window.abrirModalNuevaCAPA()" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow cursor-pointer">+ Crear Plan CAPA</button>
+  <button type="button" onclick="window.exportarExcelCAPA()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow cursor-pointer flex items-center space-x-1">
+    <span>📊</span><span>Exportar Excel</span>
+  </button>
+</div>
   
           <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
             <div class="bg-slate-50 p-3 rounded-xl border border-slate-200"><div class="text-slate-500 text-[11px] font-semibold">Total CAPAs</div><div id="kpi-capa-total" class="text-xl font-bold text-slate-800">0</div></div>
@@ -3804,6 +3812,123 @@
         printWindow.focus();
         printWindow.print();
       };
+    };
+
+          // ==========================================
+    // EXPORTACIÓN A EXCEL (NC Y CAPA)
+    // ==========================================
+
+    window.descargarExcel = function(htmlContent, nombreArchivo) {
+      // Se agrega el BOM (\ufeff) para que Excel reconozca los acentos y eñes correctamente
+      const blob = new Blob(['\ufeff' + htmlContent], { type: 'application/vnd.ms-excel' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = nombreArchivo + '.xls';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    };
+
+    window.exportarExcelNC = function() {
+      if (!window.cachedNCs || window.cachedNCs.length === 0) {
+        alert("No hay No Conformidades registradas para exportar."); return;
+      }
+
+      let html = `
+        <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+        <head><meta charset="UTF-8"></head>
+        <body>
+          <table border="1">
+            <thead>
+              <tr style="background-color: #f1f5f9; font-weight: bold;">
+                <th>Consecutivo</th><th>Fecha Identificación</th><th>Proceso Origen</th><th>Responsable</th>
+                <th>Fuente</th><th>Reincidencia</th><th>Criticidad</th><th>Estado</th>
+                <th>Descripción Hallazgo</th><th>Alcance</th><th>Corrección Inmediata</th>
+              </tr>
+            </thead>
+            <tbody>
+      `;
+
+      window.cachedNCs.forEach(nc => {
+        const proc = window.cachedProcesos.find(p => p.id === nc.procesoId)?.nombre || 'N/A';
+        const resp = window.cachedEmpleados.find(e => e.id === nc.responsableId);
+        const respName = resp ? `${resp.nombres} ${resp.apellidos}` : 'N/A';
+
+        html += `
+          <tr>
+            <td>${nc.consecutivo}</td>
+            <td>${nc.fecha}</td>
+            <td>${proc}</td>
+            <td>${respName}</td>
+            <td>${nc.fuente}</td>
+            <td>${nc.reincidencia}</td>
+            <td>${nc.criticidad}</td>
+            <td>${nc.estado}</td>
+            <td>${nc.descripcion}</td>
+            <td>${nc.alcance}</td>
+            <td>${nc.correccion}</td>
+          </tr>
+        `;
+      });
+
+      html += `</tbody></table></body></html>`;
+      
+      const fecha = new Date().toISOString().split('T')[0];
+      window.descargarExcel(html, `Maestro_No_Conformidades_${fecha}`);
+    };
+
+    window.exportarExcelCAPA = function() {
+      if (!window.cachedCAPAs || window.cachedCAPAs.length === 0) {
+        alert("No hay planes CAPA registrados para exportar."); return;
+      }
+
+      let html = `
+        <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+        <head><meta charset="UTF-8"></head>
+        <body>
+          <table border="1">
+            <thead>
+              <tr style="background-color: #f1f5f9; font-weight: bold;">
+                <th>Consecutivo CAPA</th><th>NC Asociada</th><th>Metodología</th><th>Análisis Causa Raíz</th>
+                <th>Estado</th><th>Total Actividades</th><th>Actividades Completadas</th><th>Progreso</th>
+                <th>Evaluación Efectividad</th><th>Firmado QA</th>
+              </tr>
+            </thead>
+            <tbody>
+      `;
+
+      window.cachedCAPAs.forEach(capa => {
+        const nc = window.cachedNCs.find(n => n.id === capa.ncId);
+        const ncStr = nc ? nc.consecutivo : 'N/A';
+        const totalActs = capa.plan ? capa.plan.length : 0;
+        const compActs = capa.plan ? capa.plan.filter(a => a.estado === 'Completado').length : 0;
+        const pct = totalActs > 0 ? Math.round((compActs / totalActs) * 100) : 0;
+        
+        const efec = capa.efectividad ? capa.efectividad.resultados : 'Pendiente';
+        const firmado = capa.efectividad ? capa.efectividad.firmadoPor : 'Pendiente';
+
+        html += `
+          <tr>
+            <td>${capa.consecutivo}</td>
+            <td>${ncStr}</td>
+            <td>${capa.metodologia}</td>
+            <td>${capa.analisis}</td>
+            <td>${capa.estado}</td>
+            <td>${totalActs}</td>
+            <td>${compActs}</td>
+            <td>${pct}%</td>
+            <td>${efec}</td>
+            <td>${firmado}</td>
+          </tr>
+        `;
+      });
+
+      html += `</tbody></table></body></html>`;
+      
+      const fecha = new Date().toISOString().split('T')[0];
+      window.descargarExcel(html, `Maestro_Planes_CAPA_${fecha}`);
     };
       
     </script>
