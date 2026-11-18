@@ -3020,9 +3020,16 @@
         const copiaId = urlParams.get('copia');
         const eqIdScan = urlParams.get('equipoId');
   
-                if (validarDocCode) {
-          setTimeout(() => {
-            // Normalizamos el código escaneado (quitamos espacios y pasamos a mayúsculas)
+                        if (validarDocCode) {
+          // Función recursiva que espera a que los documentos carguen
+          const intentarValidarQR = (intentos = 0) => {
+            // Si la lista de documentos está vacía, esperamos 1 segundo y reintentamos (máx 10 seg)
+            if ((!window.cachedDocs || window.cachedDocs.length === 0) && intentos < 10) {
+              setTimeout(() => intentarValidarQR(intentos + 1), 1000);
+              return;
+            }
+
+            // Normalizamos el código escaneado
             const codigoEscaneado = validarDocCode.trim().toUpperCase();
             
             // 1. Buscamos el documento por su código, sin importar el estado
@@ -3037,10 +3044,14 @@
                 alert(`🚨 ALERTA CRÍTICA GxP - DOCUMENTO NO VIGENTE\n\nEl documento ${doc.codigo} se encuentra en estado: ${doc.estado || 'DESCONOCIDO'}.\nCopia verificada: ${copiaId || 'N/A'}\n\nFavor retirar esta copia impresa del área de trabajo inmediatamente.`);
               }
             } else {
-              // No existe en absoluto en la base de datos
+              // No existe en absoluto en la base de datos (después de esperar 10 segundos)
               alert(`🚨 ALERTA CRÍTICA GxP - DOCUMENTO NO ENCONTRADO\n\nEl documento ${validarDocCode} asociado a la copia ${copiaId || 'N/A'} NO EXISTE en el sistema.\n\nFavor retirar esta copia impresa del área de trabajo inmediatamente.`);
             }
-          }, 1200);
+          };
+
+          // Lanzamos la validación
+          intentarValidarQR();
+          
         } else if (eqIdScan) {
                   
           window.pendingScanEquipoId = eqIdScan;
