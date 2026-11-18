@@ -1256,9 +1256,19 @@
       <div class="bg-white rounded-xl max-w-sm w-full p-5 border shadow-xl space-y-3 text-xs">
         <div class="border-b pb-2"><h3 class="font-bold text-sm text-slate-800">👤 Actualización de datos</h3></div>
         <div>
-          <label class="block mb-1 font-semibold">Foto de Perfil</label>
-          <input type="file" id="myAvatar" accept="image/jpeg, image/jpg, image/webp" class="w-full p-1.5 border rounded bg-slate-50" />
+               <div class="flex flex-col items-center space-y-3 mb-3">
+        <!-- Círculo de Vista Previa -->
+        <div class="w-24 h-24 rounded-full border-4 border-slate-200 bg-slate-100 flex items-center justify-center overflow-hidden shadow-sm relative">
+          <img id="avatarPreviewImg" src="" alt="Vista previa" class="w-full h-full object-cover hidden" />
+          <span id="avatarPreviewIcon" class="text-4xl text-slate-400">👤</span>
         </div>
+        
+        <!-- Input para subir la foto -->
+        <div class="w-full">
+          <label class="block mb-1 font-semibold text-center text-slate-600">Cambiar Foto de Perfil</label>
+          <input type="file" id="myAvatar" accept="image/jpeg, image/jpg, image/webp" class="w-full p-1.5 border rounded bg-slate-50 text-xs cursor-pointer" onchange="window.previewAvatar(event)" />
+        </div>
+      </div>
         <div><label class="block mb-1 font-semibold">Nombres</label><input type="text" id="myNombres" class="w-full p-2 border rounded" /></div>
         <div><label class="block mb-1 font-semibold">Apellidos</label><input type="text" id="myApellidos" class="w-full p-2 border rounded" /></div>
         <div class="flex justify-end space-x-2 pt-2 border-t">
@@ -2936,6 +2946,21 @@
           window.toggleModal('modalUpdateData', true); 
         }
       };
+
+          window.previewAvatar = function(event) {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const img = document.getElementById('avatarPreviewImg');
+          const icon = document.getElementById('avatarPreviewIcon');
+          img.src = e.target.result;
+          img.classList.remove('hidden');
+          icon.classList.add('hidden');
+        };
+        reader.readAsDataURL(file);
+      }
+    };
   
       window.guardarUpdateData = async function() {
         const emp = window.cachedEmpleados.find(e => e.id === window.activeGxpUser.empleadoId);
