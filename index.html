@@ -3495,7 +3495,7 @@
       window.toggleModal('modalCAPA', true);
     };
         
-      window.avanzarEstadoCAPA = function(id) {
+          window.avanzarEstadoCAPA = function(id) {
       const capa = window.cachedCAPAs.find(c => c.id === id);
       if (!capa) return;
 
@@ -3518,10 +3518,19 @@
           alert("⚠️ Debe completar todas las actividades del plan antes de cerrar operativamente."); return;
         }
         capa.estado = 'En Evaluación de Efectividad';
+        
         document.getElementById('efecCapaId').value = capa.id;
         document.getElementById('efecResultados').value = '';
-        document.getElementById('efecConclusion').value = 'Efectivo';
+        
+        // Limpiamos los campos de firma del QA
+        const qaEmail = document.getElementById('efecQAEmail');
+        const qaPass = document.getElementById('efecQAPass');
+        if (qaEmail) qaEmail.value = '';
+        if (qaPass) qaPass.value = '';
+
         window.toggleModal('modalEfectividad', true);
+        window.saveData(); 
+        window.renderCAPAs();
       } else {
         const flujo = ['Borrador', 'En Análisis', 'Plan Aprobado', 'En Ejecución'];
         const idx = flujo.indexOf(capa.estado);
@@ -3532,32 +3541,6 @@
         }
       }
     };
-  
-      window.avanzarEstadoCAPA = function(id) {
-        const capa = window.cachedCAPAs.find(c => c.id === id);
-        if (!capa) return;
-        
-        if (capa.estado === 'En Ejecución') {
-          const total = capa.plan.length;
-          const comp = capa.plan.filter(a => a.estado === 'Completado').length;
-          if (comp < total) {
-            alert("⚠️ Debe completar todas las actividades del plan antes de cerrar operativamente."); return;
-          }
-          capa.estado = 'En Evaluación de Efectividad';
-          document.getElementById('efecCapaId').value = capa.id;
-          document.getElementById('efecResultados').value = '';
-          document.getElementById('efecConclusion').value = 'Efectivo';
-          window.toggleModal('modalEfectividad', true);
-        } else {
-          const flujo = ['Borrador', 'En Análisis', 'Plan Aprobado', 'En Ejecución'];
-          const idx = flujo.indexOf(capa.estado);
-          if (idx < flujo.length - 1) {
-            capa.estado = flujo[idx + 1];
-            window.saveData(); window.renderCAPAs();
-            window.logAudit('CAPA_ESTADO', `CAPA ${capa.consecutivo} avanzó a ${capa.estado}`);
-          }
-        }
-      };
   
           window.guardarEfectividad = function() {
       const capaId = document.getElementById('efecCapaId').value;
