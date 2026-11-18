@@ -3334,12 +3334,16 @@
       }
     };
 
-        window.abrirModalNuevaCAPA = function() {
-      const isAdmin = window.activeGxpUser.rolesIds.includes('rol_admin') || window.esAdminMaster(window.activeGxpUser);
+            window.abrirModalNuevaCAPA = function() {
+      if (!window.activeGxpUser) { alert("Sesión no válida."); return; }
       
-      let ncsPermitidas = window.cachedNCs;
+      const userRoles = window.activeGxpUser.rolesIds || [];
+      const isAdmin = userRoles.includes('rol_admin') || window.esAdminMaster(window.activeGxpUser);
+      
+      let ncsPermitidas = window.cachedNCs || [];
       if (!isAdmin) {
-        ncsPermitidas = window.cachedNCs.filter(nc => nc.responsableId === window.activeGxpUser.empleadoId);
+        // Usamos '==' para evitar fallos si el ID es número en un lado y texto en el otro
+        ncsPermitidas = ncsPermitidas.filter(nc => nc.responsableId == window.activeGxpUser.empleadoId);
       }
 
       if (ncsPermitidas.length === 0) {
@@ -3349,20 +3353,29 @@
 
       document.getElementById('modalCAPATitle').innerText = '☑️ Plan CAPA';
       document.getElementById('capaEditId').value = '';
-      document.getElementById('capaConsecutivo').value = window.generarConsecutivo('CAPA', window.cachedCAPAs);
+      
+      // Validación segura para el consecutivo
+      document.getElementById('capaConsecutivo').value = window.generarConsecutivo('CAPA', window.cachedCAPAs || []);
       
       const selNC = document.getElementById('capaNCSelect');
-      selNC.innerHTML = ncsPermitidas.map(nc => `<option value="${nc.id}">${nc.consecutivo} - ${nc.descripcion.substring(0, 30)}...</option>`).join('');
+      if (selNC) {
+        selNC.innerHTML = ncsPermitidas.map(nc => {
+          const desc = nc.descripcion ? nc.descripcion.substring(0, 30) : 'Sin descripción';
+          return `<option value="${nc.id}">${nc.consecutivo || 'S/N'} - ${desc}...</option>`;
+        }).join('');
+      }
       
       document.getElementById('capaMetodologia').value = '5 Porqués';
       document.getElementById('capaAnalisis').value = '';
-      document.getElementById('contenedorPlanAccion').innerHTML = '';
+      
+      const container = document.getElementById('contenedorPlanAccion');
+      if (container) container.innerHTML = '';
+      
       window.agregarActividadPlan();
 
       window.toggleModal('modalCAPA', true);
     };
 
-    // Asegurémonos también de que la función de Editar CAPA esté aquí:
     window.abrirModalEditarCAPA = function(id) {
       const capa = window.cachedCAPAs.find(c => c.id === id);
       if (!capa) return;
@@ -3372,23 +3385,30 @@
       document.getElementById('capaConsecutivo').value = capa.consecutivo;
       
       const selNC = document.getElementById('capaNCSelect');
-      selNC.innerHTML = window.cachedNCs.map(n => `<option value="${n.id}">${n.consecutivo} - ${n.descripcion.substring(0, 30)}...</option>`).join('');
-      selNC.value = capa.ncId;
+      if (selNC) {
+        selNC.innerHTML = (window.cachedNCs || []).map(n => {
+          const desc = n.descripcion ? n.descripcion.substring(0, 30) : 'Sin descripción';
+          return `<option value="${n.id}">${n.consecutivo || 'S/N'} - ${desc}...</option>`;
+        }).join('');
+        selNC.value = capa.ncId;
+      }
 
-      document.getElementById('capaMetodologia').value = capa.metodologia;
-      document.getElementById('capaAnalisis').value = capa.analisis;
+      document.getElementById('capaMetodologia').value = capa.metodologia || '5 Porqués';
+      document.getElementById('capaAnalisis').value = capa.analisis || '';
 
       const container = document.getElementById('contenedorPlanAccion');
-      container.innerHTML = '';
-      if (capa.plan && capa.plan.length > 0) {
-        capa.plan.forEach(act => window.agregarActividadPlan(act));
-      } else {
-        window.agregarActividadPlan();
+      if (container) {
+        container.innerHTML = '';
+        if (capa.plan && capa.plan.length > 0) {
+          capa.plan.forEach(act => window.agregarActividadPlan(act));
+        } else {
+          window.agregarActividadPlan();
+        }
       }
 
       window.toggleModal('modalCAPA', true);
     };
-    
+        
       window.avanzarEstadoCAPA = function(id) {
       const capa = window.cachedCAPAs.find(c => c.id === id);
       if (!capa) return;
