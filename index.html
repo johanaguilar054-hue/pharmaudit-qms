@@ -1502,32 +1502,68 @@
       }
     };
   
-      window.saveData = async function() {
-        window.actualizarEstadoNube('guardando', 'Guardando...');
-        const dbState = { 
-          areas: window.cachedAreas, 
-          procesos: window.cachedProcesos, 
-          roles: window.cachedRoles, 
-          matriz: window.cachedMatrizPermisos, 
-          empleados: window.cachedEmpleados, 
-          usuarios: window.cachedUsuarios, 
-          docs: window.cachedDocs, 
-          copias: window.cachedCopias, 
-          obsoletos: window.cachedObsoletos, 
-          audit: window.auditTrailLogs,
-          equipos: window.cachedEquipos,
-          calibraciones: window.cachedCalibraciones,
-          mantenimientos: window.cachedMantenimientos,
-          infraestructura: window.cachedInfraestructura,
-          mantenimientosInfra: window.cachedMantenimientosInfra,
-          ncs: window.cachedNCs,
-          capas: window.cachedCAPAs
-        };
-        try {
-          const res = await fetch(`${SUPABASE_URL}/rest/v1/erp_state`, { method: 'POST', headers: { ...HEADERS, 'Prefer': 'resolution=merge-duplicates' }, body: JSON.stringify({ id: 1, app_data: dbState }) });
-          if (res.ok) { window.actualizarEstadoNube('conectado', 'Guardado'); setTimeout(() => window.actualizarEstadoNube('conectado', 'Conectado'), 2000); } else { window.actualizarEstadoNube('error', 'Fallo al guardar'); }
-        } catch (err) { console.error("Error al guardar en la nube:", err); window.actualizarEstadoNube('error', 'Sin conexión'); }
+         let isSaving = false;
+    let savePending = false; // Bandera para saber si hay cambios nuevos mientras se guarda
+
+    window.saveData = async function() {
+      // Si ya hay un guardado en curso, marcamos que hay uno pendiente y salimos
+      if (isSaving) {
+        savePending = true;
+        console.log("⏳ Guardado en curso. Encolando nuevo cambio...");
+        return; 
+      }
+      
+      isSaving = true;
+      window.actualizarEstadoNube('guardando', 'Guardando...');
+
+      const dbState = { 
+        areas: window.cachedAreas, 
+        procesos: window.cachedProcesos, 
+        roles: window.cachedRoles, 
+        matriz: window.cachedMatrizPermisos, 
+        empleados: window.cachedEmpleados, 
+        usuarios: window.cachedUsuarios, 
+        docs: window.cachedDocs, 
+        copias: window.cachedCopias, 
+        obsoletos: window.cachedObsoletos, 
+        audit: window.auditTrailLogs,
+        equipos: window.cachedEquipos,
+        calibraciones: window.cachedCalibraciones,
+        mantenimientos: window.cachedMantenimientos,
+        infraestructura: window.cachedInfraestructura,
+        mantenimientosInfra: window.cachedMantenimientosInfra,
+        ncs: window.cachedNCs,
+        capas: window.cachedCAPAs
       };
+
+      try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/erp_state`, { 
+          method: 'POST', 
+          headers: { ...HEADERS, 'Prefer': 'resolution=merge-duplicates' }, 
+          body: JSON.stringify({ id: 1, app_data: dbState }) 
+        });
+        
+        if (res.ok) { 
+          window.actualizarEstadoNube('conectado', 'Guardado'); 
+          setTimeout(() => window.actualizarEstadoNube('conectado', 'Conectado'), 2000); 
+        } else { 
+          window.actualizarEstadoNube('error', 'Fallo al guardar'); 
+          console.error("Error de Supabase:", await res.text());
+        }
+      } catch (err) { 
+        console.error("Error al guardar en la nube:", err); 
+        window.actualizarEstadoNube('error', 'Sin conexión'); 
+      } finally {
+        isSaving = false; // Liberamos el bloqueo
+        
+        // Si quedó un guardado pendiente en la cola, lo ejecutamos ahora
+        if (savePending) {
+          savePending = false;
+          console.log("🔄 Ejecutando guardado pendiente...");
+          window.saveData(); 
+        }
+      }
+    };
   
       window.activarBotonLogin = function() {
         const btn = document.getElementById('btnLogin');
