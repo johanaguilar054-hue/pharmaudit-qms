@@ -1492,6 +1492,15 @@
           txt.innerText = mensaje || 'Conectado';
         }
       };
+          // Puente de compatibilidad para el Audit Trail GxP
+    window.logAudit = function(evento, detalles) {
+      const email = window.activeGxpUser ? window.activeGxpUser.correo : 'sistema@pharmor.com.co';
+      if (typeof window.registrarAuditTrail === 'function') {
+        window.registrarAuditTrail(email, evento, detalles);
+      } else {
+        console.warn(`[Audit Fallback] ${evento}: ${detalles}`);
+      }
+    };
   
       window.saveData = async function() {
         window.actualizarEstadoNube('guardando', 'Guardando...');
