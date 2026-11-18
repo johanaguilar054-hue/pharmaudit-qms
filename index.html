@@ -3376,6 +3376,83 @@
       window.toggleModal('modalCAPA', true);
     };
 
+          window.agregarActividadPlan = function(act = null) {
+      const container = document.getElementById('contenedorPlanAccion');
+      if (!container) return;
+
+      const div = document.createElement('div');
+      div.className = 'flex space-x-2 items-center bg-white p-2 border rounded shadow-sm';
+      
+      const id = act ? act.id : 'act_' + Date.now() + Math.random().toString(36).substr(2, 5);
+      
+      div.innerHTML = `
+        <input type="text" class="act-id" value="${id}" hidden>
+        <input type="text" placeholder="Actividad" value="${act ? act.actividad : ''}" class="act-desc w-1/2 p-1.5 border rounded text-xs">
+        <input type="text" placeholder="Responsable" value="${act ? act.responsable : ''}" class="act-resp w-1/4 p-1.5 border rounded text-xs">
+        <input type="date" value="${act ? act.fecha : ''}" class="act-fecha w-1/4 p-1.5 border rounded text-xs font-mono">
+        <select class="act-estado p-1.5 border rounded text-xs">
+          <option value="Pendiente" ${act && act.estado === 'Pendiente' ? 'selected' : ''}>Pendiente</option>
+          <option value="Completado" ${act && act.estado === 'Completado' ? 'selected' : ''}>Completado</option>
+        </select>
+        <button type="button" onclick="this.parentElement.remove()" class="text-rose-500 font-bold px-1 hover:text-rose-700">✕</button>
+      `;
+      container.appendChild(div);
+    };
+
+    window.guardarCAPACompleta = function() {
+      const id = document.getElementById('capaEditId').value;
+      const ncId = document.getElementById('capaNCSelect').value;
+      const consecutivo = document.getElementById('capaConsecutivo').value.trim();
+      
+      const actividades = [];
+      document.querySelectorAll('#contenedorPlanAccion > div').forEach(div => {
+        const actDesc = div.querySelector('.act-desc').value.trim();
+        if (actDesc) {
+            actividades.push({
+              id: div.querySelector('.act-id').value,
+              actividad: actDesc,
+              responsable: div.querySelector('.act-resp').value,
+              fecha: div.querySelector('.act-fecha').value,
+              estado: div.querySelector('.act-estado').value
+            });
+        }
+      });
+
+      const capaData = {
+        consecutivo: consecutivo,
+        ncId: ncId,
+        metodologia: document.getElementById('capaMetodologia').value,
+        analisis: document.getElementById('capaAnalisis').value,
+        plan: actividades,
+        estado: 'Borrador',
+        efectividad: null
+      };
+
+      if (!capaData.analisis || actividades.length === 0) {
+        alert("Complete el análisis y agregue al menos una actividad al plan."); return;
+      }
+
+      const existeDuplicadoCAPA = window.cachedCAPAs.some(c => c.consecutivo === capaData.consecutivo && c.id !== id);
+      if (existeDuplicadoCAPA) {
+        alert(`⚠️ Error GxP: Ya existe un plan CAPA con el consecutivo ${capaData.consecutivo}.`);
+        return;
+      }
+
+      if (id) {
+        const idx = window.cachedCAPAs.findIndex(c => c.id === id);
+        const estadoActual = window.cachedCAPAs[idx].estado;
+        window.cachedCAPAs[idx] = { ...window.cachedCAPAs[idx], ...capaData, estado: estadoActual };
+      } else {
+        capaData.id = 'capa_' + Date.now();
+        window.cachedCAPAs.push(capaData);
+      }
+
+      window.saveData();
+      window.renderCAPAs();
+      window.toggleModal('modalCAPA', false);
+      window.logAudit('CAPA_GUARDADA', `Se registró/actualizó el CAPA ${capaData.consecutivo}`);
+    };
+
     window.abrirModalEditarCAPA = function(id) {
       const capa = window.cachedCAPAs.find(c => c.id === id);
       if (!capa) return;
