@@ -1252,11 +1252,11 @@
       </div>
     </div>
   
-    <div id="modalUpdateData" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
-      <div class="bg-white rounded-xl max-w-sm w-full p-5 border shadow-xl space-y-3 text-xs">
-        <div class="border-b pb-2"><h3 class="font-bold text-sm text-slate-800">👤 Actualización de datos</h3></div>
-        <div>
-               <div class="flex flex-col items-center space-y-3 mb-3">
+     <div id="modalUpdateData" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl max-w-sm w-full p-5 border shadow-xl space-y-3 text-xs">
+      <div class="border-b pb-2"><h3 class="font-bold text-sm text-slate-800">👤 Actualización de datos</h3></div>
+      
+      <div class="flex flex-col items-center space-y-3 mb-3">
         <!-- Círculo de Vista Previa -->
         <div class="w-24 h-24 rounded-full border-4 border-slate-200 bg-slate-100 flex items-center justify-center overflow-hidden shadow-sm relative">
           <img id="avatarPreviewImg" src="" alt="Vista previa" class="w-full h-full object-cover hidden" />
@@ -1269,14 +1269,16 @@
           <input type="file" id="myAvatar" accept="image/jpeg, image/jpg, image/webp" class="w-full p-1.5 border rounded bg-slate-50 text-xs cursor-pointer" onchange="window.previewAvatar(event)" />
         </div>
       </div>
-        <div><label class="block mb-1 font-semibold">Nombres</label><input type="text" id="myNombres" class="w-full p-2 border rounded" /></div>
-        <div><label class="block mb-1 font-semibold">Apellidos</label><input type="text" id="myApellidos" class="w-full p-2 border rounded" /></div>
-        <div class="flex justify-end space-x-2 pt-2 border-t">
-          <button onclick="window.toggleModal('modalUpdateData', false)" class="px-3 py-1.5 border rounded cursor-pointer">Cancelar</button>
-          <button onclick="window.guardarUpdateData()" class="px-4 py-1.5 bg-cyan-600 text-white rounded font-bold shadow cursor-pointer">Guardar Datos</button>
-        </div>
+
+      <div><label class="block mb-1 font-semibold">Nombres</label><input type="text" id="myNombres" class="w-full p-2 border rounded" /></div>
+      <div><label class="block mb-1 font-semibold">Apellidos</label><input type="text" id="myApellidos" class="w-full p-2 border rounded" /></div>
+      
+      <div class="flex justify-end space-x-2 pt-2 border-t">
+        <button onclick="window.toggleModal('modalUpdateData', false)" class="px-3 py-1.5 border rounded cursor-pointer">Cancelar</button>
+        <button onclick="window.guardarUpdateData()" class="px-4 py-1.5 bg-cyan-600 text-white rounded font-bold shadow cursor-pointer">Guardar Datos</button>
       </div>
     </div>
+  </div>
   
     <div id="modalProfile" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
       <div class="bg-white rounded-xl max-w-sm w-full p-5 border shadow-xl space-y-4 text-xs">
