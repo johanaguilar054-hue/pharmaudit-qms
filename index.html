@@ -3020,16 +3020,29 @@
         const copiaId = urlParams.get('copia');
         const eqIdScan = urlParams.get('equipoId');
   
-        if (validarDocCode) {
+                if (validarDocCode) {
           setTimeout(() => {
-            const doc = (window.cachedDocs || []).find(d => d.codigo === validarDocCode && d.estado === 'VIGENTE');
+            // Normalizamos el código escaneado (quitamos espacios y pasamos a mayúsculas)
+            const codigoEscaneado = validarDocCode.trim().toUpperCase();
+            
+            // 1. Buscamos el documento por su código, sin importar el estado
+            const doc = (window.cachedDocs || []).find(d => d.codigo && d.codigo.trim().toUpperCase() === codigoEscaneado);
+            
             if (doc) {
-              alert(`🟢 VERIFICACIÓN GxP EXITOSA\n\nEl documento ${doc.codigo} (Versión ${doc.version}) se encuentra actualmente VIGENTE.\nCopia verificada: ${copiaId || 'N/A'}`);
+              // 2. Si el documento existe, verificamos su estado
+              if (doc.estado && doc.estado.trim().toUpperCase() === 'VIGENTE') {
+                alert(`✅ VERIFICACIÓN GxP EXITOSA\n\nEl documento ${doc.codigo} (Versión ${doc.version}) se encuentra actualmente VIGENTE.\nCopia verificada: ${copiaId || 'N/A'}`);
+              } else {
+                // Existe pero no está vigente (está Obsoleto, En Proceso, etc.)
+                alert(`🚨 ALERTA CRÍTICA GxP - DOCUMENTO NO VIGENTE\n\nEl documento ${doc.codigo} se encuentra en estado: ${doc.estado || 'DESCONOCIDO'}.\nCopia verificada: ${copiaId || 'N/A'}\n\nFavor retirar esta copia impresa del área de trabajo inmediatamente.`);
+              }
             } else {
-              alert(`🚨 ALERTA CRÍTICA GxP - DOCUMENTO NO VIGENTE\n\nEl documento ${validarDocCode} asociado a la copia ${copiaId || 'N/A'} es OBSOLETO o NO EXISTE.\n\nFavor retirar esta copia impresa del área de trabajo inmediatamente.`);
+              // No existe en absoluto en la base de datos
+              alert(`🚨 ALERTA CRÍTICA GxP - DOCUMENTO NO ENCONTRADO\n\nEl documento ${validarDocCode} asociado a la copia ${copiaId || 'N/A'} NO EXISTE en el sistema.\n\nFavor retirar esta copia impresa del área de trabajo inmediatamente.`);
             }
           }, 1200);
         } else if (eqIdScan) {
+                  
           window.pendingScanEquipoId = eqIdScan;
           if (window.activeGxpUser) {
             setTimeout(() => {
