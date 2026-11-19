@@ -328,8 +328,22 @@
             <button onclick="window.switchMetroSubtab('calibraciones', this)" class="metro-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">📐 Calibraciones (<span id="cnt-metro-calib">0</span>)</button>
             <button onclick="window.switchMetroSubtab('mantenimiento', this)" class="metro-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">🛠️ Mantenimiento Equipos (<span id="cnt-metro-maint">0</span>)</button>
             <button onclick="window.switchMetroSubtab('infraestructura', this)" class="metro-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer text-cyan-800">🏛️ Mantenimiento Infraestructura (<span id="cnt-metro-infra">0</span>)</button>
+            <button onclick="window.switchMetroSubtab('tickets', this)" class="metro-subtab-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">🎫 Solicitudes de Servicio (<span id="cnt-metro-tickets">0</span>)</button>
           </div>
-  
+  <!-- Nuevo contenedor para la tabla de tickets -->
+<div id="metro-tickets" class="metro-subtab-content space-y-3">
+  <div class="flex justify-between items-center">
+    <button type="button" onclick="window.abrirModalNuevoTicket()" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow cursor-pointer">+ Nuevo Ticket</button>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="w-full border-collapse text-left text-xs">
+      <thead><tr class="bg-slate-100 text-slate-700 border-b font-bold">
+        <th class="p-2 border">Consecutivo</th><th class="p-2 border">Equipo/Infra</th><th class="p-2 border">Solicitante</th><th class="p-2 border">Descripción</th><th class="p-2 border">Estado</th><th class="p-2 border">Asignado a</th><th class="p-2 border text-center">Acciones</th>
+      </tr></thead>
+      <tbody id="table-tickets" class="divide-y divide-slate-100"></tbody>
+    </table>
+  </div>
+</div>
           <!-- SUBTAB: DASHBOARD Y ALERTAS METROLOGÍA -->
           <div id="metro-dashboard" class="metro-subtab-content active space-y-4">
             <div class="grid grid-cols-2 md:grid-cols-5 gap-3 text-xs font-mono">
@@ -1379,6 +1393,73 @@
         </div>
       </div>
     </div>
+
+      <!-- MODAL: CREAR TICKET DE MANTENIMIENTO -->
+  <div id="modalNuevoTicket" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl max-w-lg w-full p-5 border shadow-2xl space-y-4 text-xs">
+      <div class="border-b pb-2 flex justify-between items-center">
+        <h3 class="font-bold text-sm text-amber-900">🎫 Nueva Solicitud de Servicio</h3>
+        <button onclick="window.toggleModal('modalNuevoTicket', false)" class="text-slate-400 font-bold text-lg">✕</button>
+      </div>
+      <div class="space-y-3">
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block font-semibold mb-1">Tipo de Activo *</label>
+            <select id="tktTipoSelect" class="w-full p-2 border rounded font-bold" onchange="window.poblarItemsTicket()">
+              <option value="Equipo">Equipo</option>
+              <option value="Infraestructura">Infraestructura</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-semibold mb-1">Seleccionar Activo *</label>
+            <select id="tktItemSelect" class="w-full p-2 border rounded font-mono"></select>
+          </div>
+        </div>
+        <div>
+          <label class="block font-semibold mb-1">Descripción de la Falla / Solicitud *</label>
+          <textarea id="tktDescripcion" rows="3" class="w-full p-2 border rounded bg-slate-50" placeholder="Describa detalladamente el problema o requerimiento..."></textarea>
+        </div>
+      </div>
+      <div class="flex justify-end space-x-2 pt-3 border-t">
+        <button type="button" onclick="window.toggleModal('modalNuevoTicket', false)" class="px-3 py-1.5 border rounded cursor-pointer">Cancelar</button>
+        <button type="button" onclick="window.guardarTicket()" class="px-4 py-1.5 bg-amber-600 text-white rounded font-bold shadow cursor-pointer">Crear Ticket</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: CERRAR TICKET (FIRMA TÉCNICO) -->
+  <div id="modalCerrarTicket" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl max-w-lg w-full p-5 border shadow-2xl space-y-4 text-xs">
+      <div class="border-b pb-2 flex justify-between items-center">
+        <h3 class="font-bold text-sm text-emerald-900">✅ Cierre y Resolución de Ticket</h3>
+        <button onclick="window.toggleModal('modalCerrarTicket', false)" class="text-slate-400 font-bold text-lg">✕</button>
+      </div>
+      <input type="hidden" id="cerrarTktId">
+      <div class="space-y-3">
+        <div><label class="block font-semibold mb-1">Solución / Trabajo Realizado *</label><textarea id="tktSolucion" rows="3" class="w-full p-2 border rounded bg-emerald-50"></textarea></div>
+        
+        <div class="border-t pt-2 bg-slate-50 p-3 rounded border">
+          <div class="font-bold text-slate-800 text-[11px] mb-2">✍️ Firma Electrónica del Técnico (Part 11)</div>
+          <div class="grid grid-cols-2 gap-2">
+            <div><label class="block mb-1">Correo</label><input type="email" id="tktEmailTecnico" class="w-full p-1.5 border rounded font-mono" /></div>
+            <div>
+              <label class="block mb-1">Contraseña</label>
+              <div class="relative">
+                <input type="password" id="tktPassTecnico" class="w-full p-1.5 pr-8 border rounded font-mono" />
+                <button type="button" onclick="window.togglePasswordVisibility('tktPassTecnico', 'iconTktPass')" class="absolute inset-y-0 right-0 pr-2 flex items-center text-slate-400">
+                  <span id="iconTktPass" class="text-xs">👁️</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="flex justify-end space-x-2 pt-3 border-t">
+        <button type="button" onclick="window.toggleModal('modalCerrarTicket', false)" class="px-3 py-1.5 border rounded cursor-pointer">Cancelar</button>
+        <button type="button" onclick="window.guardarCierreTicket()" class="px-4 py-1.5 bg-emerald-600 text-white rounded font-bold shadow cursor-pointer">Firmar y Cerrar Ticket</button>
+      </div>
+    </div>
+  </div>
   
     <script>
       const SUPABASE_URL = 'https://wmtvlxjzzwwhtybccrpe.supabase.co';
@@ -1481,6 +1562,11 @@
       window.cachedCAPAs = [
         { id: 'capa_1', consecutivo: 'CAPA-2026-001', ncId: 'nc_1', metodologia: '5 Porqués', analisis: 'El operario olvidó firmar por interrupción en el flujo.', plan: [ { id: 'act_1', actividad: 'Re-entrenamiento en BPM', responsable: 'Johan Aguilar', fecha: '2026-11-01', estado: 'Completado' } ], estado: 'En Ejecución', efectividad: null }
       ];
+
+       // ESTADO PARA TICKETS DE MANTENIMIENTO
+    window.cachedTicketsMantenimiento = [
+      { id: 'tkt_1', consecutivo: 'TKT-2026-001', tipo: 'Equipo', itemId: 'EQ-001', solicitanteId: 1, descripcion: 'La balanza no enciende', estado: 'Abierto', tecnicoAsignado: '', fechaCreacion: new Date().toISOString(), fechaCierre: null, firmaTecnico: null }
+    ];
       
       window.togglePasswordVisibility = function(inputId, iconId) {
         const input = document.getElementById(inputId);
@@ -1562,7 +1648,7 @@
           docs: window.cachedDocs, copias: window.cachedCopias, obsoletos: window.cachedObsoletos, 
           audit: window.auditTrailLogs, equipos: window.cachedEquipos, calibraciones: window.cachedCalibraciones,
           mantenimientos: window.cachedMantenimientos, infraestructura: window.cachedInfraestructura,
-          mantenimientosInfra: window.cachedMantenimientosInfra, ncs: window.cachedNCs, capas: window.cachedCAPAs
+          mantenimientosInfra: window.cachedMantenimientosInfra, ncs: window.cachedNCs, capas: window.cachedCAPAs, tickets: window.cachedTicketsMantenimiento || []
         };
 
         try {
@@ -1633,6 +1719,7 @@
               if (dbState.mantenimientosInfra) window.cachedMantenimientosInfra = dbState.mantenimientosInfra;
               if (dbState.ncs) window.cachedNCs = dbState.ncs;
               if (dbState.capas) window.cachedCAPAs = dbState.capas;
+              if (dbState.tickets) window.cachedTicketsMantenimiento = dbState.tickets;
             }
           }
         } catch(e) { console.error("Accediendo en modo local por fallo de red:", e); } finally { window.activarBotonLogin(); }
@@ -2688,6 +2775,7 @@
         window.renderCAPAs();
         window.renderNotificaciones();
         window.renderAuditTrail();
+        window.renderTickets();
       };
   
       window.renderConfigTablas = function() {
@@ -4141,6 +4229,15 @@
           }
         }
       });
+                // 5. MÓDULO: TICKETS DE MANTENIMIENTO
+      (window.cachedTicketsMantenimiento || []).forEach(tkt => {
+        if (tkt.estado === 'Abierto' && window.activeGxpUser.rolesIds.includes('rol_admin')) {
+          misNotificaciones.push({
+            tipo: 'TICKET', id: tkt.id, titulo: `Ticket Pendiente: ${tkt.consecutivo}`,
+            desc: `Solicitud de ${tkt.tipo} requiere gestión.`, color: 'rose'
+          });
+        }
+      });
 
       return misNotificaciones;
     };
@@ -4189,6 +4286,9 @@
         window.switchTab('documentos', document.querySelector('[data-tab="documentos"]'));
       } else if (tipo === 'METRO') {
         window.switchTab('metrologia', document.querySelector('[data-tab="metrologia"]'));
+      } else if (tipo === 'TICKET') {
+        window.switchTab('metrologia', document.querySelector('[data-tab="metrologia"]'));
+        window.switchMetroSubtab('tickets', document.querySelector('[onclick*="tickets"]'));
       }
     };
 
@@ -4239,6 +4339,148 @@
           </div>
         </div>
       `).join('');
+    };
+
+          // ==========================================
+    // LÓGICA DE TICKETS DE MANTENIMIENTO
+    // ==========================================
+
+    window.poblarItemsTicket = function() {
+      const tipo = document.getElementById('tktTipoSelect').value;
+      const select = document.getElementById('tktItemSelect');
+      if (!select) return;
+
+      let opciones = '';
+      if (tipo === 'Equipo') {
+        opciones = (window.cachedEquipos || []).map(eq => `<option value="${eq.id}">${eq.tag} - ${eq.nombre}</option>`).join('');
+      } else {
+        opciones = (window.cachedInfraestructura || []).map(inf => `<option value="${inf.id}">${inf.codigo} - ${inf.nombre}</option>`).join('');
+      }
+      select.innerHTML = opciones || '<option value="">No hay activos registrados</option>';
+    };
+
+    window.abrirModalNuevoTicket = function() {
+      document.getElementById('tktDescripcion').value = '';
+      window.poblarItemsTicket();
+      window.toggleModal('modalNuevoTicket', true);
+    };
+
+    window.guardarTicket = function() {
+      const tipo = document.getElementById('tktTipoSelect').value;
+      const itemId = document.getElementById('tktItemSelect').value;
+      const desc = document.getElementById('tktDescripcion').value.trim();
+
+      if (!itemId || !desc) { alert("Complete todos los campos obligatorios."); return; }
+
+      const year = new Date().getFullYear();
+      const count = (window.cachedTicketsMantenimiento || []).length + 1;
+      const consecutivo = `TKT-${year}-${String(count).padStart(3, '0')}`;
+
+      const newTicket = {
+        id: 'tkt_' + Date.now(),
+        consecutivo: consecutivo,
+        tipo: tipo,
+        itemId: itemId,
+        solicitanteId: window.activeGxpUser.empleadoId,
+        descripcion: desc,
+        estado: 'Abierto',
+        tecnicoAsignado: '', 
+        fechaCreacion: new Date().toISOString(),
+        fechaCierre: null,
+        solucion: null,
+        firmaTecnico: null
+      };
+
+      window.cachedTicketsMantenimiento.push(newTicket);
+      window.saveData();
+      window.renderTickets();
+      if(window.renderNotificaciones) window.renderNotificaciones(); 
+      window.toggleModal('modalNuevoTicket', false);
+      window.logAudit('TICKET_CREADO', `Se creó el ticket ${consecutivo} para ${tipo} ${itemId}`);
+    };
+
+    window.renderTickets = function() {
+      const tbody = document.getElementById('table-tickets');
+      if (!tbody) return;
+      
+      const cnt = document.getElementById('cnt-metro-tickets');
+      if(cnt) cnt.innerText = (window.cachedTicketsMantenimiento || []).length;
+
+      if (!window.cachedTicketsMantenimiento || window.cachedTicketsMantenimiento.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-500 italic">No hay tickets registrados.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = window.cachedTicketsMantenimiento.map(tkt => {
+        const solicitante = window.cachedEmpleados.find(e => e.id === tkt.solicitanteId);
+        const solNombre = solicitante ? `${solicitante.nombres} ${solicitante.apellidos}` : 'N/A';
+        
+        let itemName = 'N/A';
+        if (tkt.tipo === 'Equipo') {
+          const eq = window.cachedEquipos.find(e => e.id === tkt.itemId);
+          itemName = eq ? eq.tag : tkt.itemId;
+        } else {
+          const inf = window.cachedInfraestructura.find(i => i.id === tkt.itemId);
+          itemName = inf ? inf.codigo : tkt.itemId;
+        }
+
+        const colorEstado = tkt.estado === 'Cerrado' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700';
+
+        return `<tr class="hover:bg-slate-50 transition">
+          <td class="p-2 border font-mono font-bold text-amber-700">${tkt.consecutivo}</td>
+          <td class="p-2 border">${tkt.tipo}: ${itemName}</td>
+          <td class="p-2 border">${solNombre}</td>
+          <td class="p-2 border">${tkt.descripcion}</td>
+          <td class="p-2 border"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${colorEstado}">${tkt.estado}</span></td>
+          <td class="p-2 border">${tkt.tecnicoAsignado || 'Sin asignar'}</td>
+          <td class="p-2 border text-center">
+            ${tkt.estado === 'Abierto' ? 
+              `<button onclick="window.abrirCierreTicket('${tkt.id}')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-2 py-1 rounded text-[10px] font-bold cursor-pointer">Cerrar Ticket</button>` 
+              : `<span class="text-emerald-600 font-bold text-[10px]">✅ Resuelto</span>`}
+          </td>
+        </tr>`;
+      }).join('');
+    };
+
+    window.abrirCierreTicket = function(id) {
+      const tkt = window.cachedTicketsMantenimiento.find(t => t.id === id);
+      if (!tkt) return;
+      
+      document.getElementById('cerrarTktId').value = tkt.id;
+      document.getElementById('tktSolucion').value = '';
+      document.getElementById('tktEmailTecnico').value = window.activeGxpUser.correo;
+      document.getElementById('tktPassTecnico').value = '';
+      
+      window.toggleModal('modalCerrarTicket', true);
+    };
+
+    window.guardarCierreTicket = function() {
+      const id = document.getElementById('cerrarTktId').value;
+      const solucion = document.getElementById('tktSolucion').value.trim();
+      const email = document.getElementById('tktEmailTecnico').value.trim();
+      const pass = document.getElementById('tktPassTecnico').value.trim();
+
+      if (!solucion) { alert("Debe ingresar la solución."); return; }
+
+      const user = window.cachedUsuarios.find(u => u.correo.toLowerCase() === email.toLowerCase() && u.password === pass);
+      if (!user) { alert("⛔ Credenciales inválidas."); return; }
+
+      const tkt = window.cachedTicketsMantenimiento.find(t => t.id === id);
+      if (!tkt) return;
+
+      tkt.estado = 'Cerrado';
+      tkt.fechaCierre = new Date().toISOString();
+      tkt.solucion = solucion;
+      tkt.firmaTecnico = email;
+      
+      const emp = window.cachedEmpleados.find(e => e.correo === email);
+      tkt.tecnicoAsignado = emp ? `${emp.nombres} ${emp.apellidos}` : email;
+
+      window.saveData();
+      window.renderTickets();
+      if(window.renderNotificaciones) window.renderNotificaciones();
+      window.toggleModal('modalCerrarTicket', false);
+      window.logAudit('TICKET_CERRADO', `Ticket ${tkt.consecutivo} cerrado y firmado por ${email}`);
     };
       
     </script>
