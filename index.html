@@ -4041,86 +4041,111 @@
           // ==========================================
     // SISTEMA DE NOTIFICACIONES
     // ==========================================
-    window.calcularNotificaciones = function() {
+        window.calcularNotificaciones = function() {
       if (!window.activeGxpUser) return [];
       
       const misNotificaciones = [];
       const miId = window.activeGxpUser.empleadoId;
       const miEmp = window.cachedEmpleados.find(e => e.id === miId);
       const miNombreCompleto = miEmp ? `${miEmp.nombres} ${miEmp.apellidos}` : '';
-      const isAdmin = window.activeGxpUser.rolesIds.includes('rol_admin');
+      const misRoles = window.activeGxpUser.rolesIds || [];
+      const isAdmin = misRoles.includes('rol_admin') || window.esAdminMaster(window.activeGxpUser);
+      const hoy = new Date();
+      hoy.setHours(0,0,0,0);
 
-      // 1. Revisar NCs asignadas a mí que no estén cerradas
+      // 1. MÓDULO: NO CONFORMIDADES (Asignadas a mí)
       window.cachedNCs.forEach(nc => {
         if (nc.responsableId === miId && nc.estado !== 'Cerrado Definitivo') {
+          let accion = 'Revisa esta NC.';
+          if (nc.estado === 'Borrador') accion = '⚠️ Requiere completar la información y firmar (Part 11).';
+          else if (nc.estado === 'En Análisis') accion = '🔍 Requiere crear o revisar el plan CAPA.';
+          else if (nc.estado === 'Plan Aprobado') accion = '🚀 Inicia la ejecución de las acciones del CAPA.';
+          else if (nc.estado === 'Cerrado Operativo') accion = '📊 Falta la Evaluación de Efectividad y cierre QA.';
+
           misNotificaciones.push({
-            tipo: 'NC',
-            id: nc.id,
-            titulo: `NC Asignada: ${nc.consecutivo}`,
-            desc: `Estado actual: ${nc.estado}. Requiere tu atención.`,
-            color: 'amber'
+            tipo: 'NC', id: nc.id, titulo: `NC Asignada: ${nc.consecutivo} (${nc.estado})`, desc: accion, color: 'amber'
           });
         }
       });
 
-      // 2. Revisar Actividades de CAPA pendientes asignadas a mí
+      // 2. MÓDULO: CAPA (Actividades pendientes asignadas a mí)
       window.cachedCAPAs.forEach(capa => {
         if (capa.estado === 'En Ejecución' || capa.estado === 'Plan Aprobado') {
           capa.plan.forEach(act => {
-            // Validamos si el nombre coincide (ignorando mayúsculas/minúsculas)
             if (act.estado === 'Pendiente' && act.responsable.toLowerCase() === miNombreCompleto.toLowerCase()) {
               misNotificaciones.push({
-                tipo: 'CAPA',
-                id: capa.id,
-                titulo: `Tarea CAPA: ${capa.consecutivo}`,
-                desc: `Actividad: "${act.actividad}" (Vence: ${act.fecha || 'Sin fecha'})`,
-                color: 'purple'
+                tipo: 'CAPA', id: capa.id, titulo: `Tarea CAPA Pendiente: ${capa.consecutivo}`, desc: `👉 Debes ejecutar: "${act.actividad}"`, color: 'purple'
               });
             }
           });
         }
       });
 
+      // 3. MÓDULO: GESTIÓN DOCUMENTAL (Firmas pendientes según rol)
+      window.cachedDocs.forEach(doc => {
+        if (doc.estado === 'En Proceso' || doc.fase !== 'Vigente') {
+          let requiereMiFirma = false;
+          if (doc.fase === 'Elaboración' && (misRoles.includes('rol_autor') || isAdmin)) requiereMiFirma = true;
+          if (doc.fase === 'Revisión' && (misRoles.includes('rol_revisor') || isAdmin)) requiereMiFirma = true;
+          if (doc.fase === 'Aprobación' && (misRoles.includes('rol_aprobador') || isAdmin)) requiereMiFirma = true;
+          if (doc.fase === 'Autorización Final' && (misRoles.includes('rol_admin') || window.activeGxpUser.areasAsignadas?.includes('ar_qa'))) requiereMiFirma = true;
+
+          if (requiereMiFirma) {
+            misNotificaciones.push({
+              tipo: 'DOC', id: doc.id, titulo: `Firma Pendiente: ${doc.codigo}`, desc: `El documento "${doc.titulo}" requiere tu firma en la fase de ${doc.fase}.`, color: 'blue'
+            });
+          }
+        }
+      });
+
+      // 4. MÓDULO: METROLOGÍA (Calibraciones y Mantenimientos próximos o vencidos)
+      window.cachedEquipos.forEach(eq => {
+        // Validar Calibración
+        if (eq.requiereCalibracion && eq.fechaProximaCal) {
+          const fechaCal = new Date(eq.fechaProximaCal + 'T00:00:00');
+          const diffDias = Math.ceil((fechaCal - hoy) / (1000 * 60 * 60 * 24));
+          
+          if (diffDias <= 30) {
+            const vencido = diffDias < 0;
+            misNotificaciones.push({
+              tipo: 'METRO', id: eq.id, 
+              titulo: vencido ? `🚨 Calibración VENCIDA: ${eq.tag}` : `⏳ Calibración Próxima: ${eq.tag}`,
+              desc: vencido ? `El equipo venció hace ${Math.abs(diffDias)} días.` : `Faltan ${diffDias} días para la calibración.`,
+              color: vencido ? 'rose' : 'emerald'
+            });
+          }
+        }
+        // Validar Mantenimiento
+        if (eq.requiereMantenimiento && eq.fechaProximoMaint) {
+          const fechaMnt = new Date(eq.fechaProximoMaint + 'T00:00:00');
+          const diffDias = Math.ceil((fechaMnt - hoy) / (1000 * 60 * 60 * 24));
+          if (diffDias <= 30) {
+             const vencido = diffDias < 0;
+             misNotificaciones.push({
+              tipo: 'METRO', id: eq.id, 
+              titulo: vencido ? `🚨 Mantenimiento VENCIDO: ${eq.tag}` : `⏳ Mantenimiento Próximo: ${eq.tag}`,
+              desc: vencido ? `El equipo venció hace ${Math.abs(diffDias)} días.` : `Faltan ${diffDias} días para el mantenimiento.`,
+              color: vencido ? 'rose' : 'purple'
+            });
+          }
+        }
+      });
+
       return misNotificaciones;
     };
-
-    window.renderNotificaciones = function() {
-      const notis = window.calcularNotificaciones();
-      const count = notis.length;
-
-      // Actualizar los badges (círculos rojos)
-      const bellTop = document.getElementById('bellIndicatorTop');
-      const menuBadge = document.getElementById('menuNotiBadge');
-      const modalBadge = document.getElementById('modalNotiBadge');
-
-      if (bellTop) bellTop.classList.toggle('hidden', count === 0);
-      if (menuBadge) { menuBadge.innerText = count; menuBadge.classList.toggle('hidden', count === 0); }
-      if (modalBadge) modalBadge.innerText = count;
-
-      const list = document.getElementById('notificationsList');
-      if (!list) return;
-
-      if (count === 0) {
-        list.innerHTML = `<div class="text-center text-slate-500 italic py-6">No tienes notificaciones pendientes. ¡Buen trabajo! 🎉</div>`;
-        return;
-      }
-
-      list.innerHTML = notis.map(n => `
-        <div class="p-2 border-l-4 border-${n.color}-500 bg-slate-50 rounded shadow-sm flex flex-col space-y-1">
-          <div class="font-bold text-[11px] text-${n.color}-700">${n.titulo}</div>
-          <div class="text-[10px] text-slate-600">${n.desc}</div>
-          <button onclick="window.toggleModal('modalNotifications', false); window.abrirDetalleDesdeNotificacion('${n.tipo}', '${n.id}')" class="text-[10px] text-cyan-600 font-bold text-left hover:underline cursor-pointer">Ver Detalle ➔</button>
-        </div>
-      `).join('');
+       window.renderNotificaciones = function() {
     };
-
-    window.abrirDetalleDesdeNotificacion = function(tipo, id) {
+         window.abrirDetalleDesdeNotificacion = function(tipo, id) {
       if (tipo === 'NC') {
         window.switchTab('desviaciones', document.querySelector('[data-tab="desviaciones"]'));
         window.verDetalleNC(id);
       } else if (tipo === 'CAPA') {
         window.switchTab('capa', document.querySelector('[data-tab="capa"]'));
         window.verDetalleCAPA(id);
+      } else if (tipo === 'DOC') {
+        window.switchTab('documentos', document.querySelector('[data-tab="documentos"]'));
+      } else if (tipo === 'METRO') {
+        window.switchTab('metrologia', document.querySelector('[data-tab="metrologia"]'));
       }
     };
 
