@@ -3484,7 +3484,7 @@
       window.toggleModal('modalCAPA', true);
     };
 
-          window.agregarActividadPlan = function(act = null) {
+             window.agregarActividadPlan = function(act = null) {
       const container = document.getElementById('contenedorPlanAccion');
       if (!container) return;
 
@@ -3493,10 +3493,21 @@
       
       const id = act ? act.id : 'act_' + Date.now() + Math.random().toString(36).substr(2, 5);
       
+      // Creamos las opciones del select basadas en los empleados
+      const opcionesEmpleados = window.cachedEmpleados.map(e => {
+        const nombreCompleto = `${e.nombres} ${e.apellidos}`;
+        return `<option value="${nombreCompleto}" ${act && act.responsable === nombreCompleto ? 'selected' : ''}>${nombreCompleto}</option>`;
+      }).join('');
+
       div.innerHTML = `
         <input type="text" class="act-id" value="${id}" hidden>
         <input type="text" placeholder="Actividad" value="${act ? act.actividad : ''}" class="act-desc w-1/2 p-1.5 border rounded text-xs">
-        <input type="text" placeholder="Responsable" value="${act ? act.responsable : ''}" class="act-resp w-1/4 p-1.5 border rounded text-xs">
+        
+        <select class="act-resp w-1/4 p-1.5 border rounded text-xs">
+          <option value="" disabled ${!act ? 'selected' : ''}>Seleccione Responsable</option>
+          ${opcionesEmpleados}
+        </select>
+
         <input type="date" value="${act ? act.fecha : ''}" class="act-fecha w-1/4 p-1.5 border rounded text-xs font-mono">
         <select class="act-estado p-1.5 border rounded text-xs">
           <option value="Pendiente" ${act && act.estado === 'Pendiente' ? 'selected' : ''}>Pendiente</option>
@@ -4133,7 +4144,39 @@
 
       return misNotificaciones;
     };
-       window.renderNotificaciones = function() {
+           window.renderNotificaciones = function() {
+      const notis = window.calcularNotificaciones();
+      const count = notis.length;
+
+      // 1. Actualizar los badges (círculos rojos)
+      const bellTop = document.getElementById('bellIndicatorTop');
+      const menuBadge = document.getElementById('menuNotiBadge');
+      const modalBadge = document.getElementById('modalNotiBadge');
+
+      if (bellTop) bellTop.classList.toggle('hidden', count === 0);
+      if (menuBadge) { 
+        menuBadge.innerText = count; 
+        menuBadge.classList.toggle('hidden', count === 0); 
+      }
+      if (modalBadge) modalBadge.innerText = count;
+
+      // 2. Dibujar la lista en el modal
+      const list = document.getElementById('notificationsList');
+      if (!list) return;
+
+      if (count === 0) {
+        list.innerHTML = `<div class="text-center text-slate-500 italic py-6">No tienes notificaciones pendientes. ¡Buen trabajo! 🎉</div>`;
+        return;
+      }
+
+      // 3. Armar el HTML de las notificaciones
+      list.innerHTML = notis.map(n => `
+        <div class="p-3 border-l-4 border-${n.color}-500 bg-slate-50 rounded shadow-sm flex flex-col space-y-1 mb-2 transition hover:bg-white">
+          <div class="font-bold text-[12px] text-${n.color}-700">${n.titulo}</div>
+          <div class="text-[11px] text-slate-600">${n.desc}</div>
+          <button onclick="window.toggleModal('modalNotifications', false); window.abrirDetalleDesdeNotificacion('${n.tipo}', '${n.id}')" class="text-[11px] text-cyan-600 font-bold text-left hover:underline cursor-pointer mt-1">Ver Detalle ➔</button>
+        </div>
+      `).join('');
     };
          window.abrirDetalleDesdeNotificacion = function(tipo, id) {
       if (tipo === 'NC') {
