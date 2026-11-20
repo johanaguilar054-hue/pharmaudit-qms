@@ -1542,36 +1542,20 @@
       window.cachedDocs = []; window.cachedCopias = []; window.cachedObsoletos = []; window.auditTrailLogs = [];
   
       // DATOS MAESTROS DE METROLOGÍA, EQUIPOS E INFRAESTRUCTURA
-      window.cachedEquipos = [
-        { id: 'EQ-001', tag: 'EQ-001', nombre: 'Balanza Analítica Sartorius', tipo: 'Instrumento', criticidad: 'Crítico', fabricante: 'Sartorius', modelo: 'Cubis II', serie: 'SN-987654', areaId: 'ar_qc', procesoId: 'pr_gestion', ubicacion: 'Lab QC - Sala 2', responsable: 'Johan Aguilar', estado: 'Operativo', requiereCalibracion: true, intervaloCalMonths: 6, requiereMantenimiento: true, intervaloMantenimientoMonths: 12, fechaUltimaCal: '2026-05-10', fechaProximaCal: '2026-11-10', fechaUltimoMaint: '2026-01-15', fechaProximoMaint: '2027-01-15', adjuntoUrl: null }
-      ];
-      window.cachedCalibraciones = [
-        { id: 'CAL-001', equipoId: 'EQ-001', fecha: '2026-05-10', realizadaPor: 'Metrología Externa S.A.S.', asFound: 'Dentro de especificación', asLeft: 'Calibrado y ajustado', estandares: 'Pesas Patrón E2 Cert #9988', resultado: 'Conforme', certificadoUrl: null, observaciones: 'Calibración semestral ejecutada sin desviaciones.', proximaFecha: '2026-11-10', firmadaPor: 'j.aguilar@pharmor.com.co' }
-      ];
-      window.cachedMantenimientos = [
-        { id: 'MNT-001', equipoId: 'EQ-001', tipo: 'Preventivo', estado: 'Completado', fechaProgramada: '2026-01-15', fechaEjecucion: '2026-01-15', realizadoPor: 'Servicio Técnico Sartorius', tiempoParo: 2, causaFalla: '', repuestos: 'Filtro de aire, celda de peso', observaciones: 'Mantenimiento preventivo anual verificado.', fotosUrls: [] }
-      ];
+      window.cachedEquipos = [];
+      window.cachedCalibraciones = [];
+      window.cachedMantenimientos = [];
   
       // INFRAESTRUCTURA Y MANTENIMIENTO LOCATIVO
-      window.cachedInfraestructura = [
-        { id: 'INF-001', codigo: 'INF-QC-01', areaId: 'ar_qc', nombre: 'Sistema HVAC Sala Limpia QC', ubicacion: 'Planta 2 - Lab QC', frecuenciaMonths: 6, fechaUltimoMaint: '2026-02-10', estado: 'Operativo' }
-      ];
-      window.cachedMantenimientosInfra = [
-        { id: 'MNT-INF-001', infraId: 'INF-001', tipo: 'Preventivo', fecha: '2026-02-10', tecnico: 'Mantenimiento HVAC S.A.S.', detalles: 'Cambio de filtros HEPA y calibración de caudal de aire en sala QC.', estado: 'Completado', fotosUrls: [] }
-      ];
+      window.cachedInfraestructura = [];
+      window.cachedMantenimientosInfra = [];
   
           // ESTADO PARA NC Y CAPA
-      window.cachedNCs = [
-        { id: 'nc_1', consecutivo: 'NC-2026-001', fecha: '2026-10-15', procesoId: 'pr_gestion', responsableId: 1, fuente: 'Auditoría Interna', reincidencia: 'No', descripcion: 'Falta de firma en registro de limpieza', alcance: 'Lote L-2026-005', impacto: 'Bajo', criticidad: 'Menor', correccion: 'Se procedió a firmar el registro previa verificación', estado: 'En Análisis', firmas: { elaborado: 'j.aguilar@pharmor.com.co', revisado: null, aprobado: null } }
-      ];
-      window.cachedCAPAs = [
-        { id: 'capa_1', consecutivo: 'CAPA-2026-001', ncId: 'nc_1', metodologia: '5 Porqués', analisis: 'El operario olvidó firmar por interrupción en el flujo.', plan: [ { id: 'act_1', actividad: 'Re-entrenamiento en BPM', responsable: 'Johan Aguilar', fecha: '2026-11-01', estado: 'Completado' } ], estado: 'En Ejecución', efectividad: null }
-      ];
+      window.cachedNCs = [];
+      window.cachedCAPAs = [];
 
        // ESTADO PARA TICKETS DE MANTENIMIENTO
-    window.cachedTicketsMantenimiento = [
-      { id: 'tkt_1', consecutivo: 'TKT-2026-001', tipo: 'Equipo', itemId: 'EQ-001', solicitanteId: 1, descripcion: 'La balanza no enciende', estado: 'Abierto', tecnicoAsignado: '', fechaCreacion: new Date().toISOString(), fechaCierre: null, firmaTecnico: null }
-    ];
+    window.cachedTicketsMantenimiento = [];
       
       window.togglePasswordVisibility = function(inputId, iconId) {
         const input = document.getElementById(inputId);
