@@ -1398,9 +1398,10 @@
   <div id="modalNuevoTicket" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
     <div class="bg-white rounded-xl max-w-lg w-full p-5 border shadow-2xl space-y-4 text-xs">
       <div class="border-b pb-2 flex justify-between items-center">
-        <h3 class="font-bold text-sm text-amber-900">🎫 Nueva Solicitud de Servicio</h3>
+        <h3 id="modalTktTitle" class="font-bold text-sm text-amber-900">🎫 Nueva Solicitud de Servicio</h3>
         <button onclick="window.toggleModal('modalNuevoTicket', false)" class="text-slate-400 font-bold text-lg">✕</button>
       </div>
+       <input type="hidden" id="editTktId" value="">
       <div class="space-y-3">
         <div class="grid grid-cols-2 gap-2">
           <div>
@@ -4371,11 +4372,13 @@
       select.innerHTML = opciones || '<option value="">No hay activos registrados</option>';
     };
 
-        window.abrirModalNuevoTicket = function() {
-      document.getElementById('tktDescripcion').value = '';
-      window.poblarItemsTicket(); // Puebla los equipos/infraestructura
+    window.abrirModalNuevoTicket = function() {
+      document.getElementById('editTktId').value = ''; // Limpiamos el ID
+      document.getElementById('modalTktTitle').innerText = '🎫 Nueva Solicitud de Servicio'; // Título original
       
-      // Poblar el selector de técnicos con los empleados
+      document.getElementById('tktDescripcion').value = '';
+      window.poblarItemsTicket();
+      
       const selectTecnico = document.getElementById('tktTecnicoSelect');
       if (selectTecnico) {
         selectTecnico.innerHTML = `<option value="" disabled selected>Seleccione al técnico encargado...</option>` + 
@@ -4385,43 +4388,81 @@
       window.toggleModal('modalNuevoTicket', true);
     };
 
-    window.guardarTicket = function() {
+          window.abrirModalEditarTicket = function(id) {
+      const tkt = window.cachedTicketsMantenimiento.find(t => t.id === id);
+      if (!tkt) return;
+
+      document.getElementById('editTktId').value = tkt.id;
+      document.getElementById('modalTktTitle').innerText = `✏️ Editar Ticket: ${tkt.consecutivo}`;
+      
+      document.getElementById('tktTipoSelect').value = tkt.tipo;
+      window.poblarItemsTicket(); // Poblar los equipos según el tipo
+      document.getElementById('tktItemSelect').value = tkt.itemId;
+      document.getElementById('tktDescripcion').value = tkt.descripcion;
+      
+      const selectTecnico = document.getElementById('tktTecnicoSelect');
+      if (selectTecnico) {
+        selectTecnico.innerHTML = (window.cachedEmpleados || []).map(e => `<option value="${e.id}">${e.nombres} ${e.apellidos} (${e.cargo})</option>`).join('');
+        selectTecnico.value = tkt.tecnicoAsignadoId; // Seleccionamos al técnico actual
+      }
+      
+      window.toggleModal('modalNuevoTicket', true);
+    };
+
+        window.guardarTicket = function() {
+      const idEdit = document.getElementById('editTktId').value;
       const tipo = document.getElementById('tktTipoSelect').value;
       const itemId = document.getElementById('tktItemSelect').value;
       const desc = document.getElementById('tktDescripcion').value.trim();
-      const tecnicoId = document.getElementById('tktTecnicoSelect').value; // NUEVO
+      const tecnicoId = document.getElementById('tktTecnicoSelect').value;
 
-      if (!itemId || !desc || !tecnicoId) { alert("Complete todos los campos obligatorios, incluyendo el técnico asignado."); return; }
-
-      const year = new Date().getFullYear();
-      const count = (window.cachedTicketsMantenimiento || []).length + 1;
-      const consecutivo = `TKT-${year}-${String(count).padStart(3, '0')}`;
+      if (!itemId || !desc || !tecnicoId) { alert("Complete todos los campos obligatorios."); return; }
 
       const tecnicoObj = window.cachedEmpleados.find(e => e.id == tecnicoId);
       const nombreTecnico = tecnicoObj ? `${tecnicoObj.nombres} ${tecnicoObj.apellidos}` : '';
 
-      const newTicket = {
-        id: 'tkt_' + Date.now(),
-        consecutivo: consecutivo,
-        tipo: tipo,
-        itemId: itemId,
-        solicitanteId: window.activeGxpUser.empleadoId,
-        descripcion: desc,
-        estado: 'Abierto',
-        tecnicoAsignadoId: tecnicoId, // Guardamos el ID para seguridad
-        tecnicoAsignado: nombreTecnico, // Guardamos el nombre para visualización
-        fechaCreacion: new Date().toISOString(),
-        fechaCierre: null,
-        solucion: null,
-        firmaTecnico: null
-      };
+      if (idEdit) {
+        // MODO EDICIÓN
+        const tkt = window.cachedTicketsMantenimiento.find(t => t.id === idEdit);
+        if (tkt) {
+          tkt.tipo = tipo;
+          tkt.itemId = itemId;
+          tkt.descripcion = desc;
+          tkt.tecnicoAsignadoId = tecnicoId;
+          tkt.tecnicoAsignado = nombreTecnico;
+          
+          window.logAudit('TICKET_EDITADO', `Ticket ${tkt.consecutivo} fue modificado por ${window.activeGxpUser.correo}`);
+        }
+      } else {
+        // MODO CREACIÓN
+        const year = new Date().getFullYear();
+        const count = (window.cachedTicketsMantenimiento || []).length + 1;
+        const consecutivo = `TKT-${year}-${String(count).padStart(3, '0')}`;
 
-      window.cachedTicketsMantenimiento.push(newTicket);
+        const newTicket = {
+          id: 'tkt_' + Date.now(),
+          consecutivo: consecutivo,
+          tipo: tipo,
+          itemId: itemId,
+          solicitanteId: window.activeGxpUser.empleadoId,
+          descripcion: desc,
+          estado: 'Abierto',
+          tecnicoAsignadoId: tecnicoId,
+          tecnicoAsignado: nombreTecnico,
+          fechaCreacion: new Date().toISOString(),
+          fechaCierre: null,
+          solucion: null,
+          firmaTecnico: null
+        };
+
+        window.cachedTicketsMantenimiento.push(newTicket);
+        window.logAudit('TICKET_CREADO', `Ticket ${consecutivo} creado y asignado a ${nombreTecnico}`);
+      }
+
       window.saveData();
       window.renderTickets();
       if(window.renderNotificaciones) window.renderNotificaciones(); 
       window.toggleModal('modalNuevoTicket', false);
-      window.logAudit('TICKET_CREADO', `Ticket ${consecutivo} creado y asignado a ${nombreTecnico}`);
     };
 
     window.renderTickets = function() {
@@ -4458,9 +4499,10 @@
           <td class="p-2 border">${tkt.descripcion}</td>
           <td class="p-2 border"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${colorEstado}">${tkt.estado}</span></td>
           <td class="p-2 border">${tkt.tecnicoAsignado || 'Sin asignar'}</td>
-          <td class="p-2 border text-center">
+          <td class="p-2 border text-center space-x-1">
             ${tkt.estado === 'Abierto' ? 
-              `<button onclick="window.abrirCierreTicket('${tkt.id}')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-2 py-1 rounded text-[10px] font-bold cursor-pointer">Cerrar Ticket</button>` 
+              `<button onclick="window.abrirModalEditarTicket('${tkt.id}')" class="bg-amber-100 text-amber-700 px-2 py-1 rounded text-[10px] font-bold hover:bg-amber-200 cursor-pointer" title="Editar Ticket">✏️</button>
+               <button onclick="window.abrirCierreTicket('${tkt.id}')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-2 py-1 rounded text-[10px] font-bold cursor-pointer">Cerrar Ticket</button>` 
               : `<span class="text-emerald-600 font-bold text-[10px]">✅ Resuelto</span>`}
           </td>
         </tr>`;
