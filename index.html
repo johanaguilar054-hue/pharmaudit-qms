@@ -2810,6 +2810,7 @@
         window.cachedEmpleados[editIdX] = { ...window.cachedEmpleados[editIdX], ...data }; 
         window.registrarAuditTrail(window.activeGxpUser.correo, 'UPDATE_EMP', `Editó empleado: ${data.correo}`); 
       }
+        };
   
       window.abrirModalUsuario = function() { 
         document.getElementById('modalUsrTitle').innerText = 'Asignar Nuevo Usuario'; 
@@ -4337,7 +4338,7 @@
 
       // Filtrar logs
       const filteredLogs = (window.auditTrailLogs || []).filter(log => {
-        const matchText = (log.accion + ' ' + log.detalles).toLowerCase().includes(filterText);
+        const matchText = (log.accion + ' ' + log.detalle).toLowerCase().includes(filterText);
         const matchUser = filterUser ? log.usuario === filterUser : true;
         // Comparamos solo la parte de la fecha YYYY-MM-DD
         const matchDate = filterDate ? log.fecha.startsWith(filterDate) : true;
@@ -4358,7 +4359,7 @@
             <span class="font-bold text-cyan-700">${log.usuario}</span> 
             <span class="mx-1">➔</span>
             <span class="font-bold text-slate-700">${log.accion}</span>: 
-            <span class="text-slate-600">${log.detalles}</span>
+            <span class="text-slate-600">${log.detalle}</span>
           </div>
         </div>
       `).join('');
