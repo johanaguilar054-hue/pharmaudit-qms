@@ -1416,6 +1416,10 @@
           </div>
         </div>
         <div>
+          <label class="block font-semibold mb-1 text-cyan-900">Asignar Técnico Responsable *</label>
+          <select id="tktTecnicoSelect" class="w-full p-2 border rounded bg-cyan-50 font-bold"></select>
+        </div>
+        <div>
           <label class="block font-semibold mb-1">Descripción de la Falla / Solicitud *</label>
           <textarea id="tktDescripcion" rows="3" class="w-full p-2 border rounded bg-slate-50" placeholder="Describa detalladamente el problema o requerimiento..."></textarea>
         </div>
@@ -4229,12 +4233,20 @@
           }
         }
       });
-                // 5. MÓDULO: TICKETS DE MANTENIMIENTO
+        // 5. MÓDULO: TICKETS DE MANTENIMIENTO
       (window.cachedTicketsMantenimiento || []).forEach(tkt => {
-        if (tkt.estado === 'Abierto' && window.activeGxpUser.rolesIds.includes('rol_admin')) {
+        // Si soy el técnico asignado y el ticket no está cerrado
+        if (tkt.estado === 'Abierto' && tkt.tecnicoAsignadoId == window.activeGxpUser.empleadoId) {
           misNotificaciones.push({
-            tipo: 'TICKET', id: tkt.id, titulo: `Ticket Pendiente: ${tkt.consecutivo}`,
-            desc: `Solicitud de ${tkt.tipo} requiere gestión.`, color: 'rose'
+            tipo: 'TICKET', id: tkt.id, titulo: `Ticket Asignado: ${tkt.consecutivo}`,
+            desc: `Tienes una nueva solicitud de mantenimiento para resolver.`, color: 'amber'
+          });
+        }
+        // O si soy Admin y hay tickets abiertos
+        else if (tkt.estado === 'Abierto' && (window.activeGxpUser.rolesIds.includes('rol_admin') || window.esAdminMaster(window.activeGxpUser))) {
+          misNotificaciones.push({
+            tipo: 'TICKET', id: tkt.id, titulo: `Ticket Abierto: ${tkt.consecutivo}`,
+            desc: `Asignado a: ${tkt.tecnicoAsignado}. Pendiente de cierre.`, color: 'rose'
           });
         }
       });
@@ -4359,9 +4371,17 @@
       select.innerHTML = opciones || '<option value="">No hay activos registrados</option>';
     };
 
-    window.abrirModalNuevoTicket = function() {
+        window.abrirModalNuevoTicket = function() {
       document.getElementById('tktDescripcion').value = '';
-      window.poblarItemsTicket();
+      window.poblarItemsTicket(); // Puebla los equipos/infraestructura
+      
+      // Poblar el selector de técnicos con los empleados
+      const selectTecnico = document.getElementById('tktTecnicoSelect');
+      if (selectTecnico) {
+        selectTecnico.innerHTML = `<option value="" disabled selected>Seleccione al técnico encargado...</option>` + 
+          (window.cachedEmpleados || []).map(e => `<option value="${e.id}">${e.nombres} ${e.apellidos} (${e.cargo})</option>`).join('');
+      }
+      
       window.toggleModal('modalNuevoTicket', true);
     };
 
@@ -4369,12 +4389,16 @@
       const tipo = document.getElementById('tktTipoSelect').value;
       const itemId = document.getElementById('tktItemSelect').value;
       const desc = document.getElementById('tktDescripcion').value.trim();
+      const tecnicoId = document.getElementById('tktTecnicoSelect').value; // NUEVO
 
-      if (!itemId || !desc) { alert("Complete todos los campos obligatorios."); return; }
+      if (!itemId || !desc || !tecnicoId) { alert("Complete todos los campos obligatorios, incluyendo el técnico asignado."); return; }
 
       const year = new Date().getFullYear();
       const count = (window.cachedTicketsMantenimiento || []).length + 1;
       const consecutivo = `TKT-${year}-${String(count).padStart(3, '0')}`;
+
+      const tecnicoObj = window.cachedEmpleados.find(e => e.id == tecnicoId);
+      const nombreTecnico = tecnicoObj ? `${tecnicoObj.nombres} ${tecnicoObj.apellidos}` : '';
 
       const newTicket = {
         id: 'tkt_' + Date.now(),
@@ -4384,7 +4408,8 @@
         solicitanteId: window.activeGxpUser.empleadoId,
         descripcion: desc,
         estado: 'Abierto',
-        tecnicoAsignado: '', 
+        tecnicoAsignadoId: tecnicoId, // Guardamos el ID para seguridad
+        tecnicoAsignado: nombreTecnico, // Guardamos el nombre para visualización
         fechaCreacion: new Date().toISOString(),
         fechaCierre: null,
         solucion: null,
@@ -4396,7 +4421,7 @@
       window.renderTickets();
       if(window.renderNotificaciones) window.renderNotificaciones(); 
       window.toggleModal('modalNuevoTicket', false);
-      window.logAudit('TICKET_CREADO', `Se creó el ticket ${consecutivo} para ${tipo} ${itemId}`);
+      window.logAudit('TICKET_CREADO', `Ticket ${consecutivo} creado y asignado a ${nombreTecnico}`);
     };
 
     window.renderTickets = function() {
@@ -4445,6 +4470,13 @@
     window.abrirCierreTicket = function(id) {
       const tkt = window.cachedTicketsMantenimiento.find(t => t.id === id);
       if (!tkt) return;
+
+      // 🚨 SEGURIDAD GxP: Validar que sea el técnico asignado o un Admin
+      const isAdmin = window.activeGxpUser.rolesIds.includes('rol_admin') || window.esAdminMaster(window.activeGxpUser);
+      if (!isAdmin && window.activeGxpUser.empleadoId != tkt.tecnicoAsignadoId) {
+        alert(`⛔ Control GxP: Este ticket está asignado a ${tkt.tecnicoAsignado}. Solo el técnico asignado o un administrador pueden cerrarlo.`);
+        return;
+      }
       
       document.getElementById('cerrarTktId').value = tkt.id;
       document.getElementById('tktSolucion').value = '';
