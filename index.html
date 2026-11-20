@@ -2797,10 +2797,19 @@
       window.guardarEmpleadoCompleto = async function() {
         const editIdx = parseInt(document.getElementById('empEditIndex').value);
         const data = { nombres: document.getElementById('empNombres').value.trim(), apellidos: document.getElementById('empApellidos').value.trim(), cargo: document.getElementById('empCargo').value.trim(), correo: document.getElementById('empCorreo').value.trim(), areaId: document.getElementById('empAreaSelect').value, estado: document.getElementById('empEstadoSelect').value };
-        if(editIdx === -1) { window.cachedEmpleados.push({ id: Date.now(), avatar: null, ...data }); window.registrarAuditTrail(window.activeGxpUser.correo, 'CREATE_EMP', `Creó empleado: ${data.correo}`); }
-        else { window.cachedEmpleados[editIdx] = { ...window.cachedEmpleados[editIdx], ...data }; window.registrarAuditTrail(window.activeGxpUser.correo, 'UPDATE_EMP', `Editó empleado: ${data.correo}`); }
-        await window.saveData(); window.toggleModal('modalEmpleado', false); window.renderAllData();
-      };
+        if (editIdX === -1) { 
+        // 👇 NUEVA LÓGICA PARA ID SECUENCIAL DE EMPLEADO 👇
+        let nuevoIdEmp = 1;
+        if (window.cachedEmpleados.length > 0) {
+          const idsNum = window.cachedEmpleados.map(e => Number(e.id)).filter(n => !isNaN(n));
+          if (idsNum.length > 0) nuevoIdEmp = Math.max(...idsNum) + 1;
+        }
+        window.cachedEmpleados.push({ id: nuevoIdEmp, avatar: null, ...data }); 
+        window.registrarAuditTrail(window.activeGxpUser.correo, 'CREATE_EMP', `Creó empleado: ${data.correo}`); 
+      } else { 
+        window.cachedEmpleados[editIdX] = { ...window.cachedEmpleados[editIdX], ...data }; 
+        window.registrarAuditTrail(window.activeGxpUser.correo, 'UPDATE_EMP', `Editó empleado: ${data.correo}`); 
+      }
   
       window.abrirModalUsuario = function() { 
         document.getElementById('modalUsrTitle').innerText = 'Asignar Nuevo Usuario'; 
@@ -2834,11 +2843,20 @@
         const data = { empleadoId: parseInt(document.getElementById('usrEmpSelect').value), correo: document.getElementById('usrCorreoInput').value.trim(), password: document.getElementById('usrPasswordInput').value.trim(), estado: document.getElementById('usrEstadoSelect').value, rolesIds: Array.from(document.querySelectorAll('input[name="chkRol"]:checked')).map(el => el.value), areasAsignadas: Array.from(document.querySelectorAll('input[name="chkArea"]:checked')).map(el => el.value) };
         
         let isNew = false;
-        if(editIdx === -1) { 
-          isNew = true;
-          window.cachedUsuarios.push({ id: Date.now(), ...data }); 
-          window.registrarAuditTrail(window.activeGxpUser.correo, 'CREATE_USER', `Creó usuario: ${data.correo}`); 
-        } else { 
+              if(editIdX === -1) {
+        isNew = true;
+        
+        // 👇 NUEVA LÓGICA PARA ID SECUENCIAL DE USUARIO 👇
+        let nuevoIdUsr = 1;
+        if (window.cachedUsuarios.length > 0) {
+          const idsNum = window.cachedUsuarios.map(u => Number(u.id)).filter(n => !isNaN(n));
+          if (idsNum.length > 0) nuevoIdUsr = Math.max(...idsNum) + 1;
+        }
+        window.cachedUsuarios.push({ id: nuevoIdUsr, ...data });
+        // 👆 FIN DE LA NUEVA LÓGICA 👆
+
+        window.registrarAuditTrail(window.activeGxpUser.correo, 'CREATE_USER', `Creó usuario: ${data.correo}`);
+      } else { 
           window.cachedUsuarios[editIdx] = { ...window.cachedUsuarios[editIdx], ...data }; 
           window.registrarAuditTrail(window.activeGxpUser.correo, 'UPDATE_USER', `Editó usuario: ${data.correo}`); 
         }
