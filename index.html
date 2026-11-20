@@ -2794,23 +2794,28 @@
   
       window.abrirModalEmpleado = function() { document.getElementById('modalEmpTitle').innerText = 'Registrar Empleado en Directorio'; document.getElementById('empEditIndex').value = '-1'; document.getElementById('empNombres').value = ''; document.getElementById('empApellidos').value = ''; document.getElementById('empCargo').value = ''; document.getElementById('empCorreo').value = ''; document.getElementById('empEstadoSelect').value = 'Activo'; window.toggleModal('modalEmpleado', true); };
       window.abrirModalEditarEmpleado = function(idx) { const emp = window.cachedEmpleados[idx]; document.getElementById('empEditIndex').value = idx; document.getElementById('empNombres').value = emp.nombres; document.getElementById('empApellidos').value = emp.apellidos; document.getElementById('empCargo').value = emp.cargo; document.getElementById('empCorreo').value = emp.correo; document.getElementById('empAreaSelect').value = emp.areaId; document.getElementById('empEstadoSelect').value = emp.estado; window.toggleModal('modalEmpleado', true); };
-      window.guardarEmpleadoCompleto = async function() {
+            window.guardarEmpleadoCompleto = async function() {
         const editIdx = parseInt(document.getElementById('empEditIndex').value);
         const data = { nombres: document.getElementById('empNombres').value.trim(), apellidos: document.getElementById('empApellidos').value.trim(), cargo: document.getElementById('empCargo').value.trim(), correo: document.getElementById('empCorreo').value.trim(), areaId: document.getElementById('empAreaSelect').value, estado: document.getElementById('empEstadoSelect').value };
-        if (editIdX === -1) { 
-        // 👇 NUEVA LÓGICA PARA ID SECUENCIAL DE EMPLEADO 👇
-        let nuevoIdEmp = 1;
-        if (window.cachedEmpleados.length > 0) {
-          const idsNum = window.cachedEmpleados.map(e => Number(e.id)).filter(n => !isNaN(n));
-          if (idsNum.length > 0) nuevoIdEmp = Math.max(...idsNum) + 1;
+
+        if (editIdx === -1) {
+          // ID secuencial de empleado
+          let nuevoIdEmp = 1;
+          if (window.cachedEmpleados.length > 0) {
+            const idsNum = window.cachedEmpleados.map(e => Number(e.id)).filter(n => !isNaN(n));
+            if (idsNum.length > 0) nuevoIdEmp = Math.max(...idsNum) + 1;
+          }
+          window.cachedEmpleados.push({ id: nuevoIdEmp, avatar: null, ...data });
+          window.registrarAuditTrail(window.activeGxpUser.correo, 'CREATE_EMP', `Creó empleado: ${data.correo}`);
+        } else {
+          window.cachedEmpleados[editIdx] = { ...window.cachedEmpleados[editIdx], ...data };
+          window.registrarAuditTrail(window.activeGxpUser.correo, 'UPDATE_EMP', `Editó empleado: ${data.correo}`);
         }
-        window.cachedEmpleados.push({ id: nuevoIdEmp, avatar: null, ...data }); 
-        window.registrarAuditTrail(window.activeGxpUser.correo, 'CREATE_EMP', `Creó empleado: ${data.correo}`); 
-      } else { 
-        window.cachedEmpleados[editIdX] = { ...window.cachedEmpleados[editIdX], ...data }; 
-        window.registrarAuditTrail(window.activeGxpUser.correo, 'UPDATE_EMP', `Editó empleado: ${data.correo}`); 
-      }
-        };
+
+        await window.saveData();
+        window.toggleModal('modalEmpleado', false);
+        window.renderAllData();
+      };
   
       window.abrirModalUsuario = function() { 
         document.getElementById('modalUsrTitle').innerText = 'Asignar Nuevo Usuario'; 
