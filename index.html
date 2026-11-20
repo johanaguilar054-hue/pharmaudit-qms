@@ -2838,42 +2838,50 @@
         window.sugerirCorreoEmpleado();
       };
   
-      window.guardarUsuarioCompleto = async function() {
-        const editIdx = parseInt(document.getElementById('usrEditIndex').value);
-        const data = { empleadoId: parseInt(document.getElementById('usrEmpSelect').value), correo: document.getElementById('usrCorreoInput').value.trim(), password: document.getElementById('usrPasswordInput').value.trim(), estado: document.getElementById('usrEstadoSelect').value, rolesIds: Array.from(document.querySelectorAll('input[name="chkRol"]:checked')).map(el => el.value), areasAsignadas: Array.from(document.querySelectorAll('input[name="chkArea"]:checked')).map(el => el.value) };
-        
-        let isNew = false;
-              if(editIdX === -1) {
+          window.guardarUsuarioCompleto = async function() {
+      const editIdX = parseInt(document.getElementById('usrEditIndex').value);
+      
+      const data = { 
+        empleadoId: parseInt(document.getElementById('usrEmpSelect').value), 
+        correo: document.getElementById('usrCorreoInput').value.trim(), 
+        password: document.getElementById('usrPasswordInput').value.trim(), 
+        estado: document.getElementById('usrEstadoSelect').value,
+        rolesIds: Array.from(document.querySelectorAll('#contenedorRolesCheckboxes input:checked')).map(cb => cb.value),
+        areasAsignadas: Array.from(document.querySelectorAll('#contenedorAreasCheckboxes input:checked')).map(cb => cb.value)
+      };
+
+      let isNew = false;
+      
+      if(editIdX === -1) {
         isNew = true;
         
-        // 👇 NUEVA LÓGICA PARA ID SECUENCIAL DE USUARIO 👇
+        // Lógica de ID secuencial
         let nuevoIdUsr = 1;
         if (window.cachedUsuarios.length > 0) {
           const idsNum = window.cachedUsuarios.map(u => Number(u.id)).filter(n => !isNaN(n));
           if (idsNum.length > 0) nuevoIdUsr = Math.max(...idsNum) + 1;
         }
+        
         window.cachedUsuarios.push({ id: nuevoIdUsr, ...data });
-        // 👆 FIN DE LA NUEVA LÓGICA 👆
-
         window.registrarAuditTrail(window.activeGxpUser.correo, 'CREATE_USER', `Creó usuario: ${data.correo}`);
-      } else { 
-          window.cachedUsuarios[editIdx] = { ...window.cachedUsuarios[editIdx], ...data }; 
-          window.registrarAuditTrail(window.activeGxpUser.correo, 'UPDATE_USER', `Editó usuario: ${data.correo}`); 
-        }
-        
-        await window.saveData(); 
-        window.toggleModal('modalUsuario', false); 
-        window.renderAllData(); 
-        
-        const btnMailto = confirm("✅ Usuario guardado correctamente en la Nube.\n\n¿Deseas abrir tu cliente de correo para enviar la notificación de acceso a este usuario?");
-        if(btnMailto) {
-            const selectEmp = document.getElementById('usrEmpSelect');
-            const empName = selectEmp.options[selectEmp.selectedIndex].text.split('(')[0].trim();
-            const subject = encodeURIComponent("🛡️ Credenciales de Acceso - PharmAudit ERP");
-            const body = encodeURIComponent(`Hola ${empName},\n\nSe ha configurado tu acceso oficial al portal de Calidad GxP (PharmAudit).\n\nUsuario: ${data.correo}\nContraseña Temporal: ${data.password}\n\nPor favor, ingresa y cambia tu contraseña inmediatamente para garantizar el cumplimiento de la política de seguridad (21 CFR Part 11).\n\nAtentamente,\nAdministrador del Sistema.`);
-            window.location.href = `mailto:${data.correo}?subject=${subject}&body=${body}`;
-        }
-      };
+      } else {
+        window.cachedUsuarios[editIdX] = { ...window.cachedUsuarios[editIdX], ...data };
+        window.registrarAuditTrail(window.activeGxpUser.correo, 'UPDATE_USER', `Editó usuario: ${data.correo}`);
+      }
+
+      await window.saveData();
+      window.toggleModal('modalUsuario', false);
+      window.renderAllData();
+
+      const btnMailto = confirm("✅ Usuario guardado correctamente en la Nube.\n\n¿Deseas abrir tu cliente de correo para enviar la notificación de acceso a este usuario?");
+      if(btnMailto) {
+        const selectEmp = document.getElementById('usrEmpSelect');
+        const empName = selectEmp.options[selectEmp.selectedIndex].text.split('(')[0].trim();
+        const subject = encodeURIComponent("🔑 Credenciales de Acceso - PharmAudit ERP");
+        const body = encodeURIComponent(`Hola ${empName},\n\nSe ha configurado tu acceso oficial al portal de Calidad GxP (PharmAudit).\n\nUsuario: ${data.correo}\nContraseña Temporal: ${data.password}\n\nPor favor, ingresa y cambia tu contraseña inmediatamente para garantizar el cumplimiento.`);
+        window.location.href = `mailto:${data.correo}?subject=${subject}&body=${body}`;
+      }
+    }; // <--- ESTA ES LA LLAVE QUE PROBABLEMENTE FALTABA;
   
       window.sugerirCorreoEmpleado = function() { 
         const empId = parseInt(document.getElementById('usrEmpSelect').value); 
