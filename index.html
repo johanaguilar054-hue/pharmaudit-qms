@@ -1545,6 +1545,18 @@
       window.esUUID = function(val) {
         return typeof val === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val.trim());
       };
+      window.esUUID = function(val) {
+        return typeof val === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val.trim());
+      };
+
+      window.generarHashSHA256 = async function(texto) {
+        if (!texto || !String(texto).trim()) return null;
+        const data = new TextEncoder().encode(String(texto).trim());
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+      };
+
+      window.dividirNombreCompleto = function(nombreCompleto) {
 
       window.dividirNombreCompleto = function(nombreCompleto) {
         const limpio = (nombreCompleto || '').trim();
@@ -1719,6 +1731,7 @@
             : (usuarioObj.username || correo);
 
           const { rol, rol_id } = window.mapearRolIdsASupabase(usuarioObj.rolesIds, usuarioObj.rol_id);
+          const hashPin = await window.generarHashSHA256(usuarioObj.password);
 
           const payload = {
             email: correo,
@@ -1729,7 +1742,8 @@
             rol: rol,
             rol_id: rol_id,
             estado: window.normalizarEstadoDB(usuarioObj.estado),
-            password: usuarioObj.password || ''
+            password: usuarioObj.password || '',
+            pin_firma_hash: hashPin
           };
 
           // Verificar si ya existe por UUID o por email
@@ -3134,6 +3148,10 @@
       };
   
           window.guardarUsuarioCompleto = async function() {
+        if (!data.correo || !data.password) {
+          alert("⚠️ Debe ingresar tanto el correo como una contraseña para el usuario GxP.");
+          return;
+        }
         const editIdX = parseInt(document.getElementById('usrEditIndex').value);
         const empIdSeleccionado = document.getElementById('usrEmpSelect').value;
         const empObj = window.cachedEmpleados.find(e => String(e.id) === String(empIdSeleccionado));
