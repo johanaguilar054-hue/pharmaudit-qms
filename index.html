@@ -1731,7 +1731,7 @@
                 password: u.password || u.pin_firma, 
                 rolesIds: u.rol ? [u.rol.toLowerCase()] : ['rol_viewer'], 
                 areasAsignadas: u.area_id ? [u.area_id] : [],
-                estado: u.estado
+                estado: u.estado ? u.estado.charAt(0).toUpperCase() + u.estado.slice(1).toLowerCase() : 'Inactivo'
               };
             });
           }
