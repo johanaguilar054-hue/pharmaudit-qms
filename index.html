@@ -1684,35 +1684,65 @@
         if (btn) { btn.disabled = false; btn.innerHTML = `<span>🔄</span> <span>Sincronizar Nube</span>`; }
       };
   
-      window.loadData = async function() {
-        try {
-          const response = await fetch(`${SUPABASE_URL}/rest/v1/erp_state?id=eq.1&select=app_data`, { method: 'GET', headers: HEADERS });
-          if (response.ok) {
-            const json = await response.json();
-            if (json && json.length > 0 && json[0].app_data) {
-              const dbState = json[0].app_data;
-              if (dbState.areas) window.cachedAreas = dbState.areas;
-              if (dbState.procesos) window.cachedProcesos = dbState.procesos;
-              if (dbState.roles && dbState.roles.length >= 6) window.cachedRoles = dbState.roles;
-              if (dbState.matriz && dbState.matriz['rol_autor'] && dbState.matriz['rol_autor'].crearEdicion) { window.cachedMatrizPermisos = dbState.matriz; } else { window.cachedMatrizPermisos = JSON.parse(JSON.stringify(window.MATRIZ_GXP_ESTANDAR)); window.saveData(); }
-              if (dbState.empleados) window.cachedEmpleados = dbState.empleados;
-              if (dbState.usuarios) window.cachedUsuarios = dbState.usuarios;
-              if (dbState.docs) window.cachedDocs = dbState.docs;
-              if (dbState.copias) window.cachedCopias = dbState.copias;
-              if (dbState.obsoletos) window.cachedObsoletos = dbState.obsoletos;
-              if (dbState.audit) window.auditTrailLogs = dbState.audit;
-              if (dbState.equipos) window.cachedEquipos = dbState.equipos;
-              if (dbState.calibraciones) window.cachedCalibraciones = dbState.calibraciones;
-              if (dbState.mantenimientos) window.cachedMantenimientos = dbState.mantenimientos;
-              if (dbState.infraestructura) window.cachedInfraestructura = dbState.infraestructura;
-              if (dbState.mantenimientosInfra) window.cachedMantenimientosInfra = dbState.mantenimientosInfra;
-              if (dbState.ncs) window.cachedNCs = dbState.ncs;
-              if (dbState.capas) window.cachedCAPAs = dbState.capas;
-              if (dbState.tickets) window.cachedTicketsMantenimiento = dbState.tickets;
-            }
+         window.loadData = async function() {
+      try {
+        // 1. Cargamos primero el estado general (ERP State)
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/erp_state?id=eq.1&select=app_data`, { method: 'GET', headers: HEADERS });
+        if (response.ok) {
+          const json = await response.json();
+          if (json && json.length > 0 && json[0].app_data) {
+            const dbState = json[0].app_data;
+            if (dbState.areas) window.cachedAreas = dbState.areas;
+            if (dbState.procesos) window.cachedProcesos = dbState.procesos;
+            if (dbState.roles && dbState.roles.length >= 6) window.cachedRoles = dbState.roles;
+            if (dbState.matriz && dbState.matriz['rol_autor'] && dbState.matriz['rol_autor'].crearEdicion) { window.cachedMatrizPermisos = dbState.matriz; } else { window.cachedMatrizPermisos = JSON.parse(JSON.stringify(window.MATRIZ_GXP_ESTANDAR)); window.saveData(); }
+            if (dbState.empleados) window.cachedEmpleados = dbState.empleados; // Importante para el mapeo
+            
+            // 👇 IMPORTANTE: ELIMINAMOS LA LÍNEA QUE SOBRESCRIBÍA LOS USUARIOS
+            // if (dbState.usuarios) window.cachedUsuarios = dbState.usuarios; 
+
+            if (dbState.docs) window.cachedDocs = dbState.docs;
+            if (dbState.copias) window.cachedCopias = dbState.copias;
+            if (dbState.obsoletos) window.cachedObsoletos = dbState.obsoletos;
+            if (dbState.audit) window.auditTrailLogs = dbState.audit;
+            if (dbState.equipos) window.cachedEquipos = dbState.equipos;
+            if (dbState.calibraciones) window.cachedCalibraciones = dbState.calibraciones;
+            if (dbState.mantenimientos) window.cachedMantenimientos = dbState.mantenimientos;
+            if (dbState.infraestructura) window.cachedInfraestructura = dbState.infraestructura;
+            if (dbState.mantenimientosInfra) window.cachedMantenimientosInfra = dbState.mantenimientosInfra;
+            if (dbState.ncs) window.cachedNCs = dbState.ncs;
+            if (dbState.capas) window.cachedCAPAs = dbState.capas;
+            if (dbState.tickets) window.cachedTicketsMantenimiento = dbState.tickets;
           }
-        } catch(e) { console.error("Accediendo en modo local por fallo de red:", e); } finally { window.activarBotonLogin(); }
-      };
+        }
+
+        // 2. Cargamos los usuarios desde la tabla relacional (Al final, para que no se sobrescriban)
+        const resUsuarios = await fetch(`${SUPABASE_URL}/rest/v1/usuarios_gxp?select=*`, { method: 'GET', headers: HEADERS });
+        if (resUsuarios.ok) {
+          const dataUsr = await resUsuarios.json();
+          if (dataUsr && dataUsr.length > 0) {
+            window.cachedUsuarios = dataUsr.map(u => {
+              // Ahora que cachedEmpleados ya tiene datos, el mapeo funcionará perfecto
+              const empAsociado = (window.cachedEmpleados || []).find(e => e.correo === u.email);
+              return {
+                id: u.id, 
+                empleadoId: empAsociado ? empAsociado.id : null, 
+                correo: u.email, 
+                password: u.password || u.pin_firma, 
+                rolesIds: u.rol ? [u.rol.toLowerCase()] : ['rol_viewer'], 
+                areasAsignadas: u.area_id ? [u.area_id] : [],
+                estado: u.estado
+              };
+            });
+          }
+        }
+
+      } catch(e) { 
+        console.error("Accediendo en modo local por fallo de red:", e); 
+      } finally { 
+        window.activarBotonLogin(); 
+      }
+    };
   
       window.loadData();
       setTimeout(window.activarBotonLogin, 1000);
@@ -2864,52 +2894,80 @@
         window.sugerirCorreoEmpleado();
       };
   
-          window.guardarUsuarioCompleto = async function() {
+              window.guardarUsuarioCompleto = async function() {
       const editIdX = parseInt(document.getElementById('usrEditIndex').value);
       const rawPass = document.getElementById('usrPasswordInput').value.trim();
       
-      // Encriptamos la contraseña antes de guardarla
+      // 1. Encriptamos la contraseña
       const hashedPass = await window.hashPassword(rawPass);
 
-      const data = { 
-        empleadoId: parseInt(document.getElementById('usrEmpSelect').value), 
-        correo: document.getElementById('usrCorreoInput').value.trim(), 
-        password: hashedPass, // 👈 Guardamos el Hash, no el texto plano
-        estado: document.getElementById('usrEstadoSelect').value,
-        rolesIds: Array.from(document.querySelectorAll('#contenedorRolesCheckboxes input:checked')).map(cb => cb.value),
-        areasAsignadas: Array.from(document.querySelectorAll('#contenedorAreasCheckboxes input:checked')).map(cb => cb.value)
+      // 2. Recolectamos los datos del formulario
+      const email = document.getElementById('usrCorreoInput').value.trim();
+      const empleadoId = parseInt(document.getElementById('usrEmpSelect').value);
+      const empleado = window.cachedEmpleados.find(e => e.id === empleadoId);
+      
+      const roles = Array.from(document.querySelectorAll('#contenedorRolesCheckboxes input:checked')).map(cb => cb.value);
+      const areas = Array.from(document.querySelectorAll('#contenedorAreasCheckboxes input:checked')).map(cb => cb.value);
+      const estado = document.getElementById('usrEstadoSelect').value;
+      
+      // 3. Preparamos el objeto para la tabla relacional
+      const payload = {
+        username: email.split('@')[0], 
+        email: email,
+        nombre_completo: empleado ? `${empleado.nombres} ${empleado.apellidos}` : 'Nuevo Usuario',
+        cargo: empleado ? empleado.cargo : '',
+        estado: estado,
+        password: hashedPass, // Guardamos el Hash
+        rol: roles[0] ? roles[0].toUpperCase() : 'VIEWER', // Tu tabla usa rol en mayúsculas
+        area_id: areas[0] || null
       };
 
-      let isNew = false;
-      
-      if(editIdX === -1) {
-        isNew = true;
+      try {
+        let res;
         
-        // Lógica de ID secuencial
-        let nuevoIdUsr = 1;
-        if (window.cachedUsuarios.length > 0) {
-          const idsNum = window.cachedUsuarios.map(u => Number(u.id)).filter(n => !isNaN(n));
-          if (idsNum.length > 0) nuevoIdUsr = Math.max(...idsNum) + 1;
+        if (editIdX === -1) {
+          // --- MODO CREACIÓN (INSERT) ---
+          res = await fetch(`${SUPABASE_URL}/rest/v1/usuarios_gxp`, {
+            method: 'POST',
+            headers: HEADERS,
+            body: JSON.stringify(payload)
+          });
+          if(res.ok) window.registrarAuditTrail(window.activeGxpUser.correo, 'CREATE_USER', `Creó usuario: ${email}`);
+        } else {
+          // --- MODO EDICIÓN (UPDATE) ---
+          // En el modelo relacional, buscamos el UUID del usuario que estamos editando
+          const usrActual = window.cachedUsuarios[editIdX];
+          res = await fetch(`${SUPABASE_URL}/rest/v1/usuarios_gxp?id=eq.${usrActual.id}`, {
+            method: 'PATCH',
+            headers: HEADERS,
+            body: JSON.stringify(payload)
+          });
+          if(res.ok) window.registrarAuditTrail(window.activeGxpUser.correo, 'UPDATE_USER', `Editó usuario: ${email}`);
         }
-        
-        window.cachedUsuarios.push({ id: nuevoIdUsr, ...data });
-        window.registrarAuditTrail(window.activeGxpUser.correo, 'CREATE_USER', `Creó usuario: ${data.correo}`);
-      } else {
-        window.cachedUsuarios[editIdX] = { ...window.cachedUsuarios[editIdX], ...data };
-        window.registrarAuditTrail(window.activeGxpUser.correo, 'UPDATE_USER', `Editó usuario: ${data.correo}`);
-      }
 
-      await window.saveData();
-      window.toggleModal('modalUsuario', false);
-      window.renderAllData();
+        if (res.ok) {
+          // 4. Recargamos los datos para sincronizar la memoria con Supabase
+          await window.loadData(); 
+          window.toggleModal('modalUsuario', false);
+          window.renderAllData();
 
-      const btnMailto = confirm("✅ Usuario guardado correctamente en la Nube.\n\n¿Deseas abrir tu cliente de correo para enviar la notificación de acceso a este usuario?");
-      if(btnMailto) {
-        const selectEmp = document.getElementById('usrEmpSelect');
-        const empName = selectEmp.options[selectEmp.selectedIndex].text.split('(')[0].trim();
-        const subject = encodeURIComponent("🔑 Credenciales de Acceso - PharmAudit ERP");
-        const body = encodeURIComponent(`Hola ${empName},\n\nSe ha configurado tu acceso oficial al portal de Calidad GxP (PharmAudit).\n\nUsuario: ${data.correo}\nContraseña Temporal: ${data.password}\n\nPor favor, ingresa y cambia tu contraseña inmediatamente para garantizar el cumplimiento.`);
-        window.location.href = `mailto:${data.correo}?subject=${subject}&body=${body}`;
+          // 5. Notificación por correo
+          const btnMailto = confirm("✅ Usuario guardado correctamente en la Base de Datos Relacional.\n\n¿Deseas abrir tu cliente de correo para enviar la notificación de acceso a este usuario?");
+          if(btnMailto) {
+            const empName = empleado ? `${empleado.nombres} ${empleado.apellidos}` : 'Usuario';
+            const subject = encodeURIComponent("🔑 Credenciales de Acceso - PharmAudit ERP");
+            // 👇 CORRECCIÓN: Usamos 'rawPass' (texto plano) para el correo, NO el hash 👇
+            const body = encodeURIComponent(`Hola ${empName},\n\nSe ha configurado tu acceso oficial al portal de Calidad GxP (PharmAudit).\n\nUsuario: ${email}\nContraseña Temporal: ${rawPass}\n\nPor favor, ingresa y cambia tu contraseña inmediatamente.`);
+            window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
+          }
+        } else {
+          const err = await res.text();
+          console.error("Error de Supabase:", err);
+          alert("❌ Error al guardar en la base de datos. Revisa la consola.");
+        }
+      } catch (e) {
+        console.error(e);
+        alert("Error de red al intentar guardar el usuario.");
       }
     }; 
   
