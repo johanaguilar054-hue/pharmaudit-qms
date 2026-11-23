@@ -1722,7 +1722,7 @@
 
           const payload = {
             email: correo,
-            username: (usuarioObj.username || correo.split('@')[0]).trim(),
+            username: (usuarioObj.username || correo).trim(),
             nombre_completo: nombreCompleto || correo,
             cargo: (empleadoObj && empleadoObj.cargo) || 'Usuario GxP',
             area_id: (empleadoObj && empleadoObj.areaId) || (usuarioObj.areasAsignadas && usuarioObj.areasAsignadas[0]) || 'ar_qa',
@@ -1751,26 +1751,34 @@
               headers: { ...HEADERS, 'Prefer': 'return=representation' },
               body: JSON.stringify(payload)
             });
-            if (patchRes.ok) {
-              const updated = await patchRes.json();
-              return updated[0] || { id: targetId, ...payload };
+            if (!patchRes.ok) {
+              const errTxt = await patchRes.text();
+              alert(`⚠️ Supabase rechazó la actualización en usuarios_gxp (${patchRes.status}):\n${errTxt}`);
+              return null;
             }
+            const updated = await patchRes.json();
+            return updated[0] || { id: targetId, ...payload };
           } else {
             const postRes = await fetch(`${SUPABASE_URL}/rest/v1/usuarios_gxp`, {
               method: 'POST',
               headers: { ...HEADERS, 'Prefer': 'return=representation' },
               body: JSON.stringify(payload)
             });
-            if (postRes.ok) {
-              const inserted = await postRes.json();
-              return inserted[0] || null;
+            if (!postRes.ok) {
+              const errTxt = await postRes.text();
+              alert(`⚠️ Supabase rechazó el registro en usuarios_gxp (${postRes.status}):\n${errTxt}`);
+              return null;
             }
+            const inserted = await postRes.json();
+            return inserted[0] || null;
           }
         } catch (err) {
           console.error("Error sincronizando usuario en usuarios_gxp:", err);
+          alert("⚠️ Error de red al guardar en usuarios_gxp: " + err.message);
         }
         return null;
       };
+      
       window.cachedEmpleados = [ { id: 1, nombres: 'Johan S.', apellidos: 'Aguilar', cargo: 'QA Lead', correo: 'j.aguilar@pharmor.com.co', areaId: 'ar_qa', estado: 'Activo', avatar: null } ];
       window.cachedUsuarios = [ { id: 1, empleadoId: 1, correo: 'j.aguilar@pharmor.com.co', password: '123', rolesIds: ['rol_admin'], areasAsignadas: ['ar_qa', 'ar_qc', 'ar_prod'], estado: 'Activo' } ];
       window.cachedDocs = []; window.cachedCopias = []; window.cachedObsoletos = []; window.auditTrailLogs = [];
