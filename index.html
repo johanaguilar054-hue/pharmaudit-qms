@@ -1557,8 +1557,6 @@
       };
 
       window.dividirNombreCompleto = function(nombreCompleto) {
-
-      window.dividirNombreCompleto = function(nombreCompleto) {
         const limpio = (nombreCompleto || '').trim();
         if (!limpio) return { nombres: 'Usuario', apellidos: '' };
         const partes = limpio.split(/\s+/);
@@ -3148,10 +3146,6 @@
       };
   
           window.guardarUsuarioCompleto = async function() {
-        if (!data.correo || !data.password) {
-          alert("⚠️ Debe ingresar tanto el correo como una contraseña para el usuario GxP.");
-          return;
-        }
         const editIdX = parseInt(document.getElementById('usrEditIndex').value);
         const empIdSeleccionado = document.getElementById('usrEmpSelect').value;
         const empObj = window.cachedEmpleados.find(e => String(e.id) === String(empIdSeleccionado));
@@ -3164,6 +3158,10 @@
           rolesIds: Array.from(document.querySelectorAll('#contenedorRolesCheckboxes input:checked')).map(cb => cb.value),
           areasAsignadas: Array.from(document.querySelectorAll('#contenedorAreasCheckboxes input:checked')).map(cb => cb.value)
         };
+            if (!data.correo || !data.password) {
+          alert("⚠️ Debe ingresar tanto el correo como una contraseña para el usuario GxP.");
+          return;
+        }
 
         let usuarioGuardado = null;
 
