@@ -1755,47 +1755,67 @@
         if(btnElement) { btnElement.classList.add('bg-slate-800', 'text-white'); btnElement.classList.remove('bg-slate-100', 'text-slate-700'); }
       };
   
-      window.ejecutarLoginPrincipal = function() {
-        const email = document.getElementById('loginEmail').value.trim().toLowerCase(); 
-        const pass = document.getElementById('loginPassword').value.trim();
-        let usrData = null;
-        
-        if (email === 'j.aguilar@pharmor.com.co' && (pass === '123' || pass === 'admin123')) {
-          usrData = (window.cachedUsuarios || []).find(u => (u.correo || '').trim().toLowerCase() === email);
-          if (!usrData) { usrData = { id: 1, empleadoId: 1, correo: 'j.aguilar@pharmor.com.co', password: pass, rolesIds: ['rol_admin'], areasAsignadas: ['ar_qa', 'ar_qc', 'ar_prod'], estado: 'Activo' }; window.cachedUsuarios.push(usrData); } else { usrData.password = pass; usrData.estado = 'Activo'; if (!usrData.rolesIds.includes('rol_admin')) usrData.rolesIds.push('rol_admin'); }
-        } else {
-          if (!window.cachedUsuarios || window.cachedUsuarios.length === 0) { alert("Base de datos no disponible."); return; }
-          usrData = window.cachedUsuarios.find(u => (u.correo || '').trim().toLowerCase() === email);
-          if (!usrData) { const empleadoSinUsuario = window.cachedEmpleados.find(e => (e.correo || '').trim().toLowerCase() === email); if (empleadoSinUsuario) { alert(`⚠️ ALERTA DEL SISTEMA GxP:\n\nEl correo ${email} pertenece a un Empleado registrado, pero aún no tiene cuenta de "Usuario GxP".`); } else { alert("Credenciales incorrectas o usuario no registrado en la Nube."); } return; }
-          if ((usrData.password || '').trim() !== pass) { alert("❌ Contraseña incorrecta. Por favor, inténtelo de nuevo."); return; }
-          if (usrData.estado !== 'Activo') { alert("Acceso denegado: Usuario INACTIVO."); return; }
-        }
-  
-        window.saveData(); 
-        window.activeGxpUser = usrData; 
-        window.registrarAuditTrail(usrData.correo, 'LOGIN', 'Inicio de sesión exitoso.');
-        
-        document.getElementById('view-login').classList.add('hidden'); 
-        document.getElementById('app-portal').classList.remove('hidden');
-        
-        const emp = (window.cachedEmpleados || []).find(e => e.id === usrData.empleadoId) || { nombres: usrData.correo, apellidos: '' };
-        window.actualizarAvatarUI(emp);
-        window.renderAllData();
-  
-        // Redirección si se inició sesión desde un escaneo QR
-        if (window.pendingScanEquipoId) {
-          const eqToOpen = window.pendingScanEquipoId;
-          window.pendingScanEquipoId = null;
-          setTimeout(() => {
-            const btnMetro = document.querySelector('[data-tab="metrologia"]');
-            if (btnMetro) window.switchTab('metrologia', btnMetro);
-            window.verHistorialEquipo(eqToOpen);
-          }, 300);
-        } else {
-          const btnDash = document.querySelector('[data-tab="dashboard"]'); 
-          if (btnDash) window.switchTab('dashboard', btnDash);
-        }
-      };
+    window.ejecutarLoginPrincipal = async function() {
+      const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+      const pass = document.getElementById('loginPassword').value.trim();
+      let usrData = null;
+
+      // 3. Validación normal de base de datos
+      if (!window.cachedUsuarios || window.cachedUsuarios.length === 0) { 
+        alert("Base de datos no disponible."); return; 
+      }
+
+      // 4. Encriptamos la contraseña que el usuario acaba de escribir
+      const passHasheada = await window.hashPassword(pass);
+
+      // 5. Buscamos al usuario por su correo
+      usrData = window.cachedUsuarios.find(u => (u.correo || '').trim().toLowerCase() === email);
+
+      // 6. Validación de existencia del empleado
+      if (!usrData) { 
+        const empleadoSinUsuario = window.cachedEmpleados.find(e => (e.correo || '').trim().toLowerCase() === email); 
+        if (empleadoSinUsuario) { 
+          alert(`⚠️ ALERTA DEL SISTEMA GxP:\n\nEl correo ${email} pertenece a un Empleado registrado, pero aun no tiene cuenta de "Usuario GxP".\n\nPor favor, inténtelo de nuevo.`); return; 
+        } 
+      }
+
+      // 7. VALIDACIÓN DE CONTRASEÑA (Acepta el Hash nuevo o el texto plano viejo para la migración)
+      if (!usrData || (usrData.password !== passHasheada && usrData.password !== pass)) { 
+        alert("❌ Credenciales inválidas. Verifique su correo y contraseña."); 
+        return; 
+      }
+
+      // 8. Validación de estado
+      if (usrData.estado !== 'Activo') { alert("Acceso denegado: Usuario INACTIVO."); return; }
+
+      // --- INICIO DE SESIÓN EXITOSO ---
+      // (El resto de tu código de éxito se mantiene exactamente igual)
+      
+      window.saveData();
+      window.activeGxpUser = usrData;
+      window.registrarAuditTrail(usrData.correo, 'LOGIN', 'Inicio de sesión exitoso.');
+
+      document.getElementById('view-login').classList.add('hidden');
+      document.getElementById('app-portal').classList.remove('hidden');
+
+      const emp = (window.cachedEmpleados || []).find(e => e.id === usrData.empleadoId) || { nombres: usrData.correo, apellidos: '' };
+      window.actualizarAvatarUI(emp);
+      window.renderAllData();
+
+      // Redirección si se inició sesión desde un escaneo QR
+      if (window.pendingScanEquipoId) {
+        const eqIdOpen = window.pendingScanEquipoId;
+        window.pendingScanEquipoId = null;
+        setTimeout(() => {
+          const btnMetro = document.querySelector('[data-tab="metrologia"]');
+          if (btnMetro) window.switchTab('metrologia', btnMetro);
+          window.verHistorialEquipo(eqIdOpen);
+        }, 300);
+      } else {
+        const btnDash = document.querySelector('[data-tab="dashboard"]');
+        if (btnDash) window.switchTab('dashboard', btnDash);
+      }
+    };
   
       window.registrarAuditTrail = function(user, accion, detalle) {
         const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 19);
@@ -2554,7 +2574,7 @@
         if (!eqId || !fecha || !realizadoPor) { alert("Complete los campos obligatorios."); return; }
   
         // Validación de Firma Part 11
-        const user = window.cachedUsuarios.find(u => u.correo.toLowerCase() === email.toLowerCase() && u.password === pass);
+        const user = window.cachedUsuarios.find(u => u.correo.toLowerCase() === email.toLowerCase() && (u.password === passHasheada || u.password === pass));
         if (!user) { alert("⛔ Firma Part 11 rechazada: Credenciales de usuario inválidas."); return; }
   
         const eq = window.cachedEquipos.find(e => e.id === eqId);
@@ -2846,11 +2866,15 @@
   
           window.guardarUsuarioCompleto = async function() {
       const editIdX = parseInt(document.getElementById('usrEditIndex').value);
+      const rawPass = document.getElementById('usrPasswordInput').value.trim();
       
+      // Encriptamos la contraseña antes de guardarla
+      const hashedPass = await window.hashPassword(rawPass);
+
       const data = { 
         empleadoId: parseInt(document.getElementById('usrEmpSelect').value), 
         correo: document.getElementById('usrCorreoInput').value.trim(), 
-        password: document.getElementById('usrPasswordInput').value.trim(), 
+        password: hashedPass, // 👈 Guardamos el Hash, no el texto plano
         estado: document.getElementById('usrEstadoSelect').value,
         rolesIds: Array.from(document.querySelectorAll('#contenedorRolesCheckboxes input:checked')).map(cb => cb.value),
         areasAsignadas: Array.from(document.querySelectorAll('#contenedorAreasCheckboxes input:checked')).map(cb => cb.value)
@@ -2887,7 +2911,7 @@
         const body = encodeURIComponent(`Hola ${empName},\n\nSe ha configurado tu acceso oficial al portal de Calidad GxP (PharmAudit).\n\nUsuario: ${data.correo}\nContraseña Temporal: ${data.password}\n\nPor favor, ingresa y cambia tu contraseña inmediatamente para garantizar el cumplimiento.`);
         window.location.href = `mailto:${data.correo}?subject=${subject}&body=${body}`;
       }
-    }; // <--- ESTA ES LA LLAVE QUE PROBABLEMENTE FALTABA;
+    }; 
   
       window.sugerirCorreoEmpleado = function() { 
         const empId = parseInt(document.getElementById('usrEmpSelect').value); 
@@ -2936,6 +2960,7 @@
       const doc = window.cachedDocs.find(x => x.id === document.getElementById('firmaDocId').value);
       const email = document.getElementById('firmaUserEmail').value.trim();
       const pass = document.getElementById('firmaUserPassword').value.trim();
+      const passHasheada = await window.hashPassword(pass);
       const significado = document.getElementById('firmaSignificado').value;
 
       if (!significado) { alert("⛔ Control GxP: Es obligatorio seleccionar la intención o el significado de la firma."); return; }
@@ -2947,7 +2972,7 @@
         const ncId = targetId.split(':')[1];
         const nc = window.cachedNCs.find(n => n.id === ncId);
         
-        const usr = window.cachedUsuarios.find(u => u.correo.toLowerCase() === email.toLowerCase() && u.password === pass);
+        const usr = window.cachedUsuarios.find(u => u.correo.toLowerCase() === email.toLowerCase() && (u.password === passHasheada || u.password === pass));
         if (!usr) { alert("⛔ Credenciales inválidas."); return; }
 
         if (significado === 'Creación / Edición') nc.firmas.elaborado = email;
@@ -2963,7 +2988,7 @@
       // ----------------------------------------
 
       // --- LÓGICA ORIGINAL PARA FIRMAR DOCUMENTOS ---
-      const user = window.cachedUsuarios.find(u => u.correo.toLowerCase() === email.toLowerCase() && u.password === pass);
+      const user = window.cachedUsuarios.find(u => u.correo.toLowerCase() === email.toLowerCase() && (u.password === passHasheada || u.password === pass));
       if (!user) { alert("⛔ Credenciales inválidas."); return; }
       
       const isAdmin = user.rolesIds.includes('rol_admin');
@@ -3761,7 +3786,7 @@
       }
     };
   
-          window.guardarEfectividad = function() {
+          window.guardarEfectividad = async function() {
       const capaId = document.getElementById('efecCapaId').value;
       const capa = window.cachedCAPAs.find(c => c.id === capaId);
       const emailQA = document.getElementById('efecQAEmail').value.trim();
@@ -3771,7 +3796,7 @@
       if (!resultados) { alert("Debe ingresar los resultados de la verificación."); return; }
 
       // Validar Credenciales del QA
-      const userQA = window.cachedUsuarios.find(u => u.correo.toLowerCase() === emailQA.toLowerCase() && u.password === passQA);
+      const user = window.cachedUsuarios.find(u => u.correo.toLowerCase() === email.toLowerCase() && (u.password === passHasheada || u.password === pass));
       if (!userQA) { alert("⛔ Credenciales QA inválidas."); return; }
 
       // Validar que tenga rol de aprobador o admin
@@ -4544,7 +4569,7 @@
       window.toggleModal('modalCerrarTicket', true);
     };
 
-    window.guardarCierreTicket = function() {
+    window.guardarCierreTicket = async function() {
       const id = document.getElementById('cerrarTktId').value;
       const solucion = document.getElementById('tktSolucion').value.trim();
       const email = document.getElementById('tktEmailTecnico').value.trim();
@@ -4552,7 +4577,7 @@
 
       if (!solucion) { alert("Debe ingresar la solución."); return; }
 
-      const user = window.cachedUsuarios.find(u => u.correo.toLowerCase() === email.toLowerCase() && u.password === pass);
+      const user = window.cachedUsuarios.find(u => u.correo.toLowerCase() === email.toLowerCase() && (u.password === passHasheada || u.password === pass));
       if (!user) { alert("⛔ Credenciales inválidas."); return; }
 
       const tkt = window.cachedTicketsMantenimiento.find(t => t.id === id);
@@ -4571,6 +4596,17 @@
       if(window.renderNotificaciones) window.renderNotificaciones();
       window.toggleModal('modalCerrarTicket', false);
       window.logAudit('TICKET_CERRADO', `Ticket ${tkt.consecutivo} cerrado y firmado por ${email}`);
+    };
+
+          // ==========================================
+    // SEGURIDAD: FUNCIÓN DE HASH (SHA-256)
+    // ==========================================
+    window.hashPassword = async function(password) {
+      const msgBuffer = new TextEncoder().encode(password);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      return hashHex;
     };
       
     </script>
