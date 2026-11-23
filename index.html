@@ -2894,14 +2894,11 @@
         window.sugerirCorreoEmpleado();
       };
   
-              window.guardarUsuarioCompleto = async function() {
+                  window.guardarUsuarioCompleto = async function() {
       const editIdX = parseInt(document.getElementById('usrEditIndex').value);
       const rawPass = document.getElementById('usrPasswordInput').value.trim();
       
-      // 1. Encriptamos la contraseña
       const hashedPass = await window.hashPassword(rawPass);
-
-      // 2. Recolectamos los datos del formulario
       const email = document.getElementById('usrCorreoInput').value.trim();
       const empleadoId = parseInt(document.getElementById('usrEmpSelect').value);
       const empleado = window.cachedEmpleados.find(e => e.id === empleadoId);
@@ -2910,60 +2907,54 @@
       const areas = Array.from(document.querySelectorAll('#contenedorAreasCheckboxes input:checked')).map(cb => cb.value);
       const estado = document.getElementById('usrEstadoSelect').value;
       
-      // 3. Preparamos el objeto para la tabla relacional
+      // 👇 SOLUCIÓN DEFINITIVA: Ahora guardamos el ID corto (ar_GAC) tal cual.
+      const areaIdValida = areas.length > 0 ? areas[0] : null;
+
       const payload = {
         username: email.split('@')[0], 
         email: email,
         nombre_completo: empleado ? `${empleado.nombres} ${empleado.apellidos}` : 'Nuevo Usuario',
         cargo: empleado ? empleado.cargo : '',
         estado: estado,
-        password: hashedPass, // Guardamos el Hash
-        rol: roles[0] ? roles[0].toUpperCase() : 'VIEWER', // Tu tabla usa rol en mayúsculas
-        area_id: areas[0] || null
+        password: hashedPass, 
+        // Como tu tabla solo acepta 1 rol de texto, guardamos el primero seleccionado
+        rol: roles.length > 0 ? roles[0] : 'rol_viewer', 
+        area_id: areaIdValida 
       };
 
       try {
         let res;
-        
         if (editIdX === -1) {
-          // --- MODO CREACIÓN (INSERT) ---
           res = await fetch(`${SUPABASE_URL}/rest/v1/usuarios_gxp`, {
             method: 'POST',
             headers: HEADERS,
             body: JSON.stringify(payload)
           });
-          if(res.ok) window.registrarAuditTrail(window.activeGxpUser.correo, 'CREATE_USER', `Creó usuario: ${email}`);
         } else {
-          // --- MODO EDICIÓN (UPDATE) ---
-          // En el modelo relacional, buscamos el UUID del usuario que estamos editando
           const usrActual = window.cachedUsuarios[editIdX];
           res = await fetch(`${SUPABASE_URL}/rest/v1/usuarios_gxp?id=eq.${usrActual.id}`, {
             method: 'PATCH',
             headers: HEADERS,
             body: JSON.stringify(payload)
           });
-          if(res.ok) window.registrarAuditTrail(window.activeGxpUser.correo, 'UPDATE_USER', `Editó usuario: ${email}`);
         }
 
         if (res.ok) {
-          // 4. Recargamos los datos para sincronizar la memoria con Supabase
           await window.loadData(); 
           window.toggleModal('modalUsuario', false);
           window.renderAllData();
-
-          // 5. Notificación por correo
-          const btnMailto = confirm("✅ Usuario guardado correctamente en la Base de Datos Relacional.\n\n¿Deseas abrir tu cliente de correo para enviar la notificación de acceso a este usuario?");
+          
+          const btnMailto = confirm("✅ Usuario guardado en la Base de Datos.\n\n¿Deseas enviar notificación por correo?");
           if(btnMailto) {
             const empName = empleado ? `${empleado.nombres} ${empleado.apellidos}` : 'Usuario';
             const subject = encodeURIComponent("🔑 Credenciales de Acceso - PharmAudit ERP");
-            // 👇 CORRECCIÓN: Usamos 'rawPass' (texto plano) para el correo, NO el hash 👇
-            const body = encodeURIComponent(`Hola ${empName},\n\nSe ha configurado tu acceso oficial al portal de Calidad GxP (PharmAudit).\n\nUsuario: ${email}\nContraseña Temporal: ${rawPass}\n\nPor favor, ingresa y cambia tu contraseña inmediatamente.`);
+            const body = encodeURIComponent(`Hola ${empName},\n\nSe ha configurado tu acceso al portal GxP (PharmAudit).\n\nUsuario: ${email}\nContraseña Temporal: ${rawPass}\n\nPor favor, ingresa y cambia tu contraseña.`);
             window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
           }
         } else {
           const err = await res.text();
           console.error("Error de Supabase:", err);
-          alert("❌ Error al guardar en la base de datos. Revisa la consola.");
+          alert("❌ Error al guardar. Revisa la consola.");
         }
       } catch (e) {
         console.error(e);
