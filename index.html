@@ -1537,6 +1537,240 @@
       ];
   
       window.cachedMatrizPermisos = JSON.parse(JSON.stringify(window.MATRIZ_GXP_ESTANDAR));
+      // ==========================================
+      // ADAPTADOR GxP: SUPABASE (usuarios_gxp / roles) <-> UI
+      // ==========================================
+      window.supabaseRolesCatalog = [];
+
+      window.esUUID = function(val) {
+        return typeof val === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val.trim());
+      };
+
+      window.dividirNombreCompleto = function(nombreCompleto) {
+        const limpio = (nombreCompleto || '').trim();
+        if (!limpio) return { nombres: 'Usuario', apellidos: '' };
+        const partes = limpio.split(/\s+/);
+        if (partes.length === 1) return { nombres: partes[0], apellidos: '' };
+        const apellidos = partes.pop();
+        return { nombres: partes.join(' '), apellidos };
+      };
+
+      window.normalizarEstadoUI = function(estadoDb) {
+        return String(estadoDb || '').trim().toUpperCase() === 'INACTIVO' ? 'Inactivo' : 'Activo';
+      };
+
+      window.normalizarEstadoDB = function(estadoUi) {
+        return String(estadoUi || '').trim().toUpperCase() === 'INACTIVO' ? 'INACTIVO' : 'ACTIVO';
+      };
+
+      window.mapearRolTextoAIds = function(rolTexto, rolIdUuid) {
+        const resultado = new Set();
+        const fuentes = [];
+
+        if (rolTexto) fuentes.push(String(rolTexto));
+        if (rolIdUuid && window.supabaseRolesCatalog.length > 0) {
+          const rolDb = window.supabaseRolesCatalog.find(r => String(r.id) === String(rolIdUuid));
+          if (rolDb && rolDb.nombre) fuentes.push(String(rolDb.nombre));
+        }
+
+        fuentes.join(',').split(',').map(s => s.trim()).filter(Boolean).forEach(token => {
+          const upper = token.toUpperCase();
+          if (token.startsWith('rol_')) {
+            resultado.add(token);
+          } else if (upper.includes('ADMIN') || upper.includes('QA_LEAD') || upper.includes('MANAGER')) {
+            resultado.add('rol_admin');
+          } else if (upper.includes('AUTOR') || upper.includes('CREADOR')) {
+            resultado.add('rol_autor');
+          } else if (upper.includes('REVISOR')) {
+            resultado.add('rol_revisor');
+          } else if (upper.includes('APROBADOR')) {
+            resultado.add('rol_aprobador');
+          } else if (upper.includes('EMISOR') || upper.includes('COPIA')) {
+            resultado.add('rol_emisor');
+          } else if (upper.includes('LECTOR') || upper.includes('VIEWER')) {
+            resultado.add('rol_viewer');
+          }
+        });
+
+        return resultado.size > 0 ? Array.from(resultado) : ['rol_viewer'];
+      };
+
+      window.mapearRolIdsASupabase = function(rolesIds, rolIdActual = null) {
+        const lista = Array.isArray(rolesIds) && rolesIds.length > 0 ? rolesIds : ['rol_viewer'];
+        const rolTexto = lista.join(',');
+
+        // Buscar si existe un UUID equivalente en la tabla public.roles
+        let rolUuid = window.esUUID(rolIdActual) ? rolIdActual : null;
+        if (!rolUuid && window.supabaseRolesCatalog.length > 0) {
+          const principal = lista[0];
+          const claveBusqueda = {
+            'rol_admin': 'ADMIN',
+            'rol_autor': 'AUTOR',
+            'rol_revisor': 'REVISOR',
+            'rol_aprobador': 'APROBADOR',
+            'rol_emisor': 'EMISOR',
+            'rol_viewer': 'LECTOR'
+          }[principal] || principal.toUpperCase();
+
+          const match = window.supabaseRolesCatalog.find(r =>
+            String(r.nombre || '').toUpperCase().includes(claveBusqueda)
+          );
+          if (match) rolUuid = match.id;
+        }
+        return { rol: rolTexto, rol_id: rolUuid };
+      };
+
+      window.cargarUsuariosDesdeSupabase = async function(erpUsersBackup = [], erpEmpleadosBackup = []) {
+        try {
+          // 1. Cargar catálogo de roles (solo lectura para resolver rol_id si existe)
+          const resRoles = await fetch(`${SUPABASE_URL}/rest/v1/roles?select=id,nombre,descripcion`, {
+            method: 'GET',
+            headers: HEADERS
+          });
+          if (resRoles.ok) {
+            const rolesData = await resRoles.json();
+            if (Array.isArray(rolesData)) window.supabaseRolesCatalog = rolesData;
+          }
+
+          // 2. Cargar usuarios_gxp
+          const resUsers = await fetch(`${SUPABASE_URL}/rest/v1/usuarios_gxp?select=*&order=created_at.asc`, {
+            method: 'GET',
+            headers: HEADERS
+          });
+          if (!resUsers.ok) return false;
+
+          const rows = await resUsers.json();
+          if (!Array.isArray(rows) || rows.length === 0) return false;
+
+          const nuevosEmpleados = [];
+          const nuevosUsuarios = [];
+          const correosEnTabla = new Set();
+
+          rows.forEach(row => {
+            const correo = (row.email || row.username || '').trim();
+            if (!correo) return;
+            const correoLow = correo.toLowerCase();
+            correosEnTabla.add(correoLow);
+
+            const backupUsr = (erpUsersBackup || []).find(u => (u.correo || '').trim().toLowerCase() === correoLow);
+            const backupEmp = (erpEmpleadosBackup || []).find(e => (e.correo || '').trim().toLowerCase() === correoLow);
+
+            const { nombres, apellidos } = window.dividirNombreCompleto(row.nombre_completo || row.username || correo);
+            const estadoUi = window.normalizarEstadoUI(row.estado);
+            const areaDefault = row.area_id || (backupEmp && backupEmp.areaId) || 'ar_qa';
+
+            const rolesDesdeDb = window.mapearRolTextoAIds(row.rol, row.rol_id);
+            const rolesFinales = (row.rol && row.rol.includes('rol_'))
+              ? rolesDesdeDb
+              : Array.from(new Set([...rolesDesdeDb, ...(backupUsr?.rolesIds || [])]));
+
+            const areasFinales = (backupUsr && Array.isArray(backupUsr.areasAsignadas) && backupUsr.areasAsignadas.length > 0)
+              ? Array.from(new Set([areaDefault, ...backupUsr.areasAsignadas]))
+              : [areaDefault];
+
+            nuevosEmpleados.push({
+              id: row.id,
+              nombres: nombres,
+              apellidos: apellidos,
+              cargo: row.cargo || (backupEmp && backupEmp.cargo) || 'Analista GxP',
+              correo: correo,
+              areaId: areaDefault,
+              estado: estadoUi,
+              avatar: (backupEmp && backupEmp.avatar) || null
+            });
+
+            nuevosUsuarios.push({
+              id: row.id,
+              empleadoId: row.id,
+              username: row.username || correo.split('@')[0],
+              correo: correo,
+              password: row.password || row.pin_firma || (backupUsr && backupUsr.password) || '',
+              rolesIds: rolesFinales,
+              areasAsignadas: areasFinales,
+              estado: estadoUi,
+              rol_id: row.rol_id || null
+            });
+          });
+
+          // Conservar empleados de erp_state que aún no tengan cuenta en usuarios_gxp
+          (erpEmpleadosBackup || []).forEach(emp => {
+            const cLow = (emp.correo || '').trim().toLowerCase();
+            if (cLow && !correosEnTabla.has(cLow)) {
+              nuevosEmpleados.push(emp);
+            }
+          });
+
+          window.cachedEmpleados = nuevosEmpleados;
+          window.cachedUsuarios = nuevosUsuarios;
+          return true;
+        } catch (err) {
+          console.warn("No se pudo leer usuarios_gxp directamente, usando respaldo erp_state:", err);
+          return false;
+        }
+      };
+
+      window.upsertUsuarioEnSupabase = async function(usuarioObj, empleadoObj) {
+        try {
+          const correo = (usuarioObj.correo || empleadoObj?.correo || '').trim().toLowerCase();
+          if (!correo) return null;
+
+          const nombreCompleto = empleadoObj
+            ? `${empleadoObj.nombres || ''} ${empleadoObj.apellidos || ''}`.trim()
+            : (usuarioObj.username || correo);
+
+          const { rol, rol_id } = window.mapearRolIdsASupabase(usuarioObj.rolesIds, usuarioObj.rol_id);
+
+          const payload = {
+            email: correo,
+            username: (usuarioObj.username || correo.split('@')[0]).trim(),
+            nombre_completo: nombreCompleto || correo,
+            cargo: (empleadoObj && empleadoObj.cargo) || 'Usuario GxP',
+            area_id: (empleadoObj && empleadoObj.areaId) || (usuarioObj.areasAsignadas && usuarioObj.areasAsignadas[0]) || 'ar_qa',
+            rol: rol,
+            rol_id: rol_id,
+            estado: window.normalizarEstadoDB(usuarioObj.estado),
+            password: usuarioObj.password || ''
+          };
+
+          // Verificar si ya existe por UUID o por email
+          let targetId = window.esUUID(usuarioObj.id) ? usuarioObj.id : null;
+          if (!targetId) {
+            const checkRes = await fetch(`${SUPABASE_URL}/rest/v1/usuarios_gxp?email=eq.${encodeURIComponent(correo)}&select=id`, {
+              method: 'GET',
+              headers: HEADERS
+            });
+            if (checkRes.ok) {
+              const found = await checkRes.json();
+              if (found && found.length > 0) targetId = found[0].id;
+            }
+          }
+
+          if (targetId) {
+            const patchRes = await fetch(`${SUPABASE_URL}/rest/v1/usuarios_gxp?id=eq.${targetId}`, {
+              method: 'PATCH',
+              headers: { ...HEADERS, 'Prefer': 'return=representation' },
+              body: JSON.stringify(payload)
+            });
+            if (patchRes.ok) {
+              const updated = await patchRes.json();
+              return updated[0] || { id: targetId, ...payload };
+            }
+          } else {
+            const postRes = await fetch(`${SUPABASE_URL}/rest/v1/usuarios_gxp`, {
+              method: 'POST',
+              headers: { ...HEADERS, 'Prefer': 'return=representation' },
+              body: JSON.stringify(payload)
+            });
+            if (postRes.ok) {
+              const inserted = await postRes.json();
+              return inserted[0] || null;
+            }
+          }
+        } catch (err) {
+          console.error("Error sincronizando usuario en usuarios_gxp:", err);
+        }
+        return null;
+      };
       window.cachedEmpleados = [ { id: 1, nombres: 'Johan S.', apellidos: 'Aguilar', cargo: 'QA Lead', correo: 'j.aguilar@pharmor.com.co', areaId: 'ar_qa', estado: 'Activo', avatar: null } ];
       window.cachedUsuarios = [ { id: 1, empleadoId: 1, correo: 'j.aguilar@pharmor.com.co', password: '123', rolesIds: ['rol_admin'], areasAsignadas: ['ar_qa', 'ar_qc', 'ar_prod'], estado: 'Activo' } ];
       window.cachedDocs = []; window.cachedCopias = []; window.cachedObsoletos = []; window.auditTrailLogs = [];
@@ -1685,16 +1919,22 @@
       };
   
       window.loadData = async function() {
+        let dbState = {};
         try {
           const response = await fetch(`${SUPABASE_URL}/rest/v1/erp_state?id=eq.1&select=app_data`, { method: 'GET', headers: HEADERS });
           if (response.ok) {
             const json = await response.json();
             if (json && json.length > 0 && json[0].app_data) {
-              const dbState = json[0].app_data;
+              dbState = json[0].app_data;
               if (dbState.areas) window.cachedAreas = dbState.areas;
               if (dbState.procesos) window.cachedProcesos = dbState.procesos;
               if (dbState.roles && dbState.roles.length >= 6) window.cachedRoles = dbState.roles;
-              if (dbState.matriz && dbState.matriz['rol_autor'] && dbState.matriz['rol_autor'].crearEdicion) { window.cachedMatrizPermisos = dbState.matriz; } else { window.cachedMatrizPermisos = JSON.parse(JSON.stringify(window.MATRIZ_GXP_ESTANDAR)); window.saveData(); }
+              if (dbState.matriz && dbState.matriz['rol_autor'] && dbState.matriz['rol_autor'].crearEdicion) {
+                window.cachedMatrizPermisos = dbState.matriz;
+              } else {
+                window.cachedMatrizPermisos = JSON.parse(JSON.stringify(window.MATRIZ_GXP_ESTANDAR));
+                window.saveData();
+              }
               if (dbState.empleados) window.cachedEmpleados = dbState.empleados;
               if (dbState.usuarios) window.cachedUsuarios = dbState.usuarios;
               if (dbState.docs) window.cachedDocs = dbState.docs;
@@ -1711,7 +1951,14 @@
               if (dbState.tickets) window.cachedTicketsMantenimiento = dbState.tickets;
             }
           }
-        } catch(e) { console.error("Accediendo en modo local por fallo de red:", e); } finally { window.activarBotonLogin(); }
+
+          // Cargar usuarios reales desde public.usuarios_gxp (sin perder respaldo)
+          await window.cargarUsuariosDesdeSupabase(dbState.usuarios || window.cachedUsuarios, dbState.empleados || window.cachedEmpleados);
+        } catch(e) {
+          console.error("Accediendo en modo local por fallo de red:", e);
+        } finally {
+          window.activarBotonLogin();
+        }
       };
   
       window.loadData();
@@ -1756,18 +2003,37 @@
       };
   
       window.ejecutarLoginPrincipal = function() {
-        const email = document.getElementById('loginEmail').value.trim().toLowerCase(); 
+        const loginInput = document.getElementById('loginEmail').value.trim().toLowerCase(); 
         const pass = document.getElementById('loginPassword').value.trim();
         let usrData = null;
         
-        if (email === 'j.aguilar@pharmor.com.co' && (pass === '123' || pass === 'admin123')) {
-          usrData = (window.cachedUsuarios || []).find(u => (u.correo || '').trim().toLowerCase() === email);
-          if (!usrData) { usrData = { id: 1, empleadoId: 1, correo: 'j.aguilar@pharmor.com.co', password: pass, rolesIds: ['rol_admin'], areasAsignadas: ['ar_qa', 'ar_qc', 'ar_prod'], estado: 'Activo' }; window.cachedUsuarios.push(usrData); } else { usrData.password = pass; usrData.estado = 'Activo'; if (!usrData.rolesIds.includes('rol_admin')) usrData.rolesIds.push('rol_admin'); }
+        if (loginInput === 'j.aguilar@pharmor.com.co' && (pass === '123' || pass === 'admin123')) {
+          usrData = (window.cachedUsuarios || []).find(u => (u.correo || '').trim().toLowerCase() === loginInput);
+          if (!usrData) {
+            usrData = { id: 1, empleadoId: 1, correo: 'j.aguilar@pharmor.com.co', password: pass, rolesIds: ['rol_admin'], areasAsignadas: ['ar_qa', 'ar_qc', 'ar_prod'], estado: 'Activo' };
+            window.cachedUsuarios.push(usrData);
+          } else {
+            usrData.password = pass;
+            usrData.estado = 'Activo';
+            if (!Array.isArray(usrData.rolesIds)) usrData.rolesIds = ['rol_admin'];
+            else if (!usrData.rolesIds.includes('rol_admin')) usrData.rolesIds.push('rol_admin');
+          }
         } else {
           if (!window.cachedUsuarios || window.cachedUsuarios.length === 0) { alert("Base de datos no disponible."); return; }
-          usrData = window.cachedUsuarios.find(u => (u.correo || '').trim().toLowerCase() === email);
-          if (!usrData) { const empleadoSinUsuario = window.cachedEmpleados.find(e => (e.correo || '').trim().toLowerCase() === email); if (empleadoSinUsuario) { alert(`⚠️ ALERTA DEL SISTEMA GxP:\n\nEl correo ${email} pertenece a un Empleado registrado, pero aún no tiene cuenta de "Usuario GxP".`); } else { alert("Credenciales incorrectas o usuario no registrado en la Nube."); } return; }
-          if ((usrData.password || '').trim() !== pass) { alert("❌ Contraseña incorrecta. Por favor, inténtelo de nuevo."); return; }
+          usrData = window.cachedUsuarios.find(u =>
+            (u.correo || '').trim().toLowerCase() === loginInput ||
+            (u.username || '').trim().toLowerCase() === loginInput
+          );
+          if (!usrData) {
+            const empleadoSinUsuario = (window.cachedEmpleados || []).find(e => (e.correo || '').trim().toLowerCase() === loginInput);
+            if (empleadoSinUsuario) {
+              alert(`⚠️ ALERTA DEL SISTEMA GxP:\n\nEl correo ${loginInput} pertenece a un Empleado registrado, pero aún no tiene cuenta de "Usuario GxP".`);
+            } else {
+              alert("Credenciales incorrectas o usuario no registrado en la Nube.");
+            }
+            return;
+          }
+          if (!pass || (usrData.password || '').trim() !== pass) { alert("❌ Contraseña incorrecta. Por favor, inténtelo de nuevo."); return; }
           if (usrData.estado !== 'Activo') { alert("Acceso denegado: Usuario INACTIVO."); return; }
         }
   
@@ -1778,7 +2044,9 @@
         document.getElementById('view-login').classList.add('hidden'); 
         document.getElementById('app-portal').classList.remove('hidden');
         
-        const emp = (window.cachedEmpleados || []).find(e => e.id === usrData.empleadoId) || { nombres: usrData.correo, apellidos: '' };
+        const emp = (window.cachedEmpleados || []).find(e => String(e.id) === String(usrData.empleadoId))
+          || (window.cachedEmpleados || []).find(e => (e.correo || '').trim().toLowerCase() === (usrData.correo || '').trim().toLowerCase())
+          || { nombres: usrData.correo, apellidos: '' };
         window.actualizarAvatarUI(emp);
         window.renderAllData();
   
@@ -2796,10 +3064,16 @@
       window.abrirModalEditarEmpleado = function(idx) { const emp = window.cachedEmpleados[idx]; document.getElementById('empEditIndex').value = idx; document.getElementById('empNombres').value = emp.nombres; document.getElementById('empApellidos').value = emp.apellidos; document.getElementById('empCargo').value = emp.cargo; document.getElementById('empCorreo').value = emp.correo; document.getElementById('empAreaSelect').value = emp.areaId; document.getElementById('empEstadoSelect').value = emp.estado; window.toggleModal('modalEmpleado', true); };
             window.guardarEmpleadoCompleto = async function() {
         const editIdx = parseInt(document.getElementById('empEditIndex').value);
-        const data = { nombres: document.getElementById('empNombres').value.trim(), apellidos: document.getElementById('empApellidos').value.trim(), cargo: document.getElementById('empCargo').value.trim(), correo: document.getElementById('empCorreo').value.trim(), areaId: document.getElementById('empAreaSelect').value, estado: document.getElementById('empEstadoSelect').value };
+        const data = {
+          nombres: document.getElementById('empNombres').value.trim(),
+          apellidos: document.getElementById('empApellidos').value.trim(),
+          cargo: document.getElementById('empCargo').value.trim(),
+          correo: document.getElementById('empCorreo').value.trim(),
+          areaId: document.getElementById('empAreaSelect').value,
+          estado: document.getElementById('empEstadoSelect').value
+        };
 
         if (editIdx === -1) {
-          // ID secuencial de empleado
           let nuevoIdEmp = 1;
           if (window.cachedEmpleados.length > 0) {
             const idsNum = window.cachedEmpleados.map(e => Number(e.id)).filter(n => !isNaN(n));
@@ -2809,6 +3083,13 @@
           window.registrarAuditTrail(window.activeGxpUser.correo, 'CREATE_EMP', `Creó empleado: ${data.correo}`);
         } else {
           window.cachedEmpleados[editIdx] = { ...window.cachedEmpleados[editIdx], ...data };
+          const empActualizado = window.cachedEmpleados[editIdx];
+          const usrVinculado = window.cachedUsuarios.find(u => String(u.empleadoId) === String(empActualizado.id));
+          if (usrVinculado) {
+            usrVinculado.correo = data.correo;
+            usrVinculado.estado = data.estado;
+            await window.upsertUsuarioEnSupabase(usrVinculado, empActualizado);
+          }
           window.registrarAuditTrail(window.activeGxpUser.correo, 'UPDATE_EMP', `Editó empleado: ${data.correo}`);
         }
 
@@ -2845,54 +3126,63 @@
       };
   
           window.guardarUsuarioCompleto = async function() {
-      const editIdX = parseInt(document.getElementById('usrEditIndex').value);
-      
-      const data = { 
-        empleadoId: parseInt(document.getElementById('usrEmpSelect').value), 
-        correo: document.getElementById('usrCorreoInput').value.trim(), 
-        password: document.getElementById('usrPasswordInput').value.trim(), 
-        estado: document.getElementById('usrEstadoSelect').value,
-        rolesIds: Array.from(document.querySelectorAll('#contenedorRolesCheckboxes input:checked')).map(cb => cb.value),
-        areasAsignadas: Array.from(document.querySelectorAll('#contenedorAreasCheckboxes input:checked')).map(cb => cb.value)
+        const editIdX = parseInt(document.getElementById('usrEditIndex').value);
+        const empIdSeleccionado = document.getElementById('usrEmpSelect').value;
+        const empObj = window.cachedEmpleados.find(e => String(e.id) === String(empIdSeleccionado));
+
+        const data = { 
+          empleadoId: empObj ? empObj.id : empIdSeleccionado, 
+          correo: document.getElementById('usrCorreoInput').value.trim(), 
+          password: document.getElementById('usrPasswordInput').value.trim(), 
+          estado: document.getElementById('usrEstadoSelect').value,
+          rolesIds: Array.from(document.querySelectorAll('#contenedorRolesCheckboxes input:checked')).map(cb => cb.value),
+          areasAsignadas: Array.from(document.querySelectorAll('#contenedorAreasCheckboxes input:checked')).map(cb => cb.value)
+        };
+
+        let usuarioGuardado = null;
+
+        if (editIdX === -1) {
+          let nuevoIdUsr = 1;
+          if (window.cachedUsuarios.length > 0) {
+            const idsNum = window.cachedUsuarios.map(u => Number(u.id)).filter(n => !isNaN(n));
+            if (idsNum.length > 0) nuevoIdUsr = Math.max(...idsNum) + 1;
+          }
+          usuarioGuardado = { id: nuevoIdUsr, ...data };
+          window.cachedUsuarios.push(usuarioGuardado);
+          window.registrarAuditTrail(window.activeGxpUser.correo, 'CREATE_USER', `Creó usuario: ${data.correo}`);
+        } else {
+          window.cachedUsuarios[editIdX] = { ...window.cachedUsuarios[editIdX], ...data };
+          usuarioGuardado = window.cachedUsuarios[editIdX];
+          window.registrarAuditTrail(window.activeGxpUser.correo, 'UPDATE_USER', `Editó usuario: ${data.correo}`);
+        }
+
+        // Guardar en tabla real public.usuarios_gxp y sincronizar UUID
+        const rowDb = await window.upsertUsuarioEnSupabase(usuarioGuardado, empObj);
+        if (rowDb && rowDb.id) {
+          usuarioGuardado.id = rowDb.id;
+          usuarioGuardado.empleadoId = rowDb.id;
+          usuarioGuardado.rol_id = rowDb.rol_id || null;
+          if (empObj) empObj.id = rowDb.id;
+        }
+
+        await window.saveData();
+        window.toggleModal('modalUsuario', false);
+        window.renderAllData();
+
+        const btnMailto = confirm("✅ Usuario guardado correctamente en Supabase (usuarios_gxp).\n\n¿Deseas abrir tu cliente de correo para enviar la notificación de acceso a este usuario?");
+        if (btnMailto) {
+          const selectEmp = document.getElementById('usrEmpSelect');
+          const empName = selectEmp.options[selectEmp.selectedIndex].text.split('(')[0].trim();
+          const subject = encodeURIComponent("🔑 Credenciales de Acceso - PharmAudit ERP");
+          const body = encodeURIComponent(`Hola ${empName},\n\nSe ha configurado tu acceso oficial al portal de Calidad GxP (PharmAudit).\n\nUsuario: ${data.correo}\nContraseña Temporal: ${data.password}\n\nPor favor, ingresa y cambia tu contraseña inmediatamente para garantizar el cumplimiento.`);
+          window.location.href = `mailto:${data.correo}?subject=${subject}&body=${body}`;
+        }
       };
 
-      let isNew = false;
-      
-      if(editIdX === -1) {
-        isNew = true;
-        
-        // Lógica de ID secuencial
-        let nuevoIdUsr = 1;
-        if (window.cachedUsuarios.length > 0) {
-          const idsNum = window.cachedUsuarios.map(u => Number(u.id)).filter(n => !isNaN(n));
-          if (idsNum.length > 0) nuevoIdUsr = Math.max(...idsNum) + 1;
-        }
-        
-        window.cachedUsuarios.push({ id: nuevoIdUsr, ...data });
-        window.registrarAuditTrail(window.activeGxpUser.correo, 'CREATE_USER', `Creó usuario: ${data.correo}`);
-      } else {
-        window.cachedUsuarios[editIdX] = { ...window.cachedUsuarios[editIdX], ...data };
-        window.registrarAuditTrail(window.activeGxpUser.correo, 'UPDATE_USER', `Editó usuario: ${data.correo}`);
-      }
-
-      await window.saveData();
-      window.toggleModal('modalUsuario', false);
-      window.renderAllData();
-
-      const btnMailto = confirm("✅ Usuario guardado correctamente en la Nube.\n\n¿Deseas abrir tu cliente de correo para enviar la notificación de acceso a este usuario?");
-      if(btnMailto) {
-        const selectEmp = document.getElementById('usrEmpSelect');
-        const empName = selectEmp.options[selectEmp.selectedIndex].text.split('(')[0].trim();
-        const subject = encodeURIComponent("🔑 Credenciales de Acceso - PharmAudit ERP");
-        const body = encodeURIComponent(`Hola ${empName},\n\nSe ha configurado tu acceso oficial al portal de Calidad GxP (PharmAudit).\n\nUsuario: ${data.correo}\nContraseña Temporal: ${data.password}\n\nPor favor, ingresa y cambia tu contraseña inmediatamente para garantizar el cumplimiento.`);
-        window.location.href = `mailto:${data.correo}?subject=${subject}&body=${body}`;
-      }
-    }; // <--- ESTA ES LA LLAVE QUE PROBABLEMENTE FALTABA;
-  
       window.sugerirCorreoEmpleado = function() { 
-        const empId = parseInt(document.getElementById('usrEmpSelect').value); 
-        const emp = window.cachedEmpleados.find(e => e.id === empId); 
-        if(emp) { document.getElementById('usrCorreoInput').value = emp.correo; } 
+        const empId = document.getElementById('usrEmpSelect').value; 
+        const emp = window.cachedEmpleados.find(e => String(e.id) === String(empId)); 
+        if (emp) { document.getElementById('usrCorreoInput').value = emp.correo; } 
       };
   
       window.abrirModalProceso = function() { document.getElementById('modalProcesoTitle').innerText = 'Nuevo Proceso'; document.getElementById('procesoEditIndex').value = '-1'; document.getElementById('inputProcesoNombre').value = ''; window.toggleModal('modalProceso', true); };
@@ -3087,26 +3377,26 @@
     };
   
       window.guardarUpdateData = async function() {
-        const emp = window.cachedEmpleados.find(e => e.id === window.activeGxpUser.empleadoId);
-        if(emp) { 
+        const emp = window.cachedEmpleados.find(e => String(e.id) === String(window.activeGxpUser.empleadoId));
+        if (emp) { 
           emp.nombres = document.getElementById('myNombres').value.trim(); 
           emp.apellidos = document.getElementById('myApellidos').value.trim(); 
           
           const avatarFile = document.getElementById('myAvatar').files[0];
           if (avatarFile) {
-              if (avatarFile.size > 1048576) {
-                  alert("⛔ Control de Sistema: La foto de perfil es demasiado pesada. El tamaño máximo permitido es de 1 MB para garantizar la velocidad de la plataforma.");
-                  return; 
-              }
-              try {
-                  emp.avatar = await window.readFileAsBase64(avatarFile);
-              } catch(e) { 
-                  console.error("Error al cargar imagen de avatar:", e); 
-              }
+            if (avatarFile.size > 1048576) {
+              alert("⛔ Control de Sistema: La foto de perfil es demasiado pesada. El tamaño máximo permitido es de 1 MB para garantizar la velocidad de la plataforma.");
+              return; 
+            }
+            try {
+              emp.avatar = await window.readFileAsBase64(avatarFile);
+            } catch(e) { 
+              console.error("Error al cargar imagen de avatar:", e); 
+            }
           }
   
           window.actualizarAvatarUI(emp);
-  
+          await window.upsertUsuarioEnSupabase(window.activeGxpUser, emp);
           window.registrarAuditTrail(window.activeGxpUser.correo, 'UPDATE_PROFILE', 'El usuario actualizó sus datos personales y/o foto de perfil.'); 
           await window.saveData(); 
           window.toggleModal('modalUpdateData', false); 
@@ -3124,10 +3414,24 @@
       window.translateToEnglish = function() { alert("⚠️ El módulo de internacionalización (i18n) está programado para la siguiente fase de validación del sistema.\n\nPara mantener la integridad de los datos GxP, los cambios de idioma requieren una validación OQ (Operational Qualification) independiente."); };
       window.abrirModalPassword = function() { document.getElementById('myPassOld').value = ''; document.getElementById('myPassNew').value = ''; document.getElementById('myPassConfirm').value = ''; window.toggleModal('modalPassword', true); };
       window.guardarPassword = async function() {
-        const oldP = document.getElementById('myPassOld').value; const newP = document.getElementById('myPassNew').value; const confP = document.getElementById('myPassConfirm').value;
-        if(oldP !== window.activeGxpUser.password) { alert("La contraseña actual es incorrecta."); return; } if(newP.length < 3) { alert("La nueva contraseña es demasiado corta."); return; } if(newP !== confP) { alert("Las contraseñas nuevas no coinciden."); return; }
-        window.activeGxpUser.password = newP; const usrIdx = window.cachedUsuarios.findIndex(u => u.correo === window.activeGxpUser.correo); if(usrIdx > -1) window.cachedUsuarios[usrIdx].password = newP;
-        window.registrarAuditTrail(window.activeGxpUser.correo, 'CHANGE_PASSWORD', 'El usuario actualizó su credencial de acceso 21 CFR Part 11.'); await window.saveData(); alert("Contraseña actualizada con éxito."); window.toggleModal('modalPassword', false);
+        const oldP = document.getElementById('myPassOld').value;
+        const newP = document.getElementById('myPassNew').value;
+        const confP = document.getElementById('myPassConfirm').value;
+        if (oldP !== window.activeGxpUser.password) { alert("La contraseña actual es incorrecta."); return; }
+        if (newP.length < 3) { alert("La nueva contraseña es demasiado corta."); return; }
+        if (newP !== confP) { alert("Las contraseñas nuevas no coinciden."); return; }
+
+        window.activeGxpUser.password = newP;
+        const usrIdx = window.cachedUsuarios.findIndex(u => u.correo === window.activeGxpUser.correo);
+        if (usrIdx > -1) window.cachedUsuarios[usrIdx].password = newP;
+
+        const emp = window.cachedEmpleados.find(e => String(e.id) === String(window.activeGxpUser.empleadoId));
+        await window.upsertUsuarioEnSupabase(window.activeGxpUser, emp);
+
+        window.registrarAuditTrail(window.activeGxpUser.correo, 'CHANGE_PASSWORD', 'El usuario actualizó su credencial de acceso 21 CFR Part 11.');
+        await window.saveData();
+        alert("Contraseña actualizada con éxito.");
+        window.toggleModal('modalPassword', false);
       };
   
       window.abrirModalAbout = function() { window.toggleModal('modalAbout', true); };
@@ -3234,7 +3538,7 @@
         consecutivo: consecutivoInput,
         fecha: document.getElementById('ncFecha').value,
         procesoId: document.getElementById('ncProcesoOrigen').value,
-        responsableId: parseInt(document.getElementById('ncResponsable').value),
+        responsableId: document.getElementById('ncResponsable').value,
         fuente: document.getElementById('ncFuente').value,
         reincidencia: document.getElementById('ncReincidencia').value,
         descripcion: document.getElementById('ncDescripcion').value,
