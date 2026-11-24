@@ -717,12 +717,27 @@
     <div id="modalEditarDocMeta" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
       <div class="bg-white rounded-xl max-w-lg w-full p-5 border shadow-2xl space-y-4 text-xs">
         <div class="border-b pb-2"><h3 class="font-bold text-sm text-cyan-900">✏️ Editar Datos del Documento</h3></div>
+        <div id="editMetaGxPNotice" class="hidden p-2.5 bg-amber-50 border border-amber-300 rounded-lg text-amber-900 text-[11px]">
+          <strong>⚠️ Control 21 CFR Part 11:</strong> Este documento ya cuenta con firma en el flujo. Si modifica sus datos o su Área/Proceso, el flujo regresará automáticamente a <strong>Elaboración</strong> para volver a firmarse.
+        </div>
         <div class="space-y-3">
           <input type="hidden" id="editMetaId">
           <div><label class="block font-semibold mb-1">Título</label><input type="text" id="editMetaTitle" class="w-full p-2 border rounded bg-slate-50" /></div>
           <div class="grid grid-cols-2 gap-3">
             <div><label class="block font-semibold mb-1">Código</label><input type="text" id="editMetaCode" class="w-full p-2 border rounded bg-slate-50 font-mono uppercase" /></div>
             <div><label class="block font-semibold mb-1">Versión</label><input type="text" id="editMetaVer" class="w-full p-2 border rounded bg-slate-50 font-mono" /></div>
+          </div>
+          <div>
+            <label class="block font-semibold mb-1">Proceso GxP / Área Propietaria</label>
+            <select id="editMetaProcesoSelect" class="w-full p-2 border rounded bg-slate-50 font-mono"></select>
+          </div>
+          <div>
+            <label class="block font-semibold mb-1">Reemplazar Archivo PDF (Opcional)</label>
+            <input type="file" id="editMetaFile" accept=".pdf" class="w-full p-1.5 border rounded bg-slate-50 font-mono" />
+          </div>
+          <div>
+            <label class="block font-semibold mb-1">Motivo de la Edición / Corrección *</label>
+            <input type="text" id="editMetaMotivo" placeholder="Ej: Corrección de área propietaria asignada" class="w-full p-2 border rounded bg-slate-50" />
           </div>
         </div>
         <div class="flex justify-end space-x-2 pt-3 border-t">
@@ -2534,27 +2549,13 @@
       };
   
       window.obtenerNotificacionesPendientes = function() {
-        let notificaciones = [];
-        if(!window.activeGxpUser) return notificaciones;
-        
-        const misAreas = window.activeGxpUser.areasAsignadas || [];
-        const misRoles = window.activeGxpUser.rolesIds || [];
-        const esAdmin = misRoles.includes('rol_admin');
-  
-        window.cachedDocs.forEach(doc => {
-          if (doc.estado === 'PROCESO') {
-            if (doc.fase === 'Revisión' && (misAreas.includes(doc.areaId) || esAdmin) && (misRoles.includes('rol_revisor') || esAdmin)) {
-              notificaciones.push({ icon: '📝', texto: `Revisión técnica pendiente para <b>${doc.codigo}</b>` });
-            }
-            else if (doc.fase === 'Aprobación' && (misAreas.includes(doc.areaId) || esAdmin) && (misRoles.includes('rol_aprobador') || esAdmin)) {
-              notificaciones.push({ icon: '✍️', texto: `Aprobación pendiente para <b>${doc.codigo}</b>` });
-            }
-            else if (doc.fase === 'Autorización Final' && (misAreas.includes('ar_qa') || esAdmin)) {
-              notificaciones.push({ icon: '✅', texto: `Verificar divulgación y Autorizar <b>${doc.codigo}</b>` });
-            }
-          }
-        });
-        return notificaciones;
+        const lista = typeof window.calcularNotificaciones === 'function' ? window.calcularNotificaciones() : [];
+        const iconos = { DOC: '📝', NC: '⚠️', CAPA: '☑️', METRO: '📐', TICKET: '🎫' };
+        return lista.map(n => ({
+          ...n,
+          icon: iconos[n.tipo] || '🔔',
+          texto: `<b>${n.titulo}</b>: ${n.desc}`
+        }));
       };
   
       window.actualizarBadgeNotificaciones = function() {
@@ -3407,7 +3408,13 @@
         document.getElementById('tablaMatrizConfig').innerHTML = window.cachedRoles.map(r => { const m = window.cachedMatrizPermisos[r.id] || {}; return `<tr class="hover:bg-slate-50 text-xs"><td class="p-2 border text-left font-bold font-sans">${r.nombre}</td><td class="p-2 border">${m.lectura ? '✅' : '❌'}</td><td class="p-2 border">${m.crearEdicion ? '✅' : '❌'}</td><td class="p-2 border">${m.revision ? '✅' : '❌'}</td><td class="p-2 border">${m.aprobacionFirma ? '✅' : '❌'}</td><td class="p-2 border">${m.administracion ? '✅' : '❌'}</td></tr>`; }).join('');
         document.getElementById('tablaUsuariosConfig').innerHTML = window.cachedUsuarios.map((u, idx) => { const emp = window.cachedEmpleados.find(e => e.id === u.empleadoId); return `<tr class="hover:bg-slate-50 font-mono text-xs"><td class="p-2 border">${u.id}</td><td class="p-2 border font-sans font-semibold">${emp ? emp.nombres + ' ' + emp.apellidos : 'N/A'}</td><td class="p-2 border text-cyan-800">${u.correo}</td><td class="p-2 border font-sans"><span class="bg-purple-100 text-purple-800 px-2 rounded text-[11px]">${u.rolesIds.join(', ')}</span></td><td class="p-2 border font-sans text-[11px] text-slate-600">${u.areasAsignadas.join(', ')}</td><td class="p-2 border text-center">${u.estado==='Activo'?'<span class="bg-emerald-100 text-emerald-800 px-2 rounded">Activo</span>':'<span class="bg-rose-100 text-rose-800 px-2 rounded">Inactivo</span>'}</td><td class="p-2 border text-center"><button onclick="window.abrirModalEditarUsuario(${idx})" class="bg-cyan-50 border px-2 py-1 rounded font-bold cursor-pointer">✏️ Editar</button></td></tr>`; }).join('');
         
-        const selProc = document.getElementById('createDocProcesoSelect'); if(selProc) selProc.innerHTML = window.cachedProcesos.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
+        const selProc = document.getElementById('createDocProcesoSelect');
+        if (selProc) {
+          selProc.innerHTML = window.cachedProcesos.map(p => {
+            const ar = window.cachedAreas.find(a => a.id === p.areaId);
+            return `<option value="${p.id}">${p.nombre} — (${ar ? ar.nombre : p.areaId})</option>`;
+          }).join('');
+        }
         const selArea = document.getElementById('selectProcesoArea'); if(selArea) selArea.innerHTML = window.cachedAreas.map(a => `<option value="${a.id}">${a.nombre}</option>`).join('');
         const selEmpArea = document.getElementById('empAreaSelect'); if(selEmpArea) selEmpArea.innerHTML = window.cachedAreas.map(a => `<option value="${a.id}">${a.nombre}</option>`).join('');
         const selCopArea = document.getElementById('copiaAreaSelect'); if(selCopArea) selCopArea.innerHTML = window.cachedAreas.map(a => `<option value="${a.nombre}">${a.nombre}</option>`).join('');
@@ -3563,10 +3570,102 @@
         await window.saveData(); window.toggleModal('modalProceso', false); window.renderAllData();
       };
   
-      window.abrirModalEditarDoc = function(docId) { const doc = window.cachedDocs.find(x => x.id === docId); if(!doc) return; document.getElementById('editMetaId').value = docId; document.getElementById('editMetaTitle').value = doc.titulo; document.getElementById('editMetaCode').value = doc.codigo; document.getElementById('editMetaVer').value = doc.version; window.toggleModal('modalEditarDocMeta', true); };
+     window.abrirModalEditarDoc = function(docId) {
+        const doc = window.cachedDocs.find(x => x.id === docId);
+        if (!doc) return;
+
+        document.getElementById('editMetaId').value = docId;
+        document.getElementById('editMetaTitle').value = doc.titulo;
+        document.getElementById('editMetaCode').value = doc.codigo;
+        document.getElementById('editMetaVer').value = doc.version;
+        document.getElementById('editMetaFile').value = '';
+        document.getElementById('editMetaMotivo').value = '';
+
+        const selProc = document.getElementById('editMetaProcesoSelect');
+        if (selProc) {
+          selProc.innerHTML = window.cachedProcesos.map(p => {
+            const ar = window.cachedAreas.find(a => a.id === p.areaId);
+            return `<option value="${p.id}">${p.nombre} — (${ar ? ar.nombre : p.areaId})</option>`;
+          }).join('');
+          if (doc.procesoId) selProc.value = doc.procesoId;
+          selProc.disabled = (doc.estado === 'VIGENTE');
+        }
+
+        const notice = document.getElementById('editMetaGxPNotice');
+        if (notice) {
+          if (doc.estado === 'PROCESO' && doc.fase !== 'Elaboración') {
+            notice.classList.remove('hidden');
+          } else {
+            notice.classList.add('hidden');
+          }
+        }
+
+        window.toggleModal('modalEditarDocMeta', true);
+      };
+
       window.guardarEdicionMetaDoc = async function() {
-        const docId = document.getElementById('editMetaId').value; const doc = window.cachedDocs.find(x => x.id === docId);
-        if(doc) { doc.titulo = document.getElementById('editMetaTitle').value; doc.codigo = document.getElementById('editMetaCode').value; doc.version = document.getElementById('editMetaVer').value; window.registrarAuditTrail(window.activeGxpUser.correo, 'EDIT_DOC', `Editó metadatos de ${doc.codigo}`); await window.saveData(); window.renderAllData(); }
+        const docId = document.getElementById('editMetaId').value;
+        const doc = window.cachedDocs.find(x => x.id === docId);
+        if (!doc) {
+          window.toggleModal('modalEditarDocMeta', false);
+          return;
+        }
+
+        const nuevoTitulo = document.getElementById('editMetaTitle').value.trim();
+        const nuevoCodigo = document.getElementById('editMetaCode').value.trim().toUpperCase();
+        const nuevaVer = document.getElementById('editMetaVer').value.trim();
+        const nuevoProcesoId = document.getElementById('editMetaProcesoSelect').value;
+        const motivo = document.getElementById('editMetaMotivo').value.trim();
+        const fileInput = document.getElementById('editMetaFile');
+
+        if (!nuevoTitulo || !nuevoCodigo || !nuevaVer) {
+          alert("⚠️ Complete Título, Código y Versión.");
+          return;
+        }
+
+        if (doc.estado === 'PROCESO' && doc.fase !== 'Elaboración' && !motivo) {
+          alert("⚠️ Control GxP: Ingrese el motivo de la corrección para registrar el reinicio del flujo en el Audit Trail.");
+          return;
+        }
+
+        const procObj = window.cachedProcesos.find(p => p.id === nuevoProcesoId);
+        const areaAnterior = doc.areaId;
+        const faseAnterior = doc.fase;
+
+        doc.titulo = nuevoTitulo;
+        doc.codigo = nuevoCodigo;
+        doc.version = nuevaVer;
+
+        if (doc.estado !== 'VIGENTE' && procObj) {
+          doc.procesoId = procObj.id;
+          doc.areaId = procObj.areaId;
+        }
+
+        if (fileInput && fileInput.files && fileInput.files[0]) {
+          try {
+            doc.archivo_url = await window.readFileAsBase64(fileInput.files[0]);
+          } catch (e) {
+            console.error("Error actualizando PDF:", e);
+          }
+        }
+
+        let detalleAudit = `Editó metadatos de ${doc.codigo} v${doc.version}`;
+        if (motivo) detalleAudit += ` | Motivo: ${motivo}`;
+
+        if (doc.estado === 'PROCESO' && faseAnterior !== 'Elaboración') {
+          doc.fase = 'Elaboración';
+          const nuevaAreaObj = window.cachedAreas.find(a => a.id === doc.areaId);
+          detalleAudit += ` | Área: ${areaAnterior} -> ${doc.areaId} (${nuevaAreaObj ? nuevaAreaObj.nombre : ''}). Flujo reiniciado a Elaboración (Part 11).`;
+        }
+
+        window.registrarAuditTrail(window.activeGxpUser.correo, 'EDIT_DOC', detalleAudit, {
+          tabla: 'documentos',
+          registroId: doc.id,
+          referencia: `${doc.codigo} v${doc.version}`
+        });
+
+        await window.saveData();
+        window.renderAllData();
         window.toggleModal('modalEditarDocMeta', false);
       };
   
@@ -4860,114 +4959,122 @@
     // SISTEMA DE NOTIFICACIONES
     // ==========================================
         window.calcularNotificaciones = function() {
-      if (!window.activeGxpUser) return [];
-      
-      const misNotificaciones = [];
-      const miId = window.activeGxpUser.empleadoId;
-      const miEmp = window.cachedEmpleados.find(e => e.id === miId);
-      const miNombreCompleto = miEmp ? `${miEmp.nombres} ${miEmp.apellidos}` : '';
-      const misRoles = window.activeGxpUser.rolesIds || [];
-      const isAdmin = misRoles.includes('rol_admin') || window.esAdminMaster(window.activeGxpUser);
-      const hoy = new Date();
-      hoy.setHours(0,0,0,0);
+        if (!window.activeGxpUser) return [];
 
-      // 1. MÓDULO: NO CONFORMIDADES (Asignadas a mí)
-      window.cachedNCs.forEach(nc => {
-        if (nc.responsableId === miId && nc.estado !== 'Cerrado Definitivo') {
-          let accion = 'Revisa esta NC.';
-          if (nc.estado === 'Borrador') accion = '⚠️ Requiere completar la información y firmar (Part 11).';
-          else if (nc.estado === 'En Análisis') accion = '🔍 Requiere crear o revisar el plan CAPA.';
-          else if (nc.estado === 'Plan Aprobado') accion = '🚀 Inicia la ejecución de las acciones del CAPA.';
-          else if (nc.estado === 'Cerrado Operativo') accion = '📊 Falta la Evaluación de Efectividad y cierre QA.';
+        const misNotificaciones = [];
+        const miId = window.activeGxpUser.empleadoId;
+        const miEmp = (window.cachedEmpleados || []).find(e => String(e.id) === String(miId));
+        const miNombreCompleto = miEmp ? `${miEmp.nombres} ${miEmp.apellidos}`.trim() : '';
+        const misRoles = window.activeGxpUser.rolesIds || [];
+        const misAreas = window.activeGxpUser.areasAsignadas || [];
+        const isAdmin = misRoles.includes('rol_admin') || (typeof window.esAdminMaster === 'function' && window.esAdminMaster(window.activeGxpUser));
+        const hoy = new Date();
+        hoy.setHours(0, 0, 0, 0);
 
-          misNotificaciones.push({
-            tipo: 'NC', id: nc.id, titulo: `NC Asignada: ${nc.consecutivo} (${nc.estado})`, desc: accion, color: 'amber'
-          });
-        }
-      });
+        // 1. MÓDULO: NO CONFORMIDADES (Asignadas al usuario)
+        (window.cachedNCs || []).forEach(nc => {
+          if (String(nc.responsableId) === String(miId) && nc.estado !== 'Cerrado Definitivo') {
+            let accion = 'Revisa esta NC.';
+            if (nc.estado === 'Borrador') accion = '⚠️ Requiere completar la información y firmar (Part 11).';
+            else if (nc.estado === 'En Análisis') accion = '🔍 Requiere crear o revisar el plan CAPA.';
+            else if (nc.estado === 'Plan Aprobado') accion = '🚀 Inicia la ejecución de las acciones del CAPA.';
+            else if (nc.estado === 'Cerrado Operativo') accion = '📊 Falta la Evaluación de Efectividad y cierre QA.';
 
-      // 2. MÓDULO: CAPA (Actividades pendientes asignadas a mí)
-      window.cachedCAPAs.forEach(capa => {
-        if (capa.estado === 'En Ejecución' || capa.estado === 'Plan Aprobado') {
-          capa.plan.forEach(act => {
-            if (act.estado === 'Pendiente' && act.responsable.toLowerCase() === miNombreCompleto.toLowerCase()) {
+            misNotificaciones.push({
+              tipo: 'NC', id: nc.id, titulo: `NC Asignada: ${nc.consecutivo} (${nc.estado})`, desc: accion, color: 'amber'
+            });
+          }
+        });
+
+        // 2. MÓDULO: CAPA (Actividades pendientes asignadas al usuario)
+        (window.cachedCAPAs || []).forEach(capa => {
+          if (capa.estado === 'En Ejecución' || capa.estado === 'Plan Aprobado') {
+            (capa.plan || []).forEach(act => {
+              if (act.estado === 'Pendiente' && (act.responsable || '').trim().toLowerCase() === miNombreCompleto.toLowerCase()) {
+                misNotificaciones.push({
+                  tipo: 'CAPA', id: capa.id, titulo: `Tarea CAPA Pendiente: ${capa.consecutivo}`, desc: `👉 Debes ejecutar: "${act.actividad}"`, color: 'purple'
+                });
+              }
+            });
+          }
+        });
+
+        // 3. MÓDULO: GESTIÓN DOCUMENTAL (Firmas pendientes filtradas por ÁREA y ROL)
+        (window.cachedDocs || []).forEach(doc => {
+          if (doc.estado === 'PROCESO') {
+            const docAreaId = doc.areaId || (window.cachedProcesos || []).find(p => p.id === doc.procesoId)?.areaId || '';
+            const perteneceAMiArea = isAdmin || misAreas.includes(docAreaId);
+            let requiereMiFirma = false;
+
+            if (doc.fase === 'Elaboración' && perteneceAMiArea && (misRoles.includes('rol_autor') || isAdmin)) {
+              requiereMiFirma = true;
+            } else if (doc.fase === 'Revisión' && perteneceAMiArea && (misRoles.includes('rol_revisor') || isAdmin)) {
+              requiereMiFirma = true;
+            } else if (doc.fase === 'Aprobación' && perteneceAMiArea && (misRoles.includes('rol_aprobador') || isAdmin)) {
+              requiereMiFirma = true;
+            } else if (doc.fase === 'Autorización Final' && (isAdmin || misAreas.includes('ar_qa'))) {
+              requiereMiFirma = true;
+            }
+
+            if (requiereMiFirma) {
               misNotificaciones.push({
-                tipo: 'CAPA', id: capa.id, titulo: `Tarea CAPA Pendiente: ${capa.consecutivo}`, desc: `👉 Debes ejecutar: "${act.actividad}"`, color: 'purple'
+                tipo: 'DOC',
+                id: doc.id,
+                titulo: `Firma Pendiente: ${doc.codigo}`,
+                desc: `El documento "${doc.titulo}" requiere tu firma en la fase de ${doc.fase}.`,
+                color: 'blue'
               });
             }
-          });
-        }
-      });
-
-      // 3. MÓDULO: GESTIÓN DOCUMENTAL (Firmas pendientes según rol)
-      window.cachedDocs.forEach(doc => {
-        if (doc.estado === 'En Proceso' || doc.fase !== 'Vigente') {
-          let requiereMiFirma = false;
-          if (doc.fase === 'Elaboración' && (misRoles.includes('rol_autor') || isAdmin)) requiereMiFirma = true;
-          if (doc.fase === 'Revisión' && (misRoles.includes('rol_revisor') || isAdmin)) requiereMiFirma = true;
-          if (doc.fase === 'Aprobación' && (misRoles.includes('rol_aprobador') || isAdmin)) requiereMiFirma = true;
-          if (doc.fase === 'Autorización Final' && (misRoles.includes('rol_admin') || window.activeGxpUser.areasAsignadas?.includes('ar_qa'))) requiereMiFirma = true;
-
-          if (requiereMiFirma) {
-            misNotificaciones.push({
-              tipo: 'DOC', id: doc.id, titulo: `Firma Pendiente: ${doc.codigo}`, desc: `El documento "${doc.titulo}" requiere tu firma en la fase de ${doc.fase}.`, color: 'blue'
-            });
           }
-        }
-      });
+        });
 
-      // 4. MÓDULO: METROLOGÍA (Calibraciones y Mantenimientos próximos o vencidos)
-      window.cachedEquipos.forEach(eq => {
-        // Validar Calibración
-        if (eq.requiereCalibracion && eq.fechaProximaCal) {
-          const fechaCal = new Date(eq.fechaProximaCal + 'T00:00:00');
-          const diffDias = Math.ceil((fechaCal - hoy) / (1000 * 60 * 60 * 24));
-          
-          if (diffDias <= 30) {
-            const vencido = diffDias < 0;
-            misNotificaciones.push({
-              tipo: 'METRO', id: eq.id, 
-              titulo: vencido ? `🚨 Calibración VENCIDA: ${eq.tag}` : `⏳ Calibración Próxima: ${eq.tag}`,
-              desc: vencido ? `El equipo venció hace ${Math.abs(diffDias)} días.` : `Faltan ${diffDias} días para la calibración.`,
-              color: vencido ? 'rose' : 'emerald'
-            });
+        // 4. MÓDULO: METROLOGÍA (Calibraciones y Mantenimientos próximos o vencidos)
+        (window.cachedEquipos || []).forEach(eq => {
+          if (eq.requiereCalibracion && eq.fechaProximaCal) {
+            const fechaCal = new Date(eq.fechaProximaCal + 'T00:00:00');
+            const diffDias = Math.ceil((fechaCal - hoy) / (1000 * 60 * 60 * 24));
+            if (diffDias <= 30) {
+              const vencido = diffDias < 0;
+              misNotificaciones.push({
+                tipo: 'METRO', id: eq.id,
+                titulo: vencido ? `🚨 Calibración VENCIDA: ${eq.tag}` : `⏳ Calibración Próxima: ${eq.tag}`,
+                desc: vencido ? `El equipo venció hace ${Math.abs(diffDias)} días.` : `Faltan ${diffDias} días para la calibración.`,
+                color: vencido ? 'rose' : 'emerald'
+              });
+            }
           }
-        }
-        // Validar Mantenimiento
-        if (eq.requiereMantenimiento && eq.fechaProximoMaint) {
-          const fechaMnt = new Date(eq.fechaProximoMaint + 'T00:00:00');
-          const diffDias = Math.ceil((fechaMnt - hoy) / (1000 * 60 * 60 * 24));
-          if (diffDias <= 30) {
-             const vencido = diffDias < 0;
-             misNotificaciones.push({
-              tipo: 'METRO', id: eq.id, 
-              titulo: vencido ? `🚨 Mantenimiento VENCIDO: ${eq.tag}` : `⏳ Mantenimiento Próximo: ${eq.tag}`,
-              desc: vencido ? `El equipo venció hace ${Math.abs(diffDias)} días.` : `Faltan ${diffDias} días para el mantenimiento.`,
-              color: vencido ? 'rose' : 'purple'
-            });
+          if (eq.requiereMantenimiento && eq.fechaProximoMaint) {
+            const fechaMnt = new Date(eq.fechaProximoMaint + 'T00:00:00');
+            const diffDias = Math.ceil((fechaMnt - hoy) / (1000 * 60 * 60 * 24));
+            if (diffDias <= 30) {
+              const vencido = diffDias < 0;
+              misNotificaciones.push({
+                tipo: 'METRO', id: eq.id,
+                titulo: vencido ? `🚨 Mantenimiento VENCIDO: ${eq.tag}` : `⏳ Mantenimiento Próximo: ${eq.tag}`,
+                desc: vencido ? `El equipo venció hace ${Math.abs(diffDias)} días.` : `Faltan ${diffDias} días para el mantenimiento.`,
+                color: vencido ? 'rose' : 'purple'
+              });
+            }
           }
-        }
-      });
+        });
+
         // 5. MÓDULO: TICKETS DE MANTENIMIENTO
-      (window.cachedTicketsMantenimiento || []).forEach(tkt => {
-        // Si soy el técnico asignado y el ticket no está cerrado
-        if (tkt.estado === 'Abierto' && tkt.tecnicoAsignadoId == window.activeGxpUser.empleadoId) {
-          misNotificaciones.push({
-            tipo: 'TICKET', id: tkt.id, titulo: `Ticket Asignado: ${tkt.consecutivo}`,
-            desc: `Tienes una nueva solicitud de mantenimiento para resolver.`, color: 'amber'
-          });
-        }
-        // O si soy Admin y hay tickets abiertos
-        else if (tkt.estado === 'Abierto' && (window.activeGxpUser.rolesIds.includes('rol_admin') || window.esAdminMaster(window.activeGxpUser))) {
-          misNotificaciones.push({
-            tipo: 'TICKET', id: tkt.id, titulo: `Ticket Abierto: ${tkt.consecutivo}`,
-            desc: `Asignado a: ${tkt.tecnicoAsignado}. Pendiente de cierre.`, color: 'rose'
-          });
-        }
-      });
+        (window.cachedTicketsMantenimiento || []).forEach(tkt => {
+          if (tkt.estado === 'Abierto' && String(tkt.tecnicoAsignadoId) === String(miId)) {
+            misNotificaciones.push({
+              tipo: 'TICKET', id: tkt.id, titulo: `Ticket Asignado: ${tkt.consecutivo}`,
+              desc: `Tienes una nueva solicitud de mantenimiento para resolver.`, color: 'amber'
+            });
+          } else if (tkt.estado === 'Abierto' && isAdmin) {
+            misNotificaciones.push({
+              tipo: 'TICKET', id: tkt.id, titulo: `Ticket Abierto: ${tkt.consecutivo}`,
+              desc: `Asignado a: ${tkt.tecnicoAsignado}. Pendiente de cierre.`, color: 'rose'
+            });
+          }
+        });
 
-      return misNotificaciones;
-    };
+        return misNotificaciones;
+      };
            window.renderNotificaciones = function() {
       const notis = window.calcularNotificaciones();
       const count = notis.length;
