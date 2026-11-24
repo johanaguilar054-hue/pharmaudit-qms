@@ -2113,28 +2113,321 @@
         }).join('');
       };
 
-      window.exportarFirmasPart11PDF = function() {
-        const firmas = window.cachedFirmasPart11 || [];
-        if (firmas.length === 0) { alert("No hay firmas electrónicas para exportar."); return; }
-        let html = `<html><head><style>
-          body { font-family: Arial, sans-serif; font-size: 10px; margin: 20px; }
-          h2 { color: #0f172a; margin-bottom: 4px; }
-          p { color: #64748b; margin-top: 0; font-size: 9px; }
-          table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-          th, td { border: 1px solid #cbd5e1; padding: 5px; text-align: left; word-break: break-word; }
-          th { background-color: #f1f5f9; font-weight: bold; }
-        </style></head><body>
-        <h2>✍️ Certificado de Firmas Electrónicas (FDA 21 CFR Part 11)</h2>
-        <p>Generado el: ${new Date().toLocaleString()} | PharmAudit ERP · Pharmor S.A.S.</p>
-        <table><thead><tr><th>Fecha / Hora</th><th>Módulo</th><th>Significado</th><th>Firmante / Rol</th><th>Justificación</th><th>Hash SHA-256</th></tr></thead><tbody>`;
-        firmas.forEach(f => {
-          html += `<tr><td>${f.timestamp_firma ? new Date(f.timestamp_firma).toLocaleString() : ''}</td><td>${f.tabla_referencia}</td><td><b>${f.significado_firma}</b></td><td>${f.usuario_nombre || ''}<br><small>${f.rol_firmante || ''}</small></td><td>${f.motivo_justificacion || ''}</td><td style="font-family:monospace;font-size:8px;">${f.hash_integridad || ''}</td></tr>`;
-        });
-        html += `</tbody></table></body></html>`;
-        const win = window.open('', '_blank');
-        win.document.write(html);
-        win.document.close();
-        win.print();
+      // ==========================================
+      // ADAPTADOR RELACIONAL: ÁREAS, PROCESOS, DOCUMENTOS Y COPIAS CONTROLADAS
+      // ==========================================
+      window.mapAreaCodeToUuid = {};
+      window.mapProcesoCodeToUuid = {};
+
+      window.inferirTipoDocumentoGxP = function(codigo) {
+        const c = String(codigo || '').toUpperCase();
+        if (c.includes('-POE-') || c.includes('-SOP-')) return 'POE';
+        if (c.includes('-FO-') || c.includes('-REG-')) return 'FORMATO';
+        if (c.includes('-MN-') || c.includes('-MAN-')) return 'MANUAL';
+        if (c.includes('-PR-')) return 'PROCEDIMIENTO';
+        if (c.includes('-IT-')) return 'INSTRUCTIVO';
+        if (c.includes('-PL-')) return 'PLAN';
+        return 'DOCUMENTO_GXP';
+      };
+
+      window.upsertAreaEnSupabase = async function(areaObj) {
+        try {
+          const code = String(areaObj.id || areaObj.codigo || `ar_${Date.now()}`).substring(0, 30);
+          const payload = {
+            codigo: code,
+            nombre: String(areaObj.nombre || 'Área GxP').substring(0, 100)
+          };
+          if (window.esUUID(areaObj._uuid)) payload.id = areaObj._uuid;
+
+          const res = await fetch(`${SUPABASE_URL}/rest/v1/areas?on_conflict=codigo`, {
+            method: 'POST',
+            headers: { ...HEADERS, 'Prefer': 'resolution=merge-duplicates,return=representation' },
+            body: JSON.stringify(payload)
+          });
+          if (res.ok) {
+            const rows = await res.json();
+            if (rows && rows[0]) {
+              areaObj._uuid = rows[0].id;
+              window.mapAreaCodeToUuid[code] = rows[0].id;
+              return rows[0].id;
+            }
+          } else {
+            console.warn('Supabase areas upsert warning:', res.status, await res.text());
+          }
+        } catch (e) {
+          console.warn('Error sincronizando área con Supabase:', e);
+        }
+        return areaObj._uuid || null;
+      };
+
+      window.upsertProcesoEnSupabase = async function(procObj) {
+        try {
+          const code = String(procObj.id || procObj.codigo || `pr_${Date.now()}`).substring(0, 30);
+          let areaUuid = window.mapAreaCodeToUuid[procObj.areaId] || null;
+          if (!areaUuid && procObj.areaId) {
+            const areaFound = (window.cachedAreas || []).find(a => a.id === procObj.areaId);
+            if (areaFound) areaUuid = await window.upsertAreaEnSupabase(areaFound);
+          }
+
+          const payload = {
+            codigo: code,
+            nombre: String(procObj.nombre || 'Proceso GxP').substring(0, 150),
+            area_id: window.esUUID(areaUuid) ? areaUuid : null
+          };
+          if (window.esUUID(procObj._uuid)) payload.id = procObj._uuid;
+
+          const res = await fetch(`${SUPABASE_URL}/rest/v1/procesos?on_conflict=codigo`, {
+            method: 'POST',
+            headers: { ...HEADERS, 'Prefer': 'resolution=merge-duplicates,return=representation' },
+            body: JSON.stringify(payload)
+          });
+          if (res.ok) {
+            const rows = await res.json();
+            if (rows && rows[0]) {
+              procObj._uuid = rows[0].id;
+              window.mapProcesoCodeToUuid[code] = rows[0].id;
+              return rows[0].id;
+            }
+          } else {
+            console.warn('Supabase procesos upsert warning:', res.status, await res.text());
+          }
+        } catch (e) {
+          console.warn('Error sincronizando proceso con Supabase:', e);
+        }
+        return procObj._uuid || null;
+      };
+
+      window.upsertDocumentoEnSupabase = async function(doc) {
+        try {
+          if (!window.esUUID(doc.id)) {
+            doc.id = crypto.randomUUID();
+          }
+
+          let areaUuid = window.mapAreaCodeToUuid[doc.areaId] || null;
+          if (!areaUuid && doc.areaId) {
+            const areaFound = (window.cachedAreas || []).find(a => a.id === doc.areaId);
+            if (areaFound) areaUuid = await window.upsertAreaEnSupabase(areaFound);
+          }
+
+          let procUuid = window.mapProcesoCodeToUuid[doc.procesoId] || null;
+          if (!procUuid && doc.procesoId) {
+            const procFound = (window.cachedProcesos || []).find(p => p.id === doc.procesoId);
+            if (procFound) procUuid = await window.upsertProcesoEnSupabase(procFound);
+          }
+
+          const payload = {
+            id: doc.id,
+            codigo: String(doc.codigo || 'SIN-COD').substring(0, 30),
+            titulo: String(doc.titulo || 'Sin Título').substring(0, 255),
+            tipo: String(doc.tipo || window.inferirTipoDocumentoGxP(doc.codigo)).substring(0, 50),
+            version: String(doc.version || '1.0').substring(0, 10),
+            estado: String(doc.estado || 'PROCESO').substring(0, 30),
+            fase: String(doc.fase || 'Elaboración').substring(0, 50),
+            area_id: window.esUUID(areaUuid) ? areaUuid : null,
+            proceso_id: window.esUUID(procUuid) ? procUuid : null,
+            fecha_aprobacion: doc.fechaAprob || null,
+            fecha_vigencia: doc.fechaVenc || null,
+            archivo_url: doc.archivo_url || null,
+            creado_por: String(doc.creado_por || window.activeGxpUser?.correo || 'Johan Aguilar').substring(0, 100),
+            justificacion_cambio: doc.justificacion_cambio || null,
+            es_version_actual: doc.estado === 'VIGENTE'
+          };
+
+          const res = await fetch(`${SUPABASE_URL}/rest/v1/documentos?on_conflict=id`, {
+            method: 'POST',
+            headers: { ...HEADERS, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+            body: JSON.stringify(payload)
+          });
+          if (!res.ok) {
+            console.warn('Supabase documentos upsert warning:', res.status, await res.text());
+          }
+        } catch (e) {
+          console.warn('Error sincronizando documento con Supabase:', e);
+        }
+      };
+
+      window.upsertCopiaControladaEnSupabase = async function(cp) {
+        try {
+          if (!window.esUUID(cp.id)) {
+            cp.id = crypto.randomUUID();
+          }
+
+          const docMatch = (window.cachedDocs || []).find(d =>
+            d.id === cp.docId || (d.codigo === cp.docCodigo && d.version === cp.docVersion) || d.codigo === cp.docCodigo
+          );
+          const docUuid = (docMatch && window.esUUID(docMatch.id)) ? docMatch.id : null;
+
+          const payload = {
+            id: cp.id,
+            codigo_copia: String(cp.codigoCopia || cp.id).substring(0, 100),
+            documento_id: docUuid,
+            documento_codigo: String(cp.docCodigo || docMatch?.codigo || '').substring(0, 50),
+            documento_titulo: String(cp.docTitulo || docMatch?.titulo || '').substring(0, 255),
+            version_emitida: String(cp.docVersion || cp.version || '1.0').substring(0, 20),
+            tipo_copia: String(cp.tipoCopia || 'CONTROLADA').substring(0, 30),
+            destinatario_id: window.esUUID(cp.destinatarioId) ? cp.destinatarioId : null,
+            destinatario_nombre: String(cp.destinatario || cp.receptor || '').substring(0, 150),
+            area_destino: String(cp.areaDestino || cp.area || 'Planta General').substring(0, 100),
+            motivo_emision: String(cp.motivo || cp.observaciones || 'Distribución controlada en planta GxP'),
+            numero_copia: parseInt(cp.numeroCopia, 10) || 1,
+            total_copias_emitidas: parseInt(cp.totalCopias, 10) || 1,
+            estado_copia: String(cp.estado || 'Activa').substring(0, 30),
+            emitido_por: window.esUUID(cp.emitidoPorId) ? cp.emitidoPorId : null,
+            emitido_por_nombre: String(cp.emitidoPor || window.activeGxpUser?.correo || '').substring(0, 150),
+            fecha_retiro_programado: cp.fechaRetiroProgramado || null,
+            fecha_conciliacion: cp.fechaConciliacion ? new Date(cp.fechaConciliacion).toISOString() : null,
+            observacion_conciliacion: cp.observacionConciliacion || null
+          };
+          if (cp.fechaEmision) {
+            const parsedEmision = new Date(cp.fechaEmision);
+            if (!isNaN(parsedEmision.getTime())) payload.fecha_emision = parsedEmision.toISOString();
+          }
+
+          const res = await fetch(`${SUPABASE_URL}/rest/v1/copias_impresas_gxp?on_conflict=id`, {
+            method: 'POST',
+            headers: { ...HEADERS, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+            body: JSON.stringify(payload)
+          });
+          if (!res.ok) {
+            console.warn('Supabase copias_impresas_gxp upsert warning:', res.status, await res.text());
+          }
+        } catch (e) {
+          console.warn('Error sincronizando copia controlada con Supabase:', e);
+        }
+      };
+
+      window.sincronizarEstructuraYDocumentosConSupabase = async function() {
+        for (const a of (window.cachedAreas || [])) {
+          await window.upsertAreaEnSupabase(a);
+        }
+        for (const p of (window.cachedProcesos || [])) {
+          await window.upsertProcesoEnSupabase(p);
+        }
+        for (const d of (window.cachedDocs || [])) {
+          await window.upsertDocumentoEnSupabase(d);
+        }
+        for (const c of (window.cachedCopiasControladas || [])) {
+          await window.upsertCopiaControladaEnSupabase(c);
+        }
+      };
+
+      window.cargarAreasProcesosDocsDesdeSupabase = async function(legacyState = {}) {
+        try {
+          const [resAreas, resProcs, resDocs, resCopias] = await Promise.all([
+            fetch(`${SUPABASE_URL}/rest/v1/areas?select=*&order=created_at.asc`, { headers: HEADERS }),
+            fetch(`${SUPABASE_URL}/rest/v1/procesos?select=*&order=created_at.asc`, { headers: HEADERS }),
+            fetch(`${SUPABASE_URL}/rest/v1/documentos?select=*&order=created_at.desc`, { headers: HEADERS }),
+            fetch(`${SUPABASE_URL}/rest/v1/copias_impresas_gxp?select=*&order=fecha_emision.desc`, { headers: HEADERS })
+          ]);
+
+          const uuidToAreaCode = {};
+          const uuidToProcCode = {};
+
+          // 1. ÁREAS
+          if (resAreas.ok) {
+            const rowsAreas = await resAreas.json();
+            if (Array.isArray(rowsAreas) && rowsAreas.length > 0) {
+              window.cachedAreas = rowsAreas.map(r => {
+                const code = r.codigo || r.id;
+                window.mapAreaCodeToUuid[code] = r.id;
+                uuidToAreaCode[r.id] = code;
+                return { id: code, _uuid: r.id, nombre: r.nombre };
+              });
+            } else if ((window.cachedAreas || []).length > 0) {
+              for (const a of window.cachedAreas) {
+                const u = await window.upsertAreaEnSupabase(a);
+                if (u) uuidToAreaCode[u] = a.id;
+              }
+            }
+          }
+
+          // 2. PROCESOS
+          if (resProcs.ok) {
+            const rowsProcs = await resProcs.json();
+            if (Array.isArray(rowsProcs) && rowsProcs.length > 0) {
+              window.cachedProcesos = rowsProcs.map(r => {
+                const code = r.codigo || r.id;
+                window.mapProcesoCodeToUuid[code] = r.id;
+                uuidToProcCode[r.id] = code;
+                return {
+                  id: code,
+                  _uuid: r.id,
+                  nombre: r.nombre,
+                  areaId: uuidToAreaCode[r.area_id] || r.area_id || ''
+                };
+              });
+            } else if ((window.cachedProcesos || []).length > 0) {
+              for (const p of window.cachedProcesos) {
+                const u = await window.upsertProcesoEnSupabase(p);
+                if (u) uuidToProcCode[u] = p.id;
+              }
+            }
+          }
+
+          // 3. DOCUMENTOS
+          if (resDocs.ok) {
+            const rowsDocs = await resDocs.json();
+            if (Array.isArray(rowsDocs) && rowsDocs.length > 0) {
+              window.cachedDocs = rowsDocs.map(r => ({
+                id: r.id,
+                codigo: r.codigo,
+                titulo: r.titulo,
+                tipo: r.tipo,
+                version: r.version,
+                estado: r.estado,
+                fase: r.fase || (r.estado === 'VIGENTE' ? 'Vigente' : (r.estado === 'OBSOLETO' ? 'Obsoleto' : 'Elaboración')),
+                areaId: uuidToAreaCode[r.area_id] || '',
+                procesoId: uuidToProcCode[r.proceso_id] || '',
+                fechaAprob: r.fecha_aprobacion || '',
+                fechaVenc: r.fecha_vigencia || '',
+                archivo_url: r.archivo_url || '',
+                creado_por: r.creado_por || '',
+                justificacion_cambio: r.justificacion_cambio || ''
+              }));
+            } else if ((window.cachedDocs || []).length > 0) {
+              for (const d of window.cachedDocs) {
+                await window.upsertDocumentoEnSupabase(d);
+              }
+            }
+          }
+
+          // 4. COPIAS CONTROLADAS
+          if (resCopias.ok) {
+            const rowsCopias = await resCopias.json();
+            if (Array.isArray(rowsCopias) && rowsCopias.length > 0) {
+              window.cachedCopiasControladas = rowsCopias.map(r => {
+                const docMatch = (window.cachedDocs || []).find(d => d.id === r.documento_id);
+                return {
+                  id: r.id,
+                  codigoCopia: r.codigo_copia,
+                  docId: r.documento_id || docMatch?.id || '',
+                  docCodigo: r.documento_codigo || docMatch?.codigo || '',
+                  docTitulo: r.documento_titulo || docMatch?.titulo || '',
+                  docVersion: r.version_emitida,
+                  tipoCopia: r.tipo_copia || 'CONTROLADA',
+                  destinatarioId: r.destinatario_id || '',
+                  destinatario: r.destinatario_nombre || '',
+                  areaDestino: r.area_destino,
+                  motivo: r.motivo_emision,
+                  numeroCopia: r.numero_copia || 1,
+                  totalCopias: r.total_copias_emitidas || 1,
+                  estado: r.estado_copia || 'Activa',
+                  emitidoPor: r.emitido_por_nombre || '',
+                  fechaEmision: r.fecha_emision ? String(r.fecha_emision).split('T')[0] : '',
+                  fechaRetiroProgramado: r.fecha_retiro_programado || '',
+                  fechaConciliacion: r.fecha_conciliacion ? String(r.fecha_conciliacion).split('T')[0] : '',
+                  observacionConciliacion: r.observacion_conciliacion || ''
+                };
+              });
+            } else if ((window.cachedCopiasControladas || []).length > 0) {
+              for (const c of window.cachedCopiasControladas) {
+                await window.upsertCopiaControladaEnSupabase(c);
+              }
+            }
+          }
+        } catch (err) {
+          console.warn('Error cargando Áreas/Procesos/Documentos desde Supabase:', err);
+        }
       };
       
       window.cachedEmpleados = [ { id: 1, nombres: 'Johan S.', apellidos: 'Aguilar', cargo: 'QA Lead', correo: 'j.aguilar@pharmor.com.co', areaId: 'ar_qa', estado: 'Activo', avatar: null } ];
@@ -2246,6 +2539,10 @@
             headers: { ...HEADERS, 'Prefer': 'resolution=merge-duplicates' }, 
             body: JSON.stringify({ id: 1, app_data: dbState }) 
           });
+
+          if (typeof window.sincronizarEstructuraYDocumentosConSupabase === 'function') {
+            await window.sincronizarEstructuraYDocumentosConSupabase();
+          }
           
           if (res.ok) { 
             window.actualizarEstadoNube('conectado', 'Guardado'); 
@@ -2322,6 +2619,7 @@
           await window.cargarUsuariosDesdeSupabase(dbState.usuarios || window.cachedUsuarios, dbState.empleados || window.cachedEmpleados);
           await window.cargarAuditTrailDesdeSupabase(dbState.audit || window.auditTrailLogs);
           await window.cargarFirmasPart11DesdeSupabase();
+          await window.cargarAreasProcesosDocsDesdeSupabase(dbState);
         } catch(e) {
           console.error("Accediendo en modo local por fallo de red:", e);
         } finally {
