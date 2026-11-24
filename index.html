@@ -508,7 +508,55 @@
           </div>
         </div>
   
-        <div id="view-firmas" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4"><h2 class="font-bold text-sm">Firmas Electrónicas (21 CFR Part 11)</h2></div>
+        <!-- FIRMAS ELECTRÓNICAS 21 CFR PART 11 -->
+        <div id="view-firmas" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-4">
+          <div class="flex justify-between items-center pb-2 border-b border-slate-100 flex-wrap gap-2">
+            <div>
+              <h2 class="font-bold text-sm text-slate-800">✍️ Registro Maestro de Firmas Electrónicas (21 CFR Part 11)</h2>
+              <p class="text-[11px] text-slate-500">Evidencia criptográfica inmutable vinculada a identidad, rol, significado y sello SHA-256 (§ 11.50 / § 11.70)</p>
+            </div>
+            <button type="button" onclick="window.exportarFirmasPart11PDF()" class="bg-cyan-700 hover:bg-cyan-800 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow transition cursor-pointer flex items-center space-x-1">
+              <span>📄</span>
+              <span>Exportar Certificado Firmas PDF</span>
+            </button>
+          </div>
+
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+            <div class="bg-slate-50 p-3 rounded-xl border border-slate-200"><div class="text-slate-500 text-[11px] font-semibold">Total Firmas Part 11</div><div id="kpi-firmas-total" class="text-xl font-bold text-slate-800 mt-0.5">0</div></div>
+            <div class="bg-cyan-50 p-3 rounded-xl border border-cyan-200"><div class="text-cyan-800 text-[11px] font-semibold">Gestión Documental</div><div id="kpi-firmas-docs" class="text-xl font-bold text-cyan-800 mt-0.5">0</div></div>
+            <div class="bg-amber-50 p-3 rounded-xl border border-amber-200"><div class="text-amber-800 text-[11px] font-semibold">NC &amp; CAPA</div><div id="kpi-firmas-qms" class="text-xl font-bold text-amber-800 mt-0.5">0</div></div>
+            <div class="bg-emerald-50 p-3 rounded-xl border border-emerald-200"><div class="text-emerald-800 text-[11px] font-semibold">Metrología &amp; Tickets</div><div id="kpi-firmas-metro" class="text-xl font-bold text-emerald-800 mt-0.5">0</div></div>
+          </div>
+
+          <div class="flex flex-wrap gap-2 text-xs bg-slate-50 p-2.5 rounded-lg border">
+            <input type="text" id="firmasFilterText" oninput="window.renderFirmasPart11()" placeholder="Buscar por código, firmante, significado o hash..." class="p-1.5 border rounded flex-1 min-w-[200px] bg-white" />
+            <select id="firmasFilterTabla" onchange="window.renderFirmasPart11()" class="p-1.5 border rounded bg-white">
+              <option value="">Todos los Módulos</option>
+              <option value="documentos">Gestión Documental</option>
+              <option value="no_conformidades">Desviaciones &amp; NC</option>
+              <option value="capas">Planes CAPA</option>
+              <option value="calibraciones">Calibraciones</option>
+              <option value="tickets_mantenimiento">Tickets Mantenimiento</option>
+            </select>
+            <input type="date" id="firmasFilterDate" onchange="window.renderFirmasPart11()" class="p-1.5 border rounded font-mono bg-white" />
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full border-collapse text-left text-xs">
+              <thead>
+                <tr class="bg-slate-100 text-slate-700 border-b font-bold">
+                  <th class="p-2 border">Fecha / Hora</th>
+                  <th class="p-2 border">Módulo</th>
+                  <th class="p-2 border">Significado (§ 11.50)</th>
+                  <th class="p-2 border">Firmante &amp; Rol</th>
+                  <th class="p-2 border">Registro / Justificación</th>
+                  <th class="p-2 border">Sello Integridad SHA-256</th>
+                </tr>
+              </thead>
+              <tbody id="table-firmas-part11" class="divide-y divide-slate-100"></tbody>
+            </table>
+          </div>
+        </div>
         
         <!-- AUDIT TRAIL -->
              <div id="view-audit" class="tab-content bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-4">
@@ -1790,6 +1838,289 @@
         }
         return null;
       };
+
+      // ==========================================
+      // ADAPTADOR GxP: AUDIT TRAIL & FIRMAS PART 11 (SUPABASE)
+      // ==========================================
+      window.cachedFirmasPart11 = [];
+      window.UUID_SISTEMA_GLOBAL = '00000000-0000-0000-0000-000000000000';
+
+      window.inferirTablaYAccionAudit = function(accionRaw, detalleRaw) {
+        const raw = String(accionRaw || 'EVENTO').trim().toUpperCase();
+        const det = String(detalleRaw || '');
+
+        const mapaAccion = {
+          'CREATE_INFRASTRUCTURE': 'CREATE_INFRA',
+          'UPDATE_INFRASTRUCTURE': 'UPDATE_INFRA',
+          'MAINTENANCE_INFRASTRUCTURE': 'MAINT_INFRA',
+          'CALIBRATION_PART11': 'CALIB_PART11',
+          'MAINTENANCE_RECORD': 'MAINT_RECORD'
+        };
+        const accionCorta = (mapaAccion[raw] || raw).substring(0, 15);
+
+        let tabla = 'sistema';
+        if (raw.includes('DOC') || raw.includes('VERSION') || raw.includes('COPY') || raw === 'FIRM_PART11') tabla = 'documentos';
+        else if (raw.includes('NC') || raw === 'FIRMA_NC') tabla = 'no_conformidades';
+        else if (raw.includes('CAPA')) tabla = 'capas';
+        else if (raw.includes('CALIB')) tabla = 'calibraciones';
+        else if (raw.includes('INFRA')) tabla = 'infraestructura';
+        else if (raw.includes('ASSET')) tabla = 'equipos';
+        else if (raw.includes('MAINT')) tabla = 'mantenimientos';
+        else if (raw.includes('TICKET')) tabla = 'tickets_mantenimiento';
+        else if (raw.includes('USER') || raw.includes('EMP') || raw.includes('LOGIN') || raw.includes('PASSWORD') || raw.includes('PROFILE')) tabla = 'usuarios_gxp';
+        else if (raw.includes('AREA') || raw.includes('PROC')) tabla = 'areas_procesos';
+
+        const matchRef = det.match(/\b([A-Z]{2,5}-[A-Z0-9-]+)\b/);
+        return {
+          accionCorta,
+          accionCompleta: raw,
+          tablaAfectada: tabla,
+          referenciaLegible: matchRef ? matchRef[1] : null
+        };
+      };
+
+      window.cargarAuditTrailDesdeSupabase = async function(legacyAuditBackup = []) {
+        try {
+          const res = await fetch(`${SUPABASE_URL}/rest/v1/audit_trail?select=*&order=timestamp.desc&limit=1000`, {
+            method: 'GET',
+            headers: HEADERS
+          });
+          if (!res.ok) return false;
+          const rows = await res.json();
+
+          if (Array.isArray(rows) && rows.length > 0) {
+            window.auditTrailLogs = rows.map(r => {
+              const vNuevo = (r.valor_nuevo && typeof r.valor_nuevo === 'object') ? r.valor_nuevo : {};
+              const fechaStr = r.timestamp ? String(r.timestamp).replace('T', ' ').substring(0, 19) : '';
+              return {
+                id: r.id,
+                fecha: fechaStr,
+                usuario: r.usuario || 'Sistema',
+                accion: vNuevo.accion_gxp || r.accion || 'EVENTO',
+                detalle: r.motivo_cambio || vNuevo.detalle || '',
+                tabla_afectada: r.tabla_afectada,
+                registro_id: r.registro_id
+              };
+            });
+            return true;
+          }
+
+          // Migración única si audit_trail en Supabase está vacía y había respaldo en erp_state
+          if (Array.isArray(legacyAuditBackup) && legacyAuditBackup.length > 0) {
+            const ordenCronologico = [...legacyAuditBackup].reverse();
+            for (const item of ordenCronologico) {
+              await window.insertarAuditTrailEnSupabase(item.usuario, item.accion, item.detalle, {
+                timestampOverride: item.fecha ? item.fecha.replace(' ', 'T') + 'Z' : null
+              });
+            }
+            return await window.cargarAuditTrailDesdeSupabase([]);
+          }
+          return true;
+        } catch (err) {
+          console.warn("No se pudo leer audit_trail desde Supabase, usando respaldo local:", err);
+          return false;
+        }
+      };
+
+      window.insertarAuditTrailEnSupabase = async function(user, accion, detalle, meta = {}) {
+        try {
+          const info = window.inferirTablaYAccionAudit(accion, detalle);
+          const regUuid = window.esUUID(meta.registroId) ? meta.registroId : window.UUID_SISTEMA_GLOBAL;
+
+          const payload = {
+            tabla_afectada: (meta.tabla || info.tablaAfectada).substring(0, 50),
+            registro_id: regUuid,
+            accion: info.accionCorta,
+            valor_anterior: meta.valorAnterior || null,
+            valor_nuevo: {
+              accion_gxp: info.accionCompleta,
+              referencia: meta.referencia || info.referenciaLegible,
+              detalle: String(detalle || '')
+            },
+            usuario: String(user || 'Sistema').substring(0, 100),
+            motivo_cambio: String(detalle || 'Evento de sistema GxP')
+          };
+          if (meta.timestampOverride) payload.timestamp = meta.timestampOverride;
+
+          const res = await fetch(`${SUPABASE_URL}/rest/v1/audit_trail`, {
+            method: 'POST',
+            headers: { ...HEADERS, 'Prefer': 'return=minimal' },
+            body: JSON.stringify(payload)
+          });
+          if (!res.ok) {
+            console.warn("Supabase audit_trail POST warning:", res.status, await res.text());
+          }
+        } catch (err) {
+          console.warn("Error de red enviando audit_trail:", err);
+        }
+      };
+
+      window.cargarFirmasPart11DesdeSupabase = async function() {
+        try {
+          const res = await fetch(`${SUPABASE_URL}/rest/v1/firmas_electronicas?select=*&order=timestamp_firma.desc&limit=1000`, {
+            method: 'GET',
+            headers: HEADERS
+          });
+          if (!res.ok) return false;
+          const rows = await res.json();
+          if (Array.isArray(rows)) {
+            window.cachedFirmasPart11 = rows;
+            return true;
+          }
+          return false;
+        } catch (err) {
+          console.warn("No se pudo leer firmas_electronicas desde Supabase:", err);
+          return false;
+        }
+      };
+
+      window.registrarFirmaPart11EnSupabase = async function({ tabla, registroId, referenciaTexto, userObj, significado, justificacion }) {
+        try {
+          const emp = (window.cachedEmpleados || []).find(e =>
+            String(e.id) === String(userObj?.empleadoId) ||
+            (e.correo || '').toLowerCase() === (userObj?.correo || '').toLowerCase()
+          );
+          const nombreFirmante = emp
+            ? `${emp.nombres || ''} ${emp.apellidos || ''}`.trim()
+            : (userObj?.correo || 'Usuario GxP');
+
+          const rolesNombres = (userObj?.rolesIds || []).map(rid => {
+            const r = (window.cachedRoles || []).find(x => x.id === rid);
+            return r ? r.nombre : rid;
+          }).join(', ') || 'Usuario GxP';
+
+          const regUuid = window.esUUID(registroId) ? registroId : window.UUID_SISTEMA_GLOBAL;
+          const userUuid = window.esUUID(userObj?.id) ? userObj.id : null;
+          const tsIso = new Date().toISOString();
+          const motivoCompleto = referenciaTexto
+            ? `[${referenciaTexto}] ${justificacion || significado}`
+            : (justificacion || significado);
+
+          const cadenaHash = `${tabla}|${referenciaTexto || regUuid}|${userObj?.correo || ''}|${significado}|${motivoCompleto}|${tsIso}`;
+          const hashIntegridad = await window.generarHashSHA256(cadenaHash);
+
+          const payload = {
+            tabla_referencia: String(tabla || 'sistema').substring(0, 50),
+            registro_id: regUuid,
+            usuario_id: userUuid,
+            significado_firma: String(significado || 'Firma Electrónica').substring(0, 50),
+            motivo_justificacion: motivoCompleto,
+            usuario_nombre: `${nombreFirmante} (${userObj?.correo || ''})`.substring(0, 150),
+            rol_firmante: rolesNombres.substring(0, 100),
+            hash_integridad: hashIntegridad
+          };
+
+          let res = await fetch(`${SUPABASE_URL}/rest/v1/firmas_electronicas`, {
+            method: 'POST',
+            headers: { ...HEADERS, 'Prefer': 'return=representation' },
+            body: JSON.stringify(payload)
+          });
+
+          // Reintento seguro si usuario_id apunta a otra tabla FK
+          if (!res.ok && userUuid) {
+            payload.usuario_id = null;
+            res = await fetch(`${SUPABASE_URL}/rest/v1/firmas_electronicas`, {
+              method: 'POST',
+              headers: { ...HEADERS, 'Prefer': 'return=representation' },
+              body: JSON.stringify(payload)
+            });
+          }
+
+          if (res.ok) {
+            const inserted = await res.json();
+            const fila = (inserted && inserted[0]) ? inserted[0] : { id: `sig_${Date.now()}`, timestamp_firma: tsIso, ...payload };
+            window.cachedFirmasPart11.unshift(fila);
+            if (typeof window.renderFirmasPart11 === 'function') window.renderFirmasPart11();
+            return fila;
+          } else {
+            console.warn("Supabase firmas_electronicas POST warning:", res.status, await res.text());
+          }
+        } catch (err) {
+          console.error("Error registrando firma electrónica Part 11:", err);
+        }
+        return null;
+      };
+
+      window.renderFirmasPart11 = function() {
+        const tbody = document.getElementById('table-firmas-part11');
+        if (!tbody) return;
+
+        const firmas = window.cachedFirmasPart11 || [];
+        const kpiTot = document.getElementById('kpi-firmas-total');
+        const kpiDocs = document.getElementById('kpi-firmas-docs');
+        const kpiQms = document.getElementById('kpi-firmas-qms');
+        const kpiMetro = document.getElementById('kpi-firmas-metro');
+
+        if (kpiTot) kpiTot.innerText = firmas.length;
+        if (kpiDocs) kpiDocs.innerText = firmas.filter(f => f.tabla_referencia === 'documentos').length;
+        if (kpiQms) kpiQms.innerText = firmas.filter(f => f.tabla_referencia === 'no_conformidades' || f.tabla_referencia === 'capas').length;
+        if (kpiMetro) kpiMetro.innerText = firmas.filter(f => f.tabla_referencia === 'calibraciones' || f.tabla_referencia === 'tickets_mantenimiento').length;
+
+        const txt = (document.getElementById('firmasFilterText')?.value || '').toLowerCase();
+        const mod = document.getElementById('firmasFilterTabla')?.value || '';
+        const fechaFiltro = document.getElementById('firmasFilterDate')?.value || '';
+
+        const etiquetasModulo = {
+          'documentos': { label: '📑 Documento', badge: 'bg-cyan-100 text-cyan-800 border-cyan-300' },
+          'no_conformidades': { label: '⚠️ NC / Desviación', badge: 'bg-amber-100 text-amber-800 border-amber-300' },
+          'capas': { label: '☑️ Plan CAPA', badge: 'bg-purple-100 text-purple-800 border-purple-300' },
+          'calibraciones': { label: '📐 Calibración', badge: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
+          'tickets_mantenimiento': { label: '🎫 Ticket Maint.', badge: 'bg-blue-100 text-blue-800 border-blue-300' }
+        };
+
+        const filtradas = firmas.filter(f => {
+          if (mod && f.tabla_referencia !== mod) return false;
+          if (fechaFiltro && !(f.timestamp_firma || '').startsWith(fechaFiltro)) return false;
+          if (txt) {
+            const blob = `${f.usuario_nombre || ''} ${f.rol_firmante || ''} ${f.significado_firma || ''} ${f.motivo_justificacion || ''} ${f.hash_integridad || ''}`.toLowerCase();
+            if (!blob.includes(txt)) return false;
+          }
+          return true;
+        });
+
+        if (filtradas.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400 italic">No hay firmas electrónicas registradas con los filtros actuales.</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = filtradas.map(f => {
+          const metaMod = etiquetasModulo[f.tabla_referencia] || { label: f.tabla_referencia, badge: 'bg-slate-100 text-slate-700 border-slate-300' };
+          const fechaFmt = f.timestamp_firma ? new Date(f.timestamp_firma).toLocaleString() : 'N/A';
+          const hashCorto = f.hash_integridad ? `${f.hash_integridad.substring(0, 16)}...` : 'N/A';
+          return `<tr class="hover:bg-slate-50 transition">
+            <td class="p-2 border font-mono text-[11px] whitespace-nowrap">${fechaFmt}</td>
+            <td class="p-2 border"><span class="${metaMod.badge} px-2 py-0.5 rounded border text-[10px] font-bold whitespace-nowrap">${metaMod.label}</span></td>
+            <td class="p-2 border font-bold text-cyan-900">${f.significado_firma}</td>
+            <td class="p-2 border"><div class="font-semibold text-slate-800">${f.usuario_nombre || 'Usuario GxP'}</div><div class="text-[10px] text-slate-500">${f.rol_firmante || ''}</div></td>
+            <td class="p-2 border text-slate-700">${f.motivo_justificacion || '-'}</td>
+            <td class="p-2 border font-mono text-[10px] text-emerald-700" title="${f.hash_integridad || ''}">🔒 ${hashCorto}</td>
+          </tr>`;
+        }).join('');
+      };
+
+      window.exportarFirmasPart11PDF = function() {
+        const firmas = window.cachedFirmasPart11 || [];
+        if (firmas.length === 0) { alert("No hay firmas electrónicas para exportar."); return; }
+        let html = `<html><head><style>
+          body { font-family: Arial, sans-serif; font-size: 10px; margin: 20px; }
+          h2 { color: #0f172a; margin-bottom: 4px; }
+          p { color: #64748b; margin-top: 0; font-size: 9px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+          th, td { border: 1px solid #cbd5e1; padding: 5px; text-align: left; word-break: break-word; }
+          th { background-color: #f1f5f9; font-weight: bold; }
+        </style></head><body>
+        <h2>✍️ Certificado de Firmas Electrónicas (FDA 21 CFR Part 11)</h2>
+        <p>Generado el: ${new Date().toLocaleString()} | PharmAudit ERP · Pharmor S.A.S.</p>
+        <table><thead><tr><th>Fecha / Hora</th><th>Módulo</th><th>Significado</th><th>Firmante / Rol</th><th>Justificación</th><th>Hash SHA-256</th></tr></thead><tbody>`;
+        firmas.forEach(f => {
+          html += `<tr><td>${f.timestamp_firma ? new Date(f.timestamp_firma).toLocaleString() : ''}</td><td>${f.tabla_referencia}</td><td><b>${f.significado_firma}</b></td><td>${f.usuario_nombre || ''}<br><small>${f.rol_firmante || ''}</small></td><td>${f.motivo_justificacion || ''}</td><td style="font-family:monospace;font-size:8px;">${f.hash_integridad || ''}</td></tr>`;
+        });
+        html += `</tbody></table></body></html>`;
+        const win = window.open('', '_blank');
+        win.document.write(html);
+        win.document.close();
+        win.print();
+      };
       
       window.cachedEmpleados = [ { id: 1, nombres: 'Johan S.', apellidos: 'Aguilar', cargo: 'QA Lead', correo: 'j.aguilar@pharmor.com.co', areaId: 'ar_qa', estado: 'Activo', avatar: null } ];
       window.cachedUsuarios = [ { id: 1, empleadoId: 1, correo: 'j.aguilar@pharmor.com.co', password: '123', rolesIds: ['rol_admin'], areasAsignadas: ['ar_qa', 'ar_qc', 'ar_prod'], estado: 'Activo' } ];
@@ -1974,6 +2305,8 @@
 
           // Cargar usuarios reales desde public.usuarios_gxp (sin perder respaldo)
           await window.cargarUsuariosDesdeSupabase(dbState.usuarios || window.cachedUsuarios, dbState.empleados || window.cachedEmpleados);
+          await window.cargarAuditTrailDesdeSupabase(dbState.audit || window.auditTrailLogs);
+          await window.cargarFirmasPart11DesdeSupabase();
         } catch(e) {
           console.error("Accediendo en modo local por fallo de red:", e);
         } finally {
@@ -2085,12 +2418,14 @@
         }
       };
   
-      window.registrarAuditTrail = function(user, accion, detalle) {
+      window.registrarAuditTrail = function(user, accion, detalle, meta = {}) {
         const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 19);
         window.auditTrailLogs.unshift({ fecha: timestamp, usuario: user, accion: accion, detalle: detalle });
+        window.insertarAuditTrailEnSupabase(user, accion, detalle, meta);
         window.saveData();
-        const auditDiv = document.getElementById('list-auds');
-        if(auditDiv) auditDiv.innerHTML = window.auditTrailLogs.map(l => `[${l.fecha}] <strong>${l.usuario}</strong> [${l.accion}]: ${l.detalle}`).join('<br><hr class="border-slate-100">');
+        const cntAudit = document.getElementById('cnt-audit');
+        if (cntAudit) cntAudit.innerText = window.auditTrailLogs.length;
+        if (typeof window.renderAuditTrail === 'function') window.renderAuditTrail();
       };
   
       window.exportarExcelAuditoria = function() {
@@ -2879,6 +3214,14 @@
         };
   
         window.cachedCalibraciones.unshift(calibObj);
+        await window.registrarFirmaPart11EnSupabase({
+          tabla: 'calibraciones',
+          registroId: calibObj.id,
+          referenciaTexto: `${calibObj.id} / ${eq.tag}`,
+          userObj: user,
+          significado: `Aprobación Calibración (${resultado})`,
+          justificacion: `Equipo ${eq.tag} - ${eq.nombre} | Ejecutado por: ${realizadoPor} | Próx: ${proxCalDate}`
+        });
         window.registrarAuditTrail(user.correo, 'CALIBRATION_PART11', `Firmó y registró calibración (${resultado}) para activo ${eq.tag}`);
         
         await window.saveData();
@@ -3053,6 +3396,7 @@
         window.renderNotificaciones();
         window.renderAuditTrail();
         window.renderTickets();
+        window.renderFirmasPart11();
       };
   
       window.renderConfigTablas = function() {
@@ -3268,6 +3612,15 @@
         else if (significado === 'Revisión Técnica') nc.firmas.revisado = email;
         else if (significado === 'Aprobación' || significado === 'Autorización Final de Versión Vigente') nc.firmas.aprobado = email;
 
+        await window.registrarFirmaPart11EnSupabase({
+          tabla: 'no_conformidades',
+          registroId: nc.id,
+          referenciaTexto: nc.consecutivo,
+          userObj: usr,
+          significado: significado,
+          justificacion: `${nc.descripcion.substring(0, 140)} (Estado: ${nc.estado})`
+        });
+
         window.saveData();
         window.renderNCs();
         window.toggleModal('modalFirmaPart11', false);
@@ -3309,6 +3662,15 @@
         doc.fase = 'Aprobado'; 
         doc.estado = 'VIGENTE';
       }
+
+       await window.registrarFirmaPart11EnSupabase({
+        tabla: 'documentos',
+        registroId: doc.id,
+        referenciaTexto: `${doc.codigo} v${doc.version}`,
+        userObj: user,
+        significado: significado,
+        justificacion: `${doc.titulo} — Fase alcanzada: ${doc.estado === 'VIGENTE' ? 'VIGENTE' : doc.fase}`
+      });
 
       window.registrarAuditTrail(user.correo, 'FIRM_PART11', `Firma aplicada sobre ${doc.codigo} (Fase lograda: ${doc.estado || doc.fase}).`); 
       await window.saveData(); 
@@ -4089,7 +4451,7 @@
       }
     };
   
-          window.guardarEfectividad = function() {
+          window.guardarEfectividad = async function() {
       const capaId = document.getElementById('efecCapaId').value;
       const capa = window.cachedCAPAs.find(c => c.id === capaId);
       const emailQA = document.getElementById('efecQAEmail').value.trim();
@@ -4124,6 +4486,14 @@
         // Registrar firma en la NC también
         nc.firmas.aprobado = emailQA; 
       }
+            await window.registrarFirmaPart11EnSupabase({
+        tabla: 'capas',
+        registroId: capa.id,
+        referenciaTexto: capa.consecutivo,
+        userObj: userQA,
+        significado: 'Cierre Definitivo CAPA (QA)',
+        justificacion: resultados
+      });
       
       window.saveData(); 
       window.renderCAPAs(); 
@@ -4872,7 +5242,7 @@
       window.toggleModal('modalCerrarTicket', true);
     };
 
-    window.guardarCierreTicket = function() {
+    window.guardarCierreTicket = async function() {
       const id = document.getElementById('cerrarTktId').value;
       const solucion = document.getElementById('tktSolucion').value.trim();
       const email = document.getElementById('tktEmailTecnico').value.trim();
@@ -4893,6 +5263,15 @@
       
       const emp = window.cachedEmpleados.find(e => e.correo === email);
       tkt.tecnicoAsignado = emp ? `${emp.nombres} ${emp.apellidos}` : email;
+      
+      await window.registrarFirmaPart11EnSupabase({
+        tabla: 'tickets_mantenimiento',
+        registroId: tkt.id,
+        referenciaTexto: tkt.consecutivo,
+        userObj: user,
+        significado: 'Cierre Técnico Mantenimiento',
+        justificacion: solucion
+      });
 
       window.saveData();
       window.renderTickets();
