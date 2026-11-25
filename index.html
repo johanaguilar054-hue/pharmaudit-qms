@@ -2639,7 +2639,7 @@
 
       window.sincronizarQMSConSupabase = async function() {
         for (const nc of (window.cachedNCs || [])) {
-          await window.upsertNCEnSupabase(nc);
+          await window.upsertNCEnSupabase(nc), true);
         }
         for (const capa of (window.cachedCAPAs || [])) {
           await window.upsertCAPAEnSupabase(capa);
@@ -2720,6 +2720,12 @@
         if ((f.significado_firma === 'Aprobación' || f.significado_firma === 'Autorización Final de Versión Vigente') && !firmasSeguras.aprobado) firmasSeguras.aprobado = f.usuario_nombre;
       });
 
+      const rawCrit = String(base.criticidad || r.clasificacion || 'Mayor').trim();
+      const criticidadNorm = /cr[ií]tic/i.test(rawCrit) ? 'Crítica'
+        : /mayor/i.test(rawCrit) ? 'Mayor'
+        : /observ/i.test(rawCrit) ? 'Observación'
+        : 'Menor';
+
       window.mapLegacyNcIdToUuid[r.id] = r.id;
       return {
         ...base,
@@ -2728,7 +2734,7 @@
         origen: r.origen,
         fuente: base.fuente || r.origen || 'Auditoría Interna',
         clasificacion: r.clasificacion,
-        criticidad: base.criticidad || r.clasificacion || 'Mayor',
+        criticidad: criticidadNorm,
         tipo: base.tipo || r.clasificacion,
         descripcion: r.descripcion,
         areaId: areaResolved,
@@ -2755,7 +2761,7 @@
     });
   } else if ((window.cachedNCs || []).length > 0) {
     for (const nc of window.cachedNCs) {
-      await window.upsertNCEnSupabase(nc);
+      await window.upsertNCEnSupabase(nc, true);
     }
   }
 }
