@@ -2112,7 +2112,35 @@
           </tr>`;
         }).join('');
       };
-
+      
+      window.exportarFirmasPart11PDF = function() {
+        const firmas = window.cachedFirmasPart11 || [];
+        if (firmas.length === 0) {
+          alert("No hay firmas electrónicas registradas para exportar.");
+          return;
+        }
+        let html = `<html><head><style>
+          body { font-family: Arial, sans-serif; font-size: 10px; margin: 20px; }
+          h2 { color: #0f172a; margin-bottom: 4px; }
+          p { color: #64748b; margin-top: 0; font-size: 9px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+          th, td { border: 1px solid #cbd5e1; padding: 6px; text-align: left; }
+          th { background-color: #f1f5f9; font-weight: bold; }
+        </style></head><body>
+        <h2>✍️ Certificado Oficial de Firmas Electrónicas (21 CFR Part 11)</h2>
+        <p>Generado el: ${new Date().toLocaleString()} | PharmAudit ERP · Pharmor</p>
+        <table><thead><tr><th>Fecha / Hora</th><th>Módulo</th><th>Significado</th><th>Firmante & Rol</th><th>Registro / Justificación</th><th>Hash SHA-256</th></tr></thead><tbody>`;
+        firmas.forEach(f => {
+          const fechaFmt = f.timestamp_firma ? new Date(f.timestamp_firma).toLocaleString() : 'N/A';
+          html += `<tr><td>${fechaFmt}</td><td>${f.tabla_referencia || ''}</td><td><b>${f.significado_firma || ''}</b></td><td>${f.usuario_nombre || ''} (${f.rol_firmante || ''})</td><td>${f.motivo_justificacion || ''}</td><td style="font-family:monospace;font-size:8px;">${f.hash_integridad || ''}</td></tr>`;
+        });
+        html += `</tbody></table></body></html>`;
+        const win = window.open('', '_blank');
+        win.document.write(html);
+        win.document.close();
+        win.print();
+      };
+      
       // ==========================================
       // ADAPTADOR RELACIONAL: ÁREAS, PROCESOS, DOCUMENTOS Y COPIAS CONTROLADAS
       // ==========================================
@@ -2132,7 +2160,7 @@
 
       window.upsertAreaEnSupabase = async function(areaObj) {
         try {
-          const code = String(areaObj.id || areaObj.codigo || `ar_${Date.now()}`).substring(0, 30);
+          const code = String(areaObj.id || areaObj.codigo || `ar_${Date.now()}`).substring(0, 10);
           const payload = {
             codigo: code,
             nombre: String(areaObj.nombre || 'Área GxP').substring(0, 100)
@@ -5017,41 +5045,38 @@ window.renderNCs = function() {
     };
 
     window.verDetalleNC = function(id) {
-const nc = window.cachedNCs.find(n => String(n.id) === String(id));
-  if (!nc) return;
-// Bloqueo por área/rol (QA, área origen o responsable)
-  if (typeof window.usuarioPuedeVerNC === 'function' && !window.usuarioPuedeVerNC(nc)) {
-    alert("⛔ Control GxP: Acceso denegado. Esta No Conformidad pertenece a otra área.");
-    return;
-  }
-  // Evita TypeError en registros importados sin objeto firmas
-  if (!nc.firmas || typeof nc.firmas !== 'object') {
-    nc.firmas = { elaborado: null, revisado: null, aprobado: null };
-  }
-  if (!window.usuarioPuedeVerNC(nc)) {
-    alert("⛔ Control GxP: Acceso restringido al área origen y QA.");
-    return;
-  }
-      const nc = window.cachedNCs.find(n => n.id === id);
+      const nc = window.cachedNCs.find(n => String(n.id) === String(id));
       if (!nc) return;
-      const proc = window.cachedProcesos.find(p => p.id === nc.procesoId)?.nombre || 'N/A';
-      const resp = window.cachedEmpleados.find(e => e.id === nc.responsableId);
-      const respName = resp ? `${resp.nombres} ${resp.apellidos}` : 'N/A';
-      
+
+      // Bloqueo por área/rol (QA, área origen o responsable)
+      if (typeof window.usuarioPuedeVerNC === 'function' && !window.usuarioPuedeVerNC(nc)) {
+        alert("⛔ Control GxP: Acceso denegado. Esta No Conformidad pertenece a otra área.");
+        return;
+      }
+
+      // Evita TypeError en registros importados sin objeto firmas
+      if (!nc.firmas || typeof nc.firmas !== 'object') {
+        nc.firmas = { elaborado: null, revisado: null, aprobado: null };
+      }
+
+      const proc = window.cachedProcesos.find(p => String(p.id) === String(nc.procesoId))?.nombre || nc.procesoId || 'N/A';
+      const resp = window.cachedEmpleados.find(e => String(e.id) === String(nc.responsableId));
+      const respName = resp ? `${resp.nombres} ${resp.apellidos}` : (nc.responsable || 'N/A');
+
       document.getElementById('viewNCTitle').innerText = `Detalle NC: ${nc.consecutivo}`;
       document.getElementById('viewNCBody').innerHTML = `
         <div class="grid grid-cols-2 gap-2 bg-slate-50 p-3 rounded border">
           <div><strong>Proceso:</strong> ${proc}</div>
           <div><strong>Responsable:</strong> ${respName}</div>
-          <div><strong>Fecha:</strong> ${nc.fecha}</div>
-          <div><strong>Fuente:</strong> ${nc.fuente} | <strong>Reincidencia:</strong> ${nc.reincidencia}</div>
-          <div><strong>Criticidad:</strong> <span class="font-bold text-rose-600">${nc.criticidad}</span></div>
+          <div><strong>Fecha:</strong> ${nc.fecha || 'N/A'}</div>
+          <div><strong>Fuente:</strong> ${nc.fuente || 'N/A'} | <strong>Reincidencia:</strong> ${nc.reincidencia || 'No'}</div>
+          <div><strong>Criticidad:</strong> <span class="font-bold text-rose-600">${nc.criticidad || 'Mayor'}</span></div>
           <div><strong>Estado Actual:</strong> ${nc.estado}</div>
         </div>
-        <div><strong>Descripción del Hallazgo:</strong><br><p class="p-2 bg-white border rounded mt-1">${nc.descripcion}</p></div>
-        <div><strong>Delimitación de Alcance:</strong><br><p class="p-2 bg-white border rounded mt-1">${nc.alcance}</p></div>
-        <div><strong>Evaluación de Impacto:</strong><br><p class="p-2 bg-white border rounded mt-1">${nc.impacto}</p></div>
-        <div><strong>Corrección Inmediata:</strong><br><p class="p-2 bg-amber-50 border border-amber-200 rounded mt-1">${nc.correccion}</p></div>
+        <div><strong>Descripción del Hallazgo:</strong><br><p class="p-2 bg-white border rounded mt-1">${nc.descripcion || ''}</p></div>
+        <div><strong>Delimitación de Alcance:</strong><br><p class="p-2 bg-white border rounded mt-1">${nc.alcance || 'No especificado'}</p></div>
+        <div><strong>Evaluación de Impacto:</strong><br><p class="p-2 bg-white border rounded mt-1">${nc.impacto || 'No especificado'}</p></div>
+        <div><strong>Corrección Inmediata:</strong><br><p class="p-2 bg-amber-50 border border-amber-200 rounded mt-1">${nc.correccion || nc.accionInmediata || ''}</p></div>
         <div class="border-t pt-2 mt-2">
           <strong>Firmas Electrónicas (Part 11):</strong>
           <ul class="list-disc pl-5 mt-1 text-slate-600">
@@ -5061,7 +5086,7 @@ const nc = window.cachedNCs.find(n => String(n.id) === String(id));
           </ul>
         </div>
       `;
-      const capaAsociada = window.cachedCAPAs.find(c => c.ncId === nc.id);
+      const capaAsociada = window.cachedCAPAs.find(c => String(c.ncId) === String(nc.id));
       if (capaAsociada && capaAsociada.efectividad) {
         document.getElementById('viewNCBody').innerHTML += `
           <div class="border-t pt-2 mt-2">
@@ -5136,22 +5161,34 @@ const nc = window.cachedNCs.find(n => String(n.id) === String(id));
     };
 
           window.abrirModalEditarNC = function(id) {
-      const nc = window.cachedNCs.find(n => n.id === id);
+      const nc = window.cachedNCs.find(n => String(n.id) === String(id));
       if (!nc) return;
+
+      if (typeof window.usuarioPuedeVerNC === 'function' && !window.usuarioPuedeVerNC(nc)) {
+        alert("⛔ Control GxP: Acceso denegado. No tiene permisos sobre esta No Conformidad.");
+        return;
+      }
+
+      // Poblar Selects antes de asignar valores (evita pérdida de datos si no se abrió antes Nuevo NC)
+      const selProc = document.getElementById('ncProcesoOrigen');
+      selProc.innerHTML = (window.cachedProcesos || []).map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
+
+      const selResp = document.getElementById('ncResponsable');
+      selResp.innerHTML = (window.cachedEmpleados || []).map(e => `<option value="${e.id}">${e.nombres} ${e.apellidos}</option>`).join('');
 
       document.getElementById('modalNCTitle').innerText = `✏️ Editar No Conformidad: ${nc.consecutivo}`;
       document.getElementById('ncEditId').value = nc.id;
-      document.getElementById('ncConsecutivo').value = nc.consecutivo;
-      document.getElementById('ncFecha').value = nc.fecha;
-      document.getElementById('ncProcesoOrigen').value = nc.procesoId;
-      document.getElementById('ncResponsable').value = nc.responsableId;
-      document.getElementById('ncFuente').value = nc.fuente;
-      document.getElementById('ncReincidencia').value = nc.reincidencia;
-      document.getElementById('ncDescripcion').value = nc.descripcion;
-      document.getElementById('ncAlcance').value = nc.alcance;
-      document.getElementById('ncImpacto').value = nc.impacto;
-      document.getElementById('ncCriticidad').value = nc.criticidad;
-      document.getElementById('ncCorreccion').value = nc.correccion;
+      document.getElementById('ncConsecutivo').value = nc.consecutivo || '';
+      document.getElementById('ncFecha').value = nc.fecha || '';
+      selProc.value = nc.procesoId || '';
+      selResp.value = nc.responsableId || '';
+      document.getElementById('ncFuente').value = nc.fuente || 'Auditoría Interna';
+      document.getElementById('ncReincidencia').value = nc.reincidencia || 'No';
+      document.getElementById('ncDescripcion').value = nc.descripcion || '';
+      document.getElementById('ncAlcance').value = nc.alcance || '';
+      document.getElementById('ncImpacto').value = nc.impacto || '';
+      document.getElementById('ncCriticidad').value = nc.criticidad || 'Mayor';
+      document.getElementById('ncCorreccion').value = nc.correccion || nc.accionInmediata || '';
 
       window.toggleModal('modalNC', true);
     };
@@ -5184,13 +5221,17 @@ const nc = window.cachedNCs.find(n => String(n.id) === String(id));
       window.toggleModal('modalCAPA', true);
     };
 
-    window.avanzarEstadoNC = function(id) {
-      const nc = window.cachedNCs.find(n => n.id === id);
+    window.avanzarEstadoNC = async function(id) {
+      const nc = window.cachedNCs.find(n => String(n.id) === String(id));
       if (!nc) return;
 
+      if (!nc.firmas || typeof nc.firmas !== 'object') {
+        nc.firmas = { elaborado: null, revisado: null, aprobado: null };
+      }
+
       const isAdmin = window.activeGxpUser.rolesIds.includes('rol_admin') || window.esAdminMaster(window.activeGxpUser);
-      const isResponsable = window.activeGxpUser.empleadoId === nc.responsableId;
-      
+      const isResponsable = String(window.activeGxpUser.empleadoId) === String(nc.responsableId);
+
       if (!isAdmin && !isResponsable) {
         alert("⛔ Control GxP: Acceso Denegado. Solo el Administrador o el Responsable asignado a esta NC pueden cambiar su estado.");
         return;
@@ -5198,13 +5239,18 @@ const nc = window.cachedNCs.find(n => String(n.id) === String(id));
 
       const flujo = ['Borrador', 'En Análisis', 'Plan Aprobado', 'En Ejecución', 'Cerrado Operativo', 'En Evaluación de Efectividad', 'Cerrado Definitivo'];
       const idx = flujo.indexOf(nc.estado);
-      
-      if (idx < flujo.length - 1) {
+
+      if (idx > -1 && idx < flujo.length - 1) {
         if (nc.estado === 'Borrador' && (!nc.firmas.elaborado || !nc.firmas.revisado || !nc.firmas.aprobado)) {
-          alert("⚠️ Se requieren las 3 firmas Part 11 (Elaborado, Revisado, Aprobado) para avanzar del estado Borrador."); return;
+          alert("⚠️ Se requieren las 3 firmas Part 11 (Elaborado, Revisado, Aprobado) para avanzar del estado Borrador.");
+          return;
         }
         nc.estado = flujo[idx + 1];
-        window.saveData(); window.renderNCs();
+        if (typeof window.upsertNCEnSupabase === 'function') {
+          await window.upsertNCEnSupabase(nc);
+        }
+        await window.saveData(true);
+        window.renderNCs();
         window.logAudit('NC_ESTADO', `NC ${nc.consecutivo} avanzó a ${nc.estado}`);
       }
     };
