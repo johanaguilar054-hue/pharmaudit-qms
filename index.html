@@ -2429,6 +2429,307 @@
           console.warn('Error cargando Áreas/Procesos/Documentos desde Supabase:', err);
         }
       };
+
+      // ==========================================
+      // ADAPTADOR RELACIONAL: DESVIACIONES (NC), CAUSA RAÍZ Y PLANES CAPA
+      // ==========================================
+      window.mapLegacyNcIdToUuid = {};
+
+      window.upsertNCEnSupabase = async function(nc) {
+        try {
+          const oldId = nc.id;
+          if (!window.esUUID(nc.id)) {
+            nc.id = crypto.randomUUID();
+            if (oldId) window.mapLegacyNcIdToUuid[oldId] = nc.id;
+          } else {
+            window.mapLegacyNcIdToUuid[nc.id] = nc.id;
+          }
+
+          let areaUuid = window.mapAreaCodeToUuid[nc.areaId] || null;
+          if (!areaUuid && nc.areaId) {
+            const areaFound = (window.cachedAreas || []).find(a => a.id === nc.areaId);
+            if (areaFound) areaUuid = await window.upsertAreaEnSupabase(areaFound);
+          }
+
+          let procUuid = window.mapProcesoCodeToUuid[nc.procesoId] || null;
+          if (!procUuid && nc.procesoId) {
+            const procFound = (window.cachedProcesos || []).find(p => p.id === nc.procesoId);
+            if (procFound) procUuid = await window.upsertProcesoEnSupabase(procFound);
+          }
+
+          const empMatch = (window.cachedEmpleados || []).find(e => String(e.id) === String(nc.responsableId));
+          const respNombre = nc.responsable || (empMatch ? `${empMatch.nombres || ''} ${empMatch.apellidos || ''}`.trim() : '');
+
+          const crObj = (nc.causaRaiz && typeof nc.causaRaiz === 'object') ? nc.causaRaiz : {};
+          const metodoCR = String(nc.metodoCausaRaiz || crObj.metodo || '5_PORQUES').substring(0, 30);
+          const fechaDet = nc.fechaDeteccion || nc.fecha || new Date().toISOString().split('T')[0];
+
+          const metaClone = { ...nc };
+          delete metaClone.evidenciaUrl;
+          delete metaClone.archivo_url;
+
+          const payload = {
+            id: nc.id,
+            codigo: String(nc.consecutivo || nc.codigo || `NC-${Date.now()}`).substring(0, 30),
+            origen: String(nc.origen || 'Proceso Interno').substring(0, 50),
+            clasificacion: String(nc.clasificacion || nc.tipo || 'Menor').substring(0, 20),
+            descripcion: String(nc.descripcion || 'Desviación registrada en sistema'),
+            area_id: window.esUUID(areaUuid) ? areaUuid : null,
+            proceso_id: window.esUUID(procUuid) ? procUuid : null,
+            equipo_o_doc: String(nc.referencia || nc.equipoDoc || nc.documento || '').substring(0, 150) || null,
+            evidencia_adjunta_url: nc.evidenciaUrl || nc.archivo_url || null,
+            metodo_causa_raiz: metodoCR,
+            analisis_causa_raiz: typeof nc.causaRaiz === 'string' ? { conclusion: nc.causaRaiz } : (nc.causaRaiz || null),
+            estado: String(nc.estado || 'Borrador').substring(0, 30),
+            fecha_deteccion: fechaDet,
+            reportado_por: String(nc.reportadoPor || window.activeGxpUser?.correo || 'Johan Aguilar').substring(0, 100),
+            responsable_id: nc.responsableId ? String(nc.responsableId).substring(0, 100) : null,
+            responsable_nombre: respNombre ? respNombre.substring(0, 150) : null,
+            lote_afectado: nc.lote ? String(nc.lote).substring(0, 100) : null,
+            accion_inmediata: nc.accionInmediata || nc.contencion || null,
+            fecha_cierre: nc.fechaCierre || null,
+            metadata_gxp: metaClone
+          };
+
+          const res = await fetch(`${SUPABASE_URL}/rest/v1/desviaciones?on_conflict=id`, {
+            method: 'POST',
+            headers: { ...HEADERS, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+            body: JSON.stringify(payload)
+          });
+
+          if (!res.ok) {
+            console.warn('Supabase desviaciones upsert warning:', res.status, await res.text());
+          } else {
+            await window.upsertCausaRaizEnSupabase(nc);
+          }
+        } catch (e) {
+          console.warn('Error sincronizando NC con Supabase:', e);
+        }
+      };
+
+      window.upsertCausaRaizEnSupabase = async function(nc) {
+        try {
+          if (!window.esUUID(nc.id)) return;
+          const cr = (nc.causaRaiz && typeof nc.causaRaiz === 'object') ? nc.causaRaiz : {};
+          const conclusion = (typeof nc.causaRaiz === 'string' && nc.causaRaiz.trim())
+            ? nc.causaRaiz.trim()
+            : (cr.conclusion || cr.causaRaizConclusiva || cr.causa_raiz_conclusiva || '').trim();
+
+          const tieneDatos = conclusion || cr.manoObra || cr.maquinaria || cr.materiales || cr.metodo || cr.medioAmbiente || cr.porque1 || cr.p1;
+          if (!tieneDatos) return;
+
+          const payload = {
+            desviacion_id: nc.id,
+            m_mano_obra: cr.manoObra || cr.m_mano_obra || null,
+            m_maquinaria: cr.maquinaria || cr.m_maquinaria || null,
+            m_materiales: cr.materiales || cr.m_materiales || null,
+            m_metodo: cr.metodo || cr.m_metodo || null,
+            m_medio_ambiente: cr.medioAmbiente || cr.m_medio_ambiente || null,
+            porque_1: cr.porque1 || cr.p1 || null,
+            porque_2: cr.porque2 || cr.p2 || null,
+            porque_3: cr.porque3 || cr.p3 || null,
+            porque_4: cr.porque4 || cr.p4 || null,
+            porque_5: cr.porque5 || cr.p5 || null,
+            causa_raiz_conclusiva: conclusion || 'Análisis de causa raíz en curso',
+            registrado_por: window.esUUID(window.activeGxpUser?.id) ? window.activeGxpUser.id : null
+          };
+
+          const res = await fetch(`${SUPABASE_URL}/rest/v1/causa_raiz_desviaciones?on_conflict=desviacion_id`, {
+            method: 'POST',
+            headers: { ...HEADERS, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+            body: JSON.stringify(payload)
+          });
+          if (!res.ok) {
+            console.warn('Supabase causa_raiz_desviaciones upsert warning:', res.status, await res.text());
+          }
+        } catch (e) {
+          console.warn('Error sincronizando causa raíz con Supabase:', e);
+        }
+      };
+
+      window.upsertCAPAEnSupabase = async function(capa) {
+        try {
+          if (!window.esUUID(capa.id)) {
+            capa.id = crypto.randomUUID();
+          }
+
+          let ncUuid = null;
+          if (capa.ncId) {
+            if (window.esUUID(capa.ncId)) {
+              ncUuid = capa.ncId;
+            } else if (window.mapLegacyNcIdToUuid[capa.ncId]) {
+              ncUuid = window.mapLegacyNcIdToUuid[capa.ncId];
+              capa.ncId = ncUuid;
+            } else {
+              const ncMatch = (window.cachedNCs || []).find(n => n.consecutivo === capa.ncConsecutivo);
+              if (ncMatch && window.esUUID(ncMatch.id)) {
+                ncUuid = ncMatch.id;
+                capa.ncId = ncUuid;
+              }
+            }
+          }
+
+          const acciones = Array.isArray(capa.plan) ? capa.plan : [];
+          const resumenPlan = acciones.length > 0
+            ? acciones.map((a, i) => `${i + 1}. ${a.actividad || 'Acción'} (${a.responsable || 'Sin asignar'} - ${a.estado || 'Pendiente'})`).join(' | ')
+            : String(capa.planAccion || capa.descripcion || 'Plan de acción CAPA');
+
+          const defaultLimite = new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0];
+          const fechaLim = capa.fechaLimite || (acciones[0]?.fechaLimite) || defaultLimite;
+
+          const payload = {
+            id: capa.id,
+            codigo: String(capa.consecutivo || capa.codigo || `CAPA-${Date.now()}`).substring(0, 30),
+            desviacion_id: window.esUUID(ncUuid) ? ncUuid : null,
+            nc_consecutivo: capa.ncConsecutivo ? String(capa.ncConsecutivo).substring(0, 50) : null,
+            tipo_accion: String(capa.tipo || 'Correctiva').substring(0, 30),
+            plan_accion: resumenPlan,
+            acciones_json: acciones,
+            responsable: String(capa.responsable || acciones[0]?.responsable || window.activeGxpUser?.correo || 'QA').substring(0, 100),
+            fecha_limite: fechaLim,
+            criterio_eficacia: String(capa.criterioEfectividad || capa.criterioEficacia || 'Verificación documental y ausencia de recurrencia'),
+            evaluador_eficacia: capa.evaluadorEfectividad ? String(capa.evaluadorEfectividad).substring(0, 100) : null,
+            resultado_eficacia: capa.resultadoEfectividad || null,
+            eficaz: typeof capa.eficaz === 'boolean' ? capa.eficaz : (capa.estado === 'Cerrado Definitivo' ? true : null),
+            estado: String(capa.estado || 'Plan Aprobado').substring(0, 30),
+            fecha_cierre: capa.fechaCierre || null,
+            metadata_gxp: { ...capa }
+          };
+
+          const res = await fetch(`${SUPABASE_URL}/rest/v1/capas?on_conflict=id`, {
+            method: 'POST',
+            headers: { ...HEADERS, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+            body: JSON.stringify(payload)
+          });
+          if (!res.ok) {
+            console.warn('Supabase capas upsert warning:', res.status, await res.text());
+          }
+        } catch (e) {
+          console.warn('Error sincronizando CAPA con Supabase:', e);
+        }
+      };
+
+      window.sincronizarQMSConSupabase = async function() {
+        for (const nc of (window.cachedNCs || [])) {
+          await window.upsertNCEnSupabase(nc);
+        }
+        for (const capa of (window.cachedCAPAs || [])) {
+          await window.upsertCAPAEnSupabase(capa);
+        }
+      };
+
+      window.cargarQMSDesdeSupabase = async function() {
+        try {
+          const [resNC, resCR, resCAPA] = await Promise.all([
+            fetch(`${SUPABASE_URL}/rest/v1/desviaciones?select=*&order=created_at.desc`, { headers: HEADERS }),
+            fetch(`${SUPABASE_URL}/rest/v1/causa_raiz_desviaciones?select=*`, { headers: HEADERS }),
+            fetch(`${SUPABASE_URL}/rest/v1/capas?select=*&order=created_at.desc`, { headers: HEADERS })
+          ]);
+
+          const uuidToAreaCode = {};
+          Object.entries(window.mapAreaCodeToUuid || {}).forEach(([code, u]) => { uuidToAreaCode[u] = code; });
+          const uuidToProcCode = {};
+          Object.entries(window.mapProcesoCodeToUuid || {}).forEach(([code, u]) => { uuidToProcCode[u] = code; });
+
+          const crByNcId = {};
+          if (resCR.ok) {
+            const rowsCR = await resCR.json();
+            if (Array.isArray(rowsCR)) {
+              rowsCR.forEach(c => { if (c.desviacion_id) crByNcId[c.desviacion_id] = c; });
+            }
+          }
+
+          // 1. DESVIACIONES / NO CONFORMIDADES
+          if (resNC.ok) {
+            const rowsNC = await resNC.json();
+            if (Array.isArray(rowsNC) && rowsNC.length > 0) {
+              window.cachedNCs = rowsNC.map(r => {
+                const base = (r.metadata_gxp && typeof r.metadata_gxp === 'object') ? r.metadata_gxp : {};
+                const crRow = crByNcId[r.id];
+                let causaRaizReconstruida = r.analisis_causa_raiz || base.causaRaiz || {};
+                if (crRow) {
+                  causaRaizReconstruida = {
+                    ...(typeof causaRaizReconstruida === 'object' ? causaRaizReconstruida : {}),
+                    manoObra: crRow.m_mano_obra || '',
+                    maquinaria: crRow.m_maquinaria || '',
+                    materiales: crRow.m_materiales || '',
+                    metodo: crRow.m_metodo || '',
+                    medioAmbiente: crRow.m_medio_ambiente || '',
+                    porque1: crRow.porque_1 || '',
+                    porque2: crRow.porque_2 || '',
+                    porque3: crRow.porque_3 || '',
+                    porque4: crRow.porque_4 || '',
+                    porque5: crRow.porque_5 || '',
+                    conclusion: crRow.causa_raiz_conclusiva || ''
+                  };
+                }
+
+                window.mapLegacyNcIdToUuid[r.id] = r.id;
+                return {
+                  ...base,
+                  id: r.id,
+                  consecutivo: r.codigo,
+                  origen: r.origen,
+                  clasificacion: r.clasificacion,
+                  tipo: base.tipo || r.clasificacion,
+                  descripcion: r.descripcion,
+                  areaId: uuidToAreaCode[r.area_id] || base.areaId || '',
+                  procesoId: uuidToProcCode[r.proceso_id] || base.procesoId || '',
+                  referencia: r.equipo_o_doc || base.referencia || '',
+                  evidenciaUrl: r.evidencia_adjunta_url || '',
+                  metodoCausaRaiz: r.metodo_causa_raiz || base.metodoCausaRaiz || '5_PORQUES',
+                  causaRaiz: causaRaizReconstruida,
+                  estado: r.estado,
+                  fecha: r.fecha_deteccion || base.fecha || '',
+                  fechaDeteccion: r.fecha_deteccion || base.fechaDeteccion || '',
+                  reportadoPor: r.reportado_por || base.reportadoPor || '',
+                  responsableId: r.responsable_id || base.responsableId || '',
+                  responsable: r.responsable_nombre || base.responsable || '',
+                  lote: r.lote_afectado || base.lote || '',
+                  accionInmediata: r.accion_inmediata || base.accionInmediata || '',
+                  fechaCierre: r.fecha_cierre || base.fechaCierre || ''
+                };
+              });
+            } else if ((window.cachedNCs || []).length > 0) {
+              for (const nc of window.cachedNCs) {
+                await window.upsertNCEnSupabase(nc);
+              }
+            }
+          }
+
+          // 2. PLANES CAPA
+          if (resCAPA.ok) {
+            const rowsCAPA = await resCAPA.json();
+            if (Array.isArray(rowsCAPA) && rowsCAPA.length > 0) {
+              window.cachedCAPAs = rowsCAPA.map(r => {
+                const base = (r.metadata_gxp && typeof r.metadata_gxp === 'object') ? r.metadata_gxp : {};
+                return {
+                  ...base,
+                  id: r.id,
+                  consecutivo: r.codigo,
+                  ncId: r.desviacion_id || base.ncId || '',
+                  ncConsecutivo: r.nc_consecutivo || base.ncConsecutivo || '',
+                  tipo: r.tipo_accion || base.tipo || 'Correctiva',
+                  plan: Array.isArray(r.acciones_json) ? r.acciones_json : (base.plan || []),
+                  responsable: r.responsable || base.responsable || '',
+                  fechaLimite: r.fecha_limite || base.fechaLimite || '',
+                  criterioEfectividad: r.criterio_eficacia || base.criterioEfectividad || '',
+                  evaluadorEfectividad: r.evaluador_eficacia || base.evaluadorEfectividad || '',
+                  resultadoEfectividad: r.resultado_eficacia || base.resultadoEfectividad || '',
+                  estado: r.estado,
+                  fechaCierre: r.fecha_cierre || base.fechaCierre || ''
+                };
+              });
+            } else if ((window.cachedCAPAs || []).length > 0) {
+              for (const capa of window.cachedCAPAs) {
+                await window.upsertCAPAEnSupabase(capa);
+              }
+            }
+          }
+        } catch (err) {
+          console.warn('Error cargando NCs/CAPAs desde Supabase:', err);
+        }
+      };
       
       window.cachedEmpleados = [ { id: 1, nombres: 'Johan S.', apellidos: 'Aguilar', cargo: 'QA Lead', correo: 'j.aguilar@pharmor.com.co', areaId: 'ar_qa', estado: 'Activo', avatar: null } ];
       window.cachedUsuarios = [ { id: 1, empleadoId: 1, correo: 'j.aguilar@pharmor.com.co', password: '123', rolesIds: ['rol_admin'], areasAsignadas: ['ar_qa', 'ar_qc', 'ar_prod'], estado: 'Activo' } ];
@@ -2543,6 +2844,10 @@
           if (typeof window.sincronizarEstructuraYDocumentosConSupabase === 'function') {
             await window.sincronizarEstructuraYDocumentosConSupabase();
           }
+
+          if (typeof window.sincronizarQMSConSupabase === 'function') {
+            await window.sincronizarQMSConSupabase();
+          }
           
           if (res.ok) { 
             window.actualizarEstadoNube('conectado', 'Guardado'); 
@@ -2620,6 +2925,7 @@
           await window.cargarAuditTrailDesdeSupabase(dbState.audit || window.auditTrailLogs);
           await window.cargarFirmasPart11DesdeSupabase();
           await window.cargarAreasProcesosDocsDesdeSupabase(dbState);
+          await window.cargarQMSDesdeSupabase();
         } catch(e) {
           console.error("Accediendo en modo local por fallo de red:", e);
         } finally {
