@@ -2641,61 +2641,96 @@
 
           // 1. DESVIACIONES / NO CONFORMIDADES
           if (resNC.ok) {
-            const rowsNC = await resNC.json();
-            if (Array.isArray(rowsNC) && rowsNC.length > 0) {
-              window.cachedNCs = rowsNC.map(r => {
-                const base = (r.metadata_gxp && typeof r.metadata_gxp === 'object') ? r.metadata_gxp : {};
-                const crRow = crByNcId[r.id];
-                let causaRaizReconstruida = r.analisis_causa_raiz || base.causaRaiz || {};
-                if (crRow) {
-                  causaRaizReconstruida = {
-                    ...(typeof causaRaizReconstruida === 'object' ? causaRaizReconstruida : {}),
-                    manoObra: crRow.m_mano_obra || '',
-                    maquinaria: crRow.m_maquinaria || '',
-                    materiales: crRow.m_materiales || '',
-                    metodo: crRow.m_metodo || '',
-                    medioAmbiente: crRow.m_medio_ambiente || '',
-                    porque1: crRow.porque_1 || '',
-                    porque2: crRow.porque_2 || '',
-                    porque3: crRow.porque_3 || '',
-                    porque4: crRow.porque_4 || '',
-                    porque5: crRow.porque_5 || '',
-                    conclusion: crRow.causa_raiz_conclusiva || ''
-                  };
-                }
+  const rowsNC = await resNC.json();
+  if (Array.isArray(rowsNC) && rowsNC.length > 0) {
+    window.cachedNCs = rowsNC.map(r => {
+      const base = (r.metadata_gxp && typeof r.metadata_gxp === 'object') ? r.metadata_gxp : {};
+      const crRow = crByNcId[r.id];
+      let causaRaizReconstruida = r.analisis_causa_raiz || base.causaRaiz || {};
+      if (crRow) {
+        causaRaizReconstruida = {
+          ...(typeof causaRaizReconstruida === 'object' ? causaRaizReconstruida : {}),
+          manoObra: crRow.m_mano_obra || '',
+          maquinaria: crRow.m_maquinaria || '',
+          materiales: crRow.m_materiales || '',
+          metodo: crRow.m_metodo || '',
+          medioAmbiente: crRow.m_medio_ambiente || '',
+          porque1: crRow.porque_1 || '',
+          porque2: crRow.porque_2 || '',
+          porque3: crRow.porque_3 || '',
+          porque4: crRow.porque_4 || '',
+          porque5: crRow.porque_5 || '',
+          conclusion: crRow.causa_raiz_conclusiva || ''
+        };
+      }
 
-                window.mapLegacyNcIdToUuid[r.id] = r.id;
-                return {
-                  ...base,
-                  id: r.id,
-                  consecutivo: r.codigo,
-                  origen: r.origen,
-                  clasificacion: r.clasificacion,
-                  tipo: base.tipo || r.clasificacion,
-                  descripcion: r.descripcion,
-                  areaId: uuidToAreaCode[r.area_id] || base.areaId || '',
-                  procesoId: uuidToProcCode[r.proceso_id] || base.procesoId || '',
-                  referencia: r.equipo_o_doc || base.referencia || '',
-                  evidenciaUrl: r.evidencia_adjunta_url || '',
-                  metodoCausaRaiz: r.metodo_causa_raiz || base.metodoCausaRaiz || '5_PORQUES',
-                  causaRaiz: causaRaizReconstruida,
-                  estado: r.estado,
-                  fecha: r.fecha_deteccion || base.fecha || '',
-                  fechaDeteccion: r.fecha_deteccion || base.fechaDeteccion || '',
-                  reportadoPor: r.reportado_por || base.reportadoPor || '',
-                  responsableId: r.responsable_id || base.responsableId || '',
-                  responsable: r.responsable_nombre || base.responsable || '',
-                  lote: r.lote_afectado || base.lote || '',
-                  accionInmediata: r.accion_inmediata || base.accionInmediata || '',
-                  fechaCierre: r.fecha_cierre || base.fechaCierre || ''
-                };
-              });
-            } else if ((window.cachedNCs || []).length > 0) {
-              for (const nc of window.cachedNCs) {
-                await window.upsertNCEnSupabase(nc);
-              }
-            }
-          }
+      const procResolved = uuidToProcCode[r.proceso_id]
+        || (window.cachedProcesos || []).find(p => String(p.id) === String(r.proceso_id) || p.nombre === r.proceso_id)?.id
+        || base.procesoId
+        || '';
+
+      const areaResolved = uuidToAreaCode[r.area_id]
+        || (window.cachedProcesos || []).find(p => String(p.id) === String(procResolved))?.areaId
+        || base.areaId
+        || '';
+
+      const empByName = r.responsable_nombre
+        ? (window.cachedEmpleados || []).find(e => `${e.nombres} ${e.apellidos}`.trim().toLowerCase() === r.responsable_nombre.trim().toLowerCase())
+        : null;
+
+      const firmasBase = (base.firmas && typeof base.firmas === 'object') ? base.firmas : {};
+      const firmasSeguras = {
+        elaborado: firmasBase.elaborado || null,
+        revisado: firmasBase.revisado || null,
+        aprobado: firmasBase.aprobado || null
+      };
+
+      // Hidratar firmas desde firmas_electronicas si metadata_gxp venía vacío
+      (window.cachedFirmasPart11 || []).filter(f => f.tabla_referencia === 'no_conformidades' && String(f.registro_id) === String(r.id)).forEach(f => {
+        if (f.significado_firma === 'Creación / Edición' && !firmasSeguras.elaborado) firmasSeguras.elaborado = f.usuario_nombre;
+        if (f.significado_firma === 'Revisión Técnica' && !firmasSeguras.revisado) firmasSeguras.revisado = f.usuario_nombre;
+        if ((f.significado_firma === 'Aprobación' || f.significado_firma === 'Autorización Final de Versión Vigente') && !firmasSeguras.aprobado) firmasSeguras.aprobado = f.usuario_nombre;
+      });
+
+      window.mapLegacyNcIdToUuid[r.id] = r.id;
+      return {
+        ...base,
+        id: r.id,
+        consecutivo: r.codigo,
+        origen: r.origen,
+        fuente: base.fuente || r.origen || 'Auditoría Interna',
+        clasificacion: r.clasificacion,
+        criticidad: base.criticidad || r.clasificacion || 'Mayor',
+        tipo: base.tipo || r.clasificacion,
+        descripcion: r.descripcion,
+        areaId: areaResolved,
+        procesoId: procResolved,
+        referencia: r.equipo_o_doc || base.referencia || '',
+        evidenciaUrl: r.evidencia_adjunta_url || '',
+        metodoCausaRaiz: r.metodo_causa_raiz || base.metodoCausaRaiz || '5_PORQUES',
+        causaRaiz: causaRaizReconstruida,
+        estado: r.estado,
+        fecha: r.fecha_deteccion || base.fecha || '',
+        fechaDeteccion: r.fecha_deteccion || base.fechaDeteccion || '',
+        reportadoPor: r.reportado_por || base.reportadoPor || '',
+        responsableId: r.responsable_id || base.responsableId || (empByName ? empByName.id : ''),
+        responsable: r.responsable_nombre || base.responsable || '',
+        lote: r.lote_afectado || base.lote || '',
+        accionInmediata: r.accion_inmediata || base.accionInmediata || '',
+        correccion: base.correccion || r.accion_inmediata || '',
+        alcance: base.alcance || '',
+        impacto: base.impacto || '',
+        reincidencia: base.reincidencia || 'No',
+        fechaCierre: r.fecha_cierre || base.fechaCierre || '',
+        firmas: firmasSeguras
+      };
+    });
+  } else if ((window.cachedNCs || []).length > 0) {
+    for (const nc of window.cachedNCs) {
+      await window.upsertNCEnSupabase(nc);
+    }
+  }
+}
 
           // 2. PLANES CAPA
           if (resCAPA.ok) {
@@ -2810,59 +2845,167 @@
       }
     };
   
-            let isSaving = false;
-    let saveTimeout = null;
+let isSaving = false;
+let pendingSave = false;
+let saveTimeout = null;
 
-    window.saveData = async function() {
-      // Si ya hay un guardado en curso, no hacemos nada, el finally se encargará
-      if (isSaving) return;
+window.saveData = async function(inmediato = false) {
+  const ejecutarGuardado = async () => {
+    if (isSaving) {
+      pendingSave = true;
+      return;
+    }
+    isSaving = true;
+    pendingSave = false;
+    window.actualizarEstadoNube('guardando', 'Guardando...');
 
-      // Temporizador (Debounce): Esperamos 1.5 segundos antes de guardar
-      clearTimeout(saveTimeout);
-      saveTimeout = setTimeout(async () => {
-        if (isSaving) return; // Si aún está guardando, salir
-        
-        isSaving = true;
-        window.actualizarEstadoNube('guardando', 'Guardando...');
-
-        const dbState = { 
-          areas: window.cachedAreas, procesos: window.cachedProcesos, roles: window.cachedRoles, 
-          matriz: window.cachedMatrizPermisos, empleados: window.cachedEmpleados, usuarios: window.cachedUsuarios, 
-          docs: window.cachedDocs, copias: window.cachedCopias, obsoletos: window.cachedObsoletos, 
-          audit: window.auditTrailLogs, equipos: window.cachedEquipos, calibraciones: window.cachedCalibraciones,
-          mantenimientos: window.cachedMantenimientos, infraestructura: window.cachedInfraestructura,
-          mantenimientosInfra: window.cachedMantenimientosInfra, ncs: window.cachedNCs, capas: window.cachedCAPAs, tickets: window.cachedTicketsMantenimiento || []
-        };
-
-        try {
-          const res = await fetch(`${SUPABASE_URL}/rest/v1/erp_state`, { 
-            method: 'POST', 
-            headers: { ...HEADERS, 'Prefer': 'resolution=merge-duplicates' }, 
-            body: JSON.stringify({ id: 1, app_data: dbState }) 
-          });
-
-          if (typeof window.sincronizarEstructuraYDocumentosConSupabase === 'function') {
-            await window.sincronizarEstructuraYDocumentosConSupabase();
-          }
-
-          if (typeof window.sincronizarQMSConSupabase === 'function') {
-            await window.sincronizarQMSConSupabase();
-          }
-          
-          if (res.ok) { 
-            window.actualizarEstadoNube('conectado', 'Guardado'); 
-            setTimeout(() => window.actualizarEstadoNube('conectado', 'Conectado'), 2000); 
-          } else { 
-            window.actualizarEstadoNube('error', 'Fallo al guardar'); 
-          }
-        } catch (err) { 
-          console.error("Error al guardar:", err); 
-          window.actualizarEstadoNube('error', 'Sin conexión'); 
-        } finally {
-          isSaving = false; 
-        }
-      }, 1500); // Espera 1.5 segundos antes de ejecutar
+    const dbState = {
+      areas: window.cachedAreas, procesos: window.cachedProcesos, roles: window.cachedRoles,
+      matriz: window.cachedMatrizPermisos, empleados: window.cachedEmpleados, usuarios: window.cachedUsuarios,
+      docs: window.cachedDocs, copias: window.cachedCopias, obsoletos: window.cachedObsoletos,
+      audit: window.auditTrailLogs, equipos: window.cachedEquipos, calibraciones: window.cachedCalibraciones,
+      mantenimientos: window.cachedMantenimientos, infraestructura: window.cachedInfraestructura,
+      mantenimientosInfra: window.cachedMantenimientosInfra, ncs: window.cachedNCs, capas: window.cachedCAPAs,
+      tickets: window.cachedTicketsMantenimiento || []
     };
+
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/erp_state`, {
+        method: 'POST',
+        headers: { ...HEADERS, 'Prefer': 'resolution=merge-duplicates' },
+        body: JSON.stringify({ id: 1, app_data: dbState })
+      });
+
+      if (typeof window.sincronizarEstructuraYDocumentosConSupabase === 'function') {
+        await window.sincronizarEstructuraYDocumentosConSupabase();
+      }
+      if (typeof window.sincronizarQMSConSupabase === 'function') {
+        await window.sincronizarQMSConSupabase();
+      }
+
+      if (res.ok) {
+        window.actualizarEstadoNube('conectado', 'Guardado');
+        setTimeout(() => window.actualizarEstadoNube('conectado', 'Conectado'), 2000);
+      } else {
+        window.actualizarEstadoNube('error', 'Fallo al guardar');
+      }
+    } catch (err) {
+      console.error("Error al guardar:", err);
+      window.actualizarEstadoNube('error', 'Sin conexión');
+    } finally {
+      isSaving = false;
+      if (pendingSave) {
+        pendingSave = false;
+        window.saveData(true);
+      }
+    }
+  };
+
+  clearTimeout(saveTimeout);
+  if (inmediato) {
+    await ejecutarGuardado();
+  } else {
+    saveTimeout = setTimeout(ejecutarGuardado, 600);
+  }
+};
+
+window.upsertNCEnSupabase = async function(nc) {
+  try {
+    const oldId = nc.id;
+    if (!window.esUUID(nc.id)) {
+      nc.id = crypto.randomUUID();
+      if (oldId) window.mapLegacyNcIdToUuid[oldId] = nc.id;
+    } else {
+      window.mapLegacyNcIdToUuid[nc.id] = nc.id;
+    }
+
+    // Derivar areaId desde el proceso origen si no viene explícito
+    if (!nc.areaId && nc.procesoId) {
+      const procMatch = (window.cachedProcesos || []).find(p => String(p.id) === String(nc.procesoId));
+      if (procMatch && procMatch.areaId) nc.areaId = procMatch.areaId;
+    }
+
+    // Garantizar estructura de firmas Part 11
+    if (!nc.firmas || typeof nc.firmas !== 'object') {
+      nc.firmas = { elaborado: null, revisado: null, aprobado: null };
+    }
+
+    let areaUuid = window.mapAreaCodeToUuid[nc.areaId] || null;
+    if (!areaUuid && nc.areaId) {
+      const areaFound = (window.cachedAreas || []).find(a => a.id === nc.areaId);
+      if (areaFound) areaUuid = await window.upsertAreaEnSupabase(areaFound);
+    }
+
+    let procUuid = window.mapProcesoCodeToUuid[nc.procesoId] || null;
+    if (!procUuid && nc.procesoId) {
+      const procFound = (window.cachedProcesos || []).find(p => p.id === nc.procesoId);
+      if (procFound) procUuid = await window.upsertProcesoEnSupabase(procFound);
+    }
+
+    const empMatch = (window.cachedEmpleados || []).find(e => String(e.id) === String(nc.responsableId));
+    const respNombre = nc.responsable || (empMatch ? `${empMatch.nombres || ''} ${empMatch.apellidos || ''}`.trim() : '');
+
+    const crObj = (nc.causaRaiz && typeof nc.causaRaiz === 'object') ? nc.causaRaiz : {};
+    const metodoCR = String(nc.metodoCausaRaiz || crObj.metodo || '5_PORQUES').substring(0, 30);
+    const fechaDet = nc.fechaDeteccion || nc.fecha || new Date().toISOString().split('T')[0];
+
+    const metaClone = { ...nc };
+    delete metaClone.evidenciaUrl;
+    delete metaClone.archivo_url;
+
+    const payloadBase = {
+      id: nc.id,
+      codigo: String(nc.consecutivo || nc.codigo || `NC-${Date.now()}`).substring(0, 30),
+      origen: String(nc.fuente || nc.origen || 'Proceso Interno').substring(0, 50),
+      clasificacion: String(nc.criticidad || nc.clasificacion || nc.tipo || 'Menor').substring(0, 20),
+      descripcion: String(nc.descripcion || 'Desviación registrada en sistema'),
+      area_id: window.esUUID(areaUuid) ? areaUuid : null,
+      proceso_id: window.esUUID(procUuid) ? procUuid : null,
+      equipo_o_doc: String(nc.referencia || nc.equipoDoc || nc.documento || '').substring(0, 150) || null,
+      evidencia_adjunta_url: nc.evidenciaUrl || nc.archivo_url || null,
+      metodo_causa_raiz: metodoCR,
+      analisis_causa_raiz: typeof nc.causaRaiz === 'string' ? { conclusion: nc.causaRaiz } : (nc.causaRaiz || null),
+      estado: String(nc.estado || 'Borrador').substring(0, 30),
+      fecha_deteccion: fechaDet,
+      reportado_por: String(nc.reportadoPor || window.activeGxpUser?.correo || 'Johan Aguilar').substring(0, 100),
+      responsable_id: window.esUUID(nc.responsableId) ? nc.responsableId : null,
+      responsable_nombre: respNombre ? respNombre.substring(0, 150) : null,
+      lote_afectado: nc.lote ? String(nc.lote).substring(0, 100) : null,
+      accion_inmediata: nc.correccion || nc.accionInmediata || nc.contencion || null,
+      fecha_cierre: nc.fechaCierre || null
+    };
+
+    let res = await fetch(`${SUPABASE_URL}/rest/v1/desviaciones?on_conflict=id`, {
+      method: 'POST',
+      headers: { ...HEADERS, 'Prefer': 'resolution=merge-duplicates,return=representation' },
+      body: JSON.stringify({ ...payloadBase, metadata_gxp: metaClone })
+    });
+
+    // Reintento automático si alguna columna extendida (ej. metadata_gxp) no existe en el esquema
+    if (!res.ok) {
+      const errDetail = await res.text();
+      console.warn('Reintentando upsert en desviaciones sin columnas extendidas:', res.status, errDetail);
+      res = await fetch(`${SUPABASE_URL}/rest/v1/desviaciones?on_conflict=id`, {
+        method: 'POST',
+        headers: { ...HEADERS, 'Prefer': 'resolution=merge-duplicates,return=representation' },
+        body: JSON.stringify(payloadBase)
+      });
+
+      if (!res.ok) {
+        const finalErr = await res.text();
+        alert(`⚠️ Supabase rechazó guardar la NC (${res.status}):\n${finalErr}`);
+        return false;
+      }
+    }
+
+    await window.upsertCausaRaizEnSupabase(nc);
+    return true;
+  } catch (e) {
+    console.error('Error sincronizando NC con Supabase:', e);
+    alert(`⚠️ Error de red al sincronizar la NC con Supabase: ${e.message}`);
+    return false;
+  }
+};
   
       window.activarBotonLogin = function() {
         const btn = document.getElementById('btnLogin');
@@ -4301,19 +4444,61 @@
 
       if (!significado) { alert("⛔ Control GxP: Es obligatorio seleccionar la intención o el significado de la firma."); return; }
 
-      // --- LÓGICA PARA FIRMAR NCS (NUEVO) ---
+      // --- LÓGICA PARA FIRMAR NCS (VALIDACIÓN ESTRICTA PART 11) ---
       const targetId = document.getElementById('firmaDocId').value;
-      
+
       if (targetId.startsWith('NC:')) {
         const ncId = targetId.split(':')[1];
-        const nc = window.cachedNCs.find(n => n.id === ncId);
-        
-        const usr = window.cachedUsuarios.find(u => u.correo.toLowerCase() === email.toLowerCase() && u.password === pass);
-        if (!usr) { alert("⛔ Credenciales inválidas."); return; }
+        const nc = window.cachedNCs.find(n => String(n.id) === String(ncId));
+        if (!nc) { alert("⛔ No Conformidad no encontrada."); return; }
 
-        if (significado === 'Creación / Edición') nc.firmas.elaborado = email;
-        else if (significado === 'Revisión Técnica') nc.firmas.revisado = email;
-        else if (significado === 'Aprobación' || significado === 'Autorización Final de Versión Vigente') nc.firmas.aprobado = email;
+        const usr = window.cachedUsuarios.find(u =>
+          (u.correo || '').trim().toLowerCase() === email.toLowerCase() &&
+          (u.password || '').trim() === pass
+        );
+        if (!usr) { alert("⛔ Credenciales inválidas."); return; }
+        if (usr.estado !== 'Activo') { alert("⛔ Control GxP: El usuario firmante está INACTIVO."); return; }
+
+        if (!nc.firmas || typeof nc.firmas !== 'object') {
+          nc.firmas = { elaborado: null, revisado: null, aprobado: null };
+        }
+
+        const rolesUsr = usr.rolesIds || [];
+        const isAdmin = rolesUsr.includes('rol_admin') || window.esAdminMaster(usr);
+
+        if (!window.usuarioPuedeVerNC(nc, usr)) {
+          alert("⛔ Control GxP: Acceso Denegado. Su perfil no pertenece a QA ni al área origen de esta No Conformidad.");
+          return;
+        }
+
+        if (significado === 'Creación / Edición') {
+          const esAutorOAsignado = isAdmin || rolesUsr.includes('rol_autor') || String(usr.empleadoId) === String(nc.responsableId);
+          if (!esAutorOAsignado) {
+            alert("⛔ Control GxP: No tienes el rol de 'Creador / Autor' ni eres el responsable asignado para firmar la elaboración.");
+            return;
+          }
+          nc.firmas.elaborado = usr.correo;
+        } else if (significado === 'Revisión Técnica') {
+          if (!nc.firmas.elaborado) {
+            alert("⛔ Control GxP: La NC debe tener primero la firma de 'Creación / Edición' antes de realizar la Revisión Técnica.");
+            return;
+          }
+          if (!isAdmin && !rolesUsr.includes('rol_revisor')) {
+            alert("⛔ Control GxP: No tienes el rol de 'Revisor Técnico' asignado para firmar esta No Conformidad.");
+            return;
+          }
+          nc.firmas.revisado = usr.correo;
+        } else if (significado === 'Aprobación' || significado === 'Autorización Final de Versión Vigente') {
+          if (!nc.firmas.elaborado || !nc.firmas.revisado) {
+            alert("⛔ Control GxP: Se requieren las firmas previas de 'Creación / Edición' y 'Revisión Técnica' antes de Aprobar.");
+            return;
+          }
+          if (!isAdmin && !rolesUsr.includes('rol_aprobador')) {
+            alert("⛔ Control GxP: No tienes el rol de 'Aprobador Final' asignado para aprobar esta No Conformidad.");
+            return;
+          }
+          nc.firmas.aprobado = usr.correo;
+        }
 
         await window.registrarFirmaPart11EnSupabase({
           tabla: 'no_conformidades',
@@ -4321,14 +4506,15 @@
           referenciaTexto: nc.consecutivo,
           userObj: usr,
           significado: significado,
-          justificacion: `${nc.descripcion.substring(0, 140)} (Estado: ${nc.estado})`
+          justificacion: `${(nc.descripcion || '').substring(0, 140)} (Estado: ${nc.estado})`
         });
 
-        window.saveData();
+        await window.upsertNCEnSupabase(nc);
+        await window.saveData(true);
         window.renderNCs();
         window.toggleModal('modalFirmaPart11', false);
-        window.logAudit('FIRMA_NC', `NC ${nc.consecutivo} firmada por ${email} como ${significado}`);
-        return; // Detiene la ejecución aquí para que no siga a la firma de documentos
+        window.logAudit('FIRMA_NC', `NC ${nc.consecutivo} firmada por ${usr.correo} como ${significado}`);
+        return;
       }
       // ----------------------------------------
 
@@ -4615,97 +4801,161 @@
         window.toggleModal('modalNC', true);
       };
   
-      window.guardarNCCompleta = function() {
-      const id = document.getElementById('ncEditId').value;
-      const consecutivoInput = document.getElementById('ncConsecutivo').value.trim();
-      
-      // Rescatamos las firmas si estamos editando, si es nueva van en null
-      const ncExistente = id ? window.cachedNCs.find(n => n.id === id) : null;
-      const firmasActuales = ncExistente ? ncExistente.firmas : { elaborado: window.activeGxpUser.correo, revisado: null, aprobado: null };
+      window.guardarNCCompleta = async function() {
+  const id = document.getElementById('ncEditId').value;
+  const consecutivoInput = document.getElementById('ncConsecutivo').value.trim();
+  const procesoId = document.getElementById('ncProcesoOrigen').value;
+  const responsableId = document.getElementById('ncResponsable').value;
 
-      const ncData = {
-        consecutivo: consecutivoInput,
-        fecha: document.getElementById('ncFecha').value,
-        procesoId: document.getElementById('ncProcesoOrigen').value,
-        responsableId: document.getElementById('ncResponsable').value,
-        fuente: document.getElementById('ncFuente').value,
-        reincidencia: document.getElementById('ncReincidencia').value,
-        descripcion: document.getElementById('ncDescripcion').value,
-        alcance: document.getElementById('ncAlcance').value,
-        impacto: document.getElementById('ncImpacto').value,
-        criticidad: document.getElementById('ncCriticidad').value,
-        correccion: document.getElementById('ncCorreccion').value,
-        estado: ncExistente ? ncExistente.estado : 'Borrador', // Mantiene el estado actual
-        firmas: firmasActuales // <--- AQUÍ MANTENEMOS LAS FIRMAS
-      };
+  const procObj = (window.cachedProcesos || []).find(p => String(p.id) === String(procesoId));
+  const empObj = (window.cachedEmpleados || []).find(e => String(e.id) === String(responsableId));
+
+  const ncExistente = id ? window.cachedNCs.find(n => n.id === id) : null;
+  const firmasActuales = (ncExistente && ncExistente.firmas && typeof ncExistente.firmas === 'object')
+    ? { elaborado: ncExistente.firmas.elaborado || null, revisado: ncExistente.firmas.revisado || null, aprobado: ncExistente.firmas.aprobado || null }
+    : { elaborado: window.activeGxpUser.correo, revisado: null, aprobado: null };
+
+  const ncData = {
+    id: id || crypto.randomUUID(),
+    consecutivo: consecutivoInput,
+    fecha: document.getElementById('ncFecha').value,
+    procesoId: procesoId,
+    areaId: procObj ? procObj.areaId : (empObj ? empObj.areaId : ''),
+    responsableId: responsableId,
+    responsable: empObj ? `${empObj.nombres} ${empObj.apellidos}`.trim() : '',
+    fuente: document.getElementById('ncFuente').value,
+    origen: document.getElementById('ncFuente').value,
+    reincidencia: document.getElementById('ncReincidencia').value,
+    descripcion: document.getElementById('ncDescripcion').value.trim(),
+    alcance: document.getElementById('ncAlcance').value.trim(),
+    impacto: document.getElementById('ncImpacto').value.trim(),
+    criticidad: document.getElementById('ncCriticidad').value,
+    clasificacion: document.getElementById('ncCriticidad').value,
+    correccion: document.getElementById('ncCorreccion').value.trim(),
+    accionInmediata: document.getElementById('ncCorreccion').value.trim(),
+    estado: ncExistente ? ncExistente.estado : 'Borrador',
+    reportadoPor: ncExistente ? ncExistente.reportadoPor : window.activeGxpUser.correo,
+    firmas: firmasActuales
+  };
+
+  if (!ncData.descripcion || !ncData.alcance || !ncData.correccion) {
+    alert("Complete los campos obligatorios (*)");
+    return;
+  }
+
+  const existeDuplicado = window.cachedNCs.some(nc => nc.consecutivo === ncData.consecutivo && nc.id !== ncData.id);
+  if (existeDuplicado) {
+    alert(`⚠️ Error GxP: Ya existe una No Conformidad registrada con el consecutivo ${ncData.consecutivo}. Por favor verifique.`);
+    return;
+  }
+
+  if (id) {
+    const idx = window.cachedNCs.findIndex(n => n.id === id);
+    if (idx > -1) window.cachedNCs[idx] = { ...window.cachedNCs[idx], ...ncData };
+  } else {
+    window.cachedNCs.unshift(ncData);
+  }
+
+  const guardadoEnSupa = await window.upsertNCEnSupabase(ncData);
+  if (!guardadoEnSupa) return;
+
+  await window.saveData(true);
+  window.renderNCs();
+  window.toggleModal('modalNC', false);
+  window.logAudit('NC_GUARDADA', `Se registró/actualizó la NC ${ncData.consecutivo}`);
+};
   
-        if (!ncData.descripcion || !ncData.alcance || !ncData.correccion) {
-          alert("Complete los campos obligatorios (*)"); return;
-        }
+          window.obtenerAreaIdDeNC = function(nc) {
+  if (!nc) return '';
+  if (nc.areaId) return nc.areaId;
+  if (nc.procesoId) {
+    const proc = (window.cachedProcesos || []).find(p => String(p.id) === String(nc.procesoId));
+    if (proc && proc.areaId) return proc.areaId;
+  }
+  if (nc.responsableId) {
+    const emp = (window.cachedEmpleados || []).find(e => String(e.id) === String(nc.responsableId));
+    if (emp && emp.areaId) return emp.areaId;
+  }
+  return '';
+};
 
-        const existeDuplicado = window.cachedNCs.some(nc => nc.consecutivo === ncData.consecutivo && nc.id !== id);
-      if (existeDuplicado) {
-        alert(`⚠️ Error GxP: Ya existe una No Conformidad registrada con el consecutivo ${ncData.consecutivo}. Por favor verifique.`);
-        return;
-      }
-        if (id) {
-          const idx = window.cachedNCs.findIndex(n => n.id === id);
-          window.cachedNCs[idx] = { ...window.cachedNCs[idx], ...ncData };
-        } else {
-          ncData.id = 'nc_' + Date.now();
-          window.cachedNCs.push(ncData);
-        }
-  
-        window.saveData();
-        window.renderNCs();
-        window.toggleModal('modalNC', false);
-        window.logAudit('NC_GUARDADA', `Se registró/actualizó la NC ${ncData.consecutivo}`);
-      };
-  
-          window.renderNCs = function() {
-      const tbody = document.getElementById('table-ncs');
-      if (!tbody) return;
-      const filtro = document.getElementById('filtroNCInput').value.toLowerCase();
-      const estadoFiltro = document.getElementById('filtroNCEstado').value;
+window.usuarioPuedeVerNC = function(nc, usr = window.activeGxpUser) {
+  if (!usr || !nc) return false;
+  const roles = usr.rolesIds || [];
+  const areas = usr.areasAsignadas || [];
+  const isAdmin = roles.includes('rol_admin') || window.esAdminMaster(usr);
+  if (isAdmin) return true;
 
-      const filtered = window.cachedNCs.filter(nc => {
-        const matchFiltro = nc.consecutivo.toLowerCase().includes(filtro) || nc.descripcion.toLowerCase().includes(filtro);
-        const matchEstado = estadoFiltro ? nc.estado === estadoFiltro : true;
-        return matchFiltro && matchEstado;
-      });
+  // Aseguramiento de Calidad (QA) tiene visibilidad transversal de todas las NC
+  const esQA = areas.some(aId => {
+    if (aId === 'ar_qa') return true;
+    const areaObj = (window.cachedAreas || []).find(a => a.id === aId);
+    return areaObj && /aseguramiento|\bqa\b/i.test(areaObj.nombre || '');
+  });
+  if (esQA) return true;
 
-      tbody.innerHTML = filtered.map(nc => {
-        const proc = window.cachedProcesos.find(p => p.id === nc.procesoId)?.nombre || 'N/A';
-        const resp = window.cachedEmpleados.find(e => e.id === nc.responsableId);
-        const respName = resp ? `${resp.nombres} ${resp.apellidos}` : 'N/A';
-        
-        let colorEstado = 'bg-slate-100 text-slate-700';
-        if (nc.estado.includes('Cerrado')) colorEstado = 'bg-emerald-100 text-emerald-700';
-        else if (nc.estado === 'En Ejecución') colorEstado = 'bg-amber-100 text-amber-700';
+  // Responsable directo asignado
+  if (nc.responsableId && String(nc.responsableId) === String(usr.empleadoId)) return true;
 
-        const firmas = nc.firmas || {};
-        const fElab = firmas.elaborado ? '<span class="text-emerald-600" title="Elaborado">✅</span>' : '<span class="text-slate-300">⬜</span>';
-        const fRev = firmas.revisado ? '<span class="text-emerald-600" title="Revisado">✅</span>' : '<span class="text-slate-300">⬜</span>';
-        const fApr = firmas.aprobado ? '<span class="text-emerald-600" title="Aprobado">✅</span>' : '<span class="text-slate-300">⬜</span>';
+  // Usuarios del área origen (ej. Producción)
+  const ncAreaId = window.obtenerAreaIdDeNC(nc);
+  if (!ncAreaId) return false;
 
-        return `<tr class="hover:bg-slate-50 transition">
-          <td class="p-2 border font-mono font-bold text-amber-700">${nc.consecutivo}</td>
-          <td class="p-2 border">${proc}</td>
-          <td class="p-2 border">${respName}</td>
-          <td class="p-2 border font-semibold ${nc.criticidad === 'Crítica' ? 'text-rose-600' : (nc.criticidad === 'Mayor' ? 'text-amber-600' : 'text-slate-600')}">${nc.criticidad}</td>
-          <td class="p-2 border"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${colorEstado}">${nc.estado}</span></td>
-          <td class="p-2 border text-center space-x-1 font-mono text-xs">${fElab}${fRev}${fApr}</td>
-          <td class="p-2 border text-center space-x-1">
-            <button onclick="window.verDetalleNC('${nc.id}')" class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-[10px] font-bold hover:bg-blue-200 cursor-pointer" title="Ver Detalle">👁️</button>
-            ${(nc.estado !== 'Cerrado Definitivo' && nc.estado !== 'Cerrado Operativo') ? 
-              `<button onclick="window.abrirModalEditarNC('${nc.id}')" class="bg-amber-100 text-amber-700 px-2 py-1 rounded text-[10px] font-bold hover:bg-amber-200 cursor-pointer" title="Editar">✏️</button>` 
-              : ''}
-            <button onclick="window.abrirModalFirmaPart11NC('${nc.id}')" class="bg-cyan-100 text-cyan-700 px-2 py-1 rounded text-[10px] font-bold hover:bg-cyan-200 cursor-pointer" title="Firmar Part 11">✍️</button>
-            <button onclick="window.avanzarEstadoNC('${nc.id}')" class="bg-slate-100 text-slate-700 px-2 py-1 rounded text-[10px] font-bold hover:bg-slate-200 cursor-pointer" title="Avanzar Estado">⏭️</button>
-          </td>
-        </tr>`;
-      }).join('');
-    };
+  const emp = (window.cachedEmpleados || []).find(e => String(e.id) === String(usr.empleadoId));
+  return areas.includes(ncAreaId) || (emp && String(emp.areaId) === String(ncAreaId));
+};
+
+window.renderNCs = function() {
+  const tbody = document.getElementById('table-ncs');
+  if (!tbody) return;
+  const filtro = (document.getElementById('filtroNCInput')?.value || '').toLowerCase();
+  const estadoFiltro = document.getElementById('filtroNCEstado')?.value || '';
+
+  const visibles = (window.cachedNCs || []).filter(nc => window.usuarioPuedeVerNC(nc, window.activeGxpUser));
+
+  const filtered = visibles.filter(nc => {
+    const matchFiltro = (nc.consecutivo || '').toLowerCase().includes(filtro) || (nc.descripcion || '').toLowerCase().includes(filtro);
+    const matchEstado = estadoFiltro ? nc.estado === estadoFiltro : true;
+    return matchFiltro && matchEstado;
+  });
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400 italic">No hay No Conformidades o Desviaciones autorizadas para su área/perfil.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(nc => {
+    const proc = window.cachedProcesos.find(p => String(p.id) === String(nc.procesoId))?.nombre || nc.procesoId || 'N/A';
+    const resp = window.cachedEmpleados.find(e => String(e.id) === String(nc.responsableId));
+    const respName = resp ? `${resp.nombres} ${resp.apellidos}` : (nc.responsable || 'N/A');
+
+    let colorEstado = 'bg-slate-100 text-slate-700';
+    if (nc.estado.includes('Cerrado')) colorEstado = 'bg-emerald-100 text-emerald-700';
+    else if (nc.estado === 'En Ejecución') colorEstado = 'bg-amber-100 text-amber-700';
+
+    const firmas = nc.firmas || {};
+    const fElab = firmas.elaborado ? '<span class="text-emerald-600" title="Elaborado">✅</span>' : '<span class="text-slate-300">⬜</span>';
+    const fRev = firmas.revisado ? '<span class="text-emerald-600" title="Revisado">✅</span>' : '<span class="text-slate-300">⬜</span>';
+    const fApr = firmas.aprobado ? '<span class="text-emerald-600" title="Aprobado">✅</span>' : '<span class="text-slate-300">⬜</span>';
+
+    return `<tr class="hover:bg-slate-50 transition">
+      <td class="p-2 border font-mono font-bold text-amber-700">${nc.consecutivo}</td>
+      <td class="p-2 border">${proc}</td>
+      <td class="p-2 border">${respName}</td>
+      <td class="p-2 border font-semibold ${nc.criticidad === 'Crítica' ? 'text-rose-600' : (nc.criticidad === 'Mayor' ? 'text-amber-600' : 'text-slate-600')}">${nc.criticidad}</td>
+      <td class="p-2 border"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${colorEstado}">${nc.estado}</span></td>
+      <td class="p-2 border text-center space-x-1 font-mono text-xs">${fElab}${fRev}${fApr}</td>
+      <td class="p-2 border text-center space-x-1">
+        <button onclick="window.verDetalleNC('${nc.id}')" class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-[10px] font-bold hover:bg-blue-200 cursor-pointer" title="Ver Detalle">👁️</button>
+        ${(nc.estado !== 'Cerrado Definitivo' && nc.estado !== 'Cerrado Operativo') ?
+          `<button onclick="window.abrirModalEditarNC('${nc.id}')" class="bg-amber-100 text-amber-700 px-2 py-1 rounded text-[10px] font-bold hover:bg-amber-200 cursor-pointer" title="Editar">✏️</button>`
+          : ''}
+        <button onclick="window.abrirModalFirmaPart11NC('${nc.id}')" class="bg-cyan-100 text-cyan-700 px-2 py-1 rounded text-[10px] font-bold hover:bg-cyan-200 cursor-pointer" title="Firmar Part 11">✍️</button>
+        <button onclick="window.avanzarEstadoNC('${nc.id}')" class="bg-slate-100 text-slate-700 px-2 py-1 rounded text-[10px] font-bold hover:bg-slate-200 cursor-pointer" title="Avanzar Estado">⏭️</button>
+      </td>
+    </tr>`;
+  }).join('');
+};
 
     window.renderCAPAs = function() {
       const tbody = document.getElementById('table-capas');
@@ -4767,6 +5017,21 @@
     };
 
     window.verDetalleNC = function(id) {
+const nc = window.cachedNCs.find(n => String(n.id) === String(id));
+  if (!nc) return;
+// Bloqueo por área/rol (QA, área origen o responsable)
+  if (typeof window.usuarioPuedeVerNC === 'function' && !window.usuarioPuedeVerNC(nc)) {
+    alert("⛔ Control GxP: Acceso denegado. Esta No Conformidad pertenece a otra área.");
+    return;
+  }
+  // Evita TypeError en registros importados sin objeto firmas
+  if (!nc.firmas || typeof nc.firmas !== 'object') {
+    nc.firmas = { elaborado: null, revisado: null, aprobado: null };
+  }
+  if (!window.usuarioPuedeVerNC(nc)) {
+    alert("⛔ Control GxP: Acceso restringido al área origen y QA.");
+    return;
+  }
       const nc = window.cachedNCs.find(n => n.id === id);
       if (!nc) return;
       const proc = window.cachedProcesos.find(p => p.id === nc.procesoId)?.nombre || 'N/A';
@@ -5206,16 +5471,23 @@
     };
   
       window.abrirModalFirmaPart11NC = function(id) {
-        const nc = window.cachedNCs.find(n => n.id === id);
-        if (!nc) return;
-        
-        document.getElementById('firmaDocId').value = `NC:${id}`;
-        document.getElementById('firmaUserEmail').value = window.activeGxpUser.correo;
-        document.getElementById('firmaUserPassword').value = '';
-        document.getElementById('firmaSignificado').value = 'Creación / Edición';
-        
-        window.toggleModal('modalFirmaPart11', true);
-      };
+  const nc = window.cachedNCs.find(n => String(n.id) === String(id));
+  if (!nc) return;
+  if (!nc.firmas || typeof nc.firmas !== 'object') {
+    nc.firmas = { elaborado: null, revisado: null, aprobado: null };
+  }
+
+  let siguienteSignificado = 'Creación / Edición';
+  if (nc.firmas.elaborado && !nc.firmas.revisado) siguienteSignificado = 'Revisión Técnica';
+  else if (nc.firmas.elaborado && nc.firmas.revisado && !nc.firmas.aprobado) siguienteSignificado = 'Aprobación';
+
+  document.getElementById('firmaDocId').value = `NC:${id}`;
+  document.getElementById('firmaUserEmail').value = window.activeGxpUser.correo;
+  document.getElementById('firmaUserPassword').value = '';
+  document.getElementById('firmaSignificado').value = siguienteSignificado;
+
+  window.toggleModal('modalFirmaPart11', true);
+};
 
           // ==========================================
     // FUNCIONES DE IMPRESIÓN GxP (NC Y CAPA)
@@ -5419,8 +5691,9 @@
     };
 
     window.exportarExcelNC = function() {
-      if (!window.cachedNCs || window.cachedNCs.length === 0) {
-        alert("No hay No Conformidades registradas para exportar."); return;
+      const ncsExportables = (window.cachedNCs || []).filter(nc => window.usuarioPuedeVerNC(nc));
+      if (ncsExportables.length === 0) {
+        alert("⛔ Control GxP: No hay No Conformidades autorizadas en su área para exportar."); return;
       }
 
       let html = `
@@ -5438,24 +5711,24 @@
             <tbody>
       `;
 
-      window.cachedNCs.forEach(nc => {
-        const proc = window.cachedProcesos.find(p => p.id === nc.procesoId)?.nombre || 'N/A';
-        const resp = window.cachedEmpleados.find(e => e.id === nc.responsableId);
-        const respName = resp ? `${resp.nombres} ${resp.apellidos}` : 'N/A';
+      ncsExportables.forEach(nc => {
+        const proc = window.cachedProcesos.find(p => String(p.id) === String(nc.procesoId))?.nombre || nc.procesoId || 'N/A';
+        const resp = window.cachedEmpleados.find(e => String(e.id) === String(nc.responsableId));
+        const respName = resp ? `${resp.nombres} ${resp.apellidos}` : (nc.responsable || 'N/A');
 
         html += `
           <tr>
-            <td>${nc.consecutivo}</td>
-            <td>${nc.fecha}</td>
+            <td>${nc.consecutivo || ''}</td>
+            <td>${nc.fecha || ''}</td>
             <td>${proc}</td>
             <td>${respName}</td>
-            <td>${nc.fuente}</td>
-            <td>${nc.reincidencia}</td>
-            <td>${nc.criticidad}</td>
-            <td>${nc.estado}</td>
-            <td>${nc.descripcion}</td>
-            <td>${nc.alcance}</td>
-            <td>${nc.correccion}</td>
+            <td>${nc.fuente || ''}</td>
+            <td>${nc.reincidencia || ''}</td>
+            <td>${nc.criticidad || ''}</td>
+            <td>${nc.estado || ''}</td>
+            <td>${nc.descripcion || ''}</td>
+            <td>${nc.alcance || ''}</td>
+            <td>${nc.correccion || ''}</td>
           </tr>
         `;
       });
