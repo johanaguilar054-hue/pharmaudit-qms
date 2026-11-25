@@ -5468,14 +5468,27 @@ window.renderNCs = function() {
         window.toggleModal('modalEfectividad', true);
         window.saveData(); 
         window.renderCAPAs();
+      } else if (capa.estado === 'En Evaluación de Efectividad') {
+        document.getElementById('efecCapaId').value = capa.id;
+        document.getElementById('efecResultados').value = (capa.efectividad && capa.efectividad.resultados) || '';
+
+        const qaEmail = document.getElementById('efecQAEmail');
+        const qaPass = document.getElementById('efecQAPass');
+        if (qaEmail) qaEmail.value = '';
+        if (qaPass) qaPass.value = '';
+
+        window.toggleModal('modalEfectividad', true);
+      } else if (capa.estado === 'Cerrado Definitivo') {
+        alert("ℹ️ Este plan CAPA ya está Cerrado Definitivamente.");
       } else {
         const flujo = ['Borrador', 'En Análisis', 'Plan Aprobado', 'En Ejecución'];
         const idx = flujo.indexOf(capa.estado);
-        if (idx < flujo.length - 1) {
+        if (idx >= 0 && idx < flujo.length - 1) {
           capa.estado = flujo[idx + 1];
           window.saveData(); window.renderCAPAs();
           window.logAudit('CAPA_ESTADO', `CAPA ${capa.consecutivo} avanzó a ${capa.estado}`);
         }
+      }
       }
     };
   
