@@ -2638,13 +2638,13 @@
       };
 
       window.sincronizarQMSConSupabase = async function() {
-        for (const nc of (window.cachedNCs || [])) {
-          await window.upsertNCEnSupabase(nc), true);
-        }
-        for (const capa of (window.cachedCAPAs || [])) {
-          await window.upsertCAPAEnSupabase(capa);
-        }
-      };
+  for (const nc of (window.cachedNCs || [])) {
+    await window.upsertNCEnSupabase(nc);
+  }
+  for (const capa of (window.cachedCAPAs || [])) {
+    await window.upsertCAPAEnSupabase(capa);
+  }
+};
 
       window.cargarQMSDesdeSupabase = async function() {
         try {
@@ -4147,6 +4147,10 @@ window.upsertNCEnSupabase = async function(nc) {
         document.getElementById('cnt-copias').innerText = window.cachedCopias.length;
         document.getElementById('count-obsoleto').innerText = obsoletos.length;
         document.getElementById('cnt-audit').innerText = window.auditTrailLogs.length;
+        const elCapas = document.getElementById('cnt-capas');
+const elEqps = document.getElementById('cnt-eqps');
+if (elCapas) elCapas.innerText = (window.cachedCAPAs || []).length;
+if (elEqps) elEqps.innerText = (window.cachedEquipos || []).filter(e => (e.estado || '').toLowerCase() === 'operativo').length;
   
         document.getElementById('table-vigente').innerHTML = vigentes.length ? vigentes.map((d, idx) => {
           const proc = window.cachedProcesos.find(p => p.id === d.procesoId); const area = window.cachedAreas.find(a => a.id === d.areaId);
@@ -4809,7 +4813,7 @@ window.upsertNCEnSupabase = async function(nc) {
   
       window.generarConsecutivo = function(prefijo, array) {
         const year = new Date().getFullYear();
-        const count = array.filter(item => item.consecutivo.includes(year)).length + 1;
+        const count = (array || []).filter(item => (item.consecutivo || '').includes(String(year))).length + 1;
         return `${prefijo}-${year}-${String(count).padStart(3, '0')}`;
       };
   
@@ -5841,47 +5845,6 @@ window.renderNCs = function() {
       
       const fecha = new Date().toISOString().split('T')[0];
       window.descargarExcel(html, `Maestro_Planes_CAPA_${fecha}`);
-    };
-
-          // ==========================================
-    // FUNCIONES DE MODALES DE USUARIO (PERFIL, CLAVE, NOTIFICACIONES)
-    // ==========================================
-
-    window.abrirModalProfile = function() {
-      const emp = window.cachedEmpleados.find(e => e.id === window.activeGxpUser.empleadoId);
-      
-      if (emp) {
-        document.getElementById('profName').innerText = `${emp.nombres} ${emp.apellidos}`;
-        document.getElementById('profCargo').innerText = emp.cargo || 'N/A';
-        const area = window.cachedAreas.find(a => a.id === emp.areaId);
-        document.getElementById('profArea').innerText = area ? area.nombre : 'N/A';
-        document.getElementById('profEmail').innerText = window.activeGxpUser.correo;
-        
-        // Armar las etiquetas de los Roles
-        const rolesHtml = window.activeGxpUser.rolesIds.map(rid => {
-          const rol = window.cachedRoles.find(r => r.id === rid);
-          return `<span class="bg-cyan-100 text-cyan-800 px-2 py-0.5 rounded text-[10px] font-bold border border-cyan-200">${rol ? rol.nombre : rid}</span>`;
-        }).join(' ');
-        document.getElementById('profRoles').innerHTML = rolesHtml || '<span class="text-slate-400 italic">Sin roles asignados</span>';
-      }
-      
-      window.toggleModal('modalProfile', true);
-    };
-
-    window.abrirModalPassword = function() {
-      // Limpiamos los campos por seguridad antes de abrir
-      document.getElementById('myPassOld').value = '';
-      document.getElementById('myPassNew').value = '';
-      document.getElementById('myPassConfirm').value = '';
-      window.toggleModal('modalPassword', true);
-    };
-
-    window.abrirModalNotifications = function() {
-      window.toggleModal('modalNotifications', true);
-    };
-
-    window.translateToEnglish = function() {
-      alert("ⓘ Info: El módulo de traducción estará disponible en la próxima versión del ERP.");
     };
 
           // ==========================================
