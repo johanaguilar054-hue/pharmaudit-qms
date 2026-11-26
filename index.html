@@ -1673,9 +1673,10 @@
           return { ok: false, motivo: 'Contraseña incorrecta.' };
         }
 
-        // Migración transparente a SHA-256 en memoria si aún estaba en texto plano
-        if (!hashGuardado && hashIngresado) {
+        // Migración transparente a SHA-256 si pin_firma_hash estaba vacío o desactualizado respecto a password
+        if (!coincideHash && coincideLegacy && hashIngresado) {
           usr.pin_firma_hash = hashIngresado;
+          usr._migrarHashPendiente = true;
         }
 
         return { ok: true, user: usr };
@@ -1860,7 +1861,7 @@
               empleadoId: row.id,
               username: row.username || correo.split('@')[0],
               correo: correo,
-              password: '', // No conservar contraseñas planas en memoria/erp_state
+              password: row.password || '', // Lectura temporal para validar claves legadas (saveData la limpia antes de guardar erp_state)
               pin_firma_hash: row.pin_firma_hash || (backupUsr && backupUsr.pin_firma_hash) || '',
               rolesIds: rolesFinales,
               areasAsignadas: areasFinales,
@@ -3305,6 +3306,12 @@ window.upsertNCEnSupabase = async function(nc) {
 
         const usrData = verificacion.user;
         window.activeGxpUser = usrData;
+        if (usrData._migrarHashPendiente) {
+          delete usrData._migrarHashPendiente;
+          const empSync = (window.cachedEmpleados || []).find(e => String(e.id) === String(usrData.empleadoId));
+          await window.upsertUsuarioEnSupabase(usrData, empSync);
+          usrData.password = '';
+        }
         window.registrarAuditTrail(usrData.correo, 'LOGIN', 'Inicio de sesión exitoso (21 CFR Part 11).');
         await window.saveData(true);
 
