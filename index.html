@@ -2275,13 +2275,15 @@
             codigo: code,
             nombre: String(areaObj.nombre || 'Área GxP').substring(0, 100)
           };
-          if (window.esUUID(areaObj._uuid)) payload.id = areaObj._uuid;
+    const tieneUuid = window.esUUID(areaObj._uuid);
+    if (tieneUuid) payload.id = areaObj._uuid;
+    const conflictCol = tieneUuid ? 'id' : 'codigo';
 
-          const resAreas = await fetch(`${SUPABASE_URL}/rest/v1/areas?on_conflict=id`, {
-  method: 'POST',
-  headers: { ...HEADERS, 'Prefer': 'resolution=merge-duplicates,return=representation' },
-  body: JSON.stringify(payloadAreas)
-});
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/areas?on_conflict=${conflictCol}`, {
+    method: 'POST',
+    headers: { ...HEADERS, 'Prefer': 'resolution=merge-duplicates,return=representation' },
+    body: JSON.stringify(payload)
+    });
           if (res.ok) {
             const rows = await res.json();
             if (rows && rows[0]) {
