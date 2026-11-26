@@ -105,7 +105,7 @@
                 </a>
   
                 <div class="border-t border-slate-100 my-1"></div>
-                <button onclick="window.location.reload()" class="w-full text-left px-4 py-2 hover:bg-rose-50 text-rose-600 flex items-center space-x-2 cursor-pointer font-bold"><span>🚪</span><span>Cerrar sesión</span></button>
+                <button onclick="window.cerrarSesionGxP()" class="w-full text-left px-4 py-2 hover:bg-rose-50 text-rose-600 flex items-center space-x-2 cursor-pointer font-bold"><span>🚪</span><span>Cerrar sesión</span></button>
                 <div class="border-t border-slate-100 my-1"></div>
                 <a href="#" onclick="window.abrirModalAbout(); window.toggleUserMenu(); return false;" class="block px-4 py-2 hover:bg-slate-50 flex items-center space-x-2 text-slate-400"><span>ℹ️</span><span>Acerca de...</span></a>
               </div>
@@ -1609,11 +1609,110 @@
       // ==========================================
       window.supabaseRolesCatalog = [];
 
-      window.esUUID = function(val) {
+     window.esUUID = function(val) {
         return typeof val === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val.trim());
       };
-      window.esUUID = function(val) {
-        return typeof val === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val.trim());
+
+      // Parseo seguro YYYY-MM-DD en hora local (evita desfase de 1 día por conversión UTC)
+      window.parseFechaLocal = function(fechaStr) {
+        if (!fechaStr) return null;
+        if (fechaStr instanceof Date) {
+          const d = new Date(fechaStr.getTime());
+          d.setHours(0, 0, 0, 0);
+          return d;
+        }
+        const limpio = String(fechaStr).trim().split('T')[0].split(' ')[0];
+        const partes = limpio.split('-').map(Number);
+        if (partes.length === 3 && !partes.some(isNaN)) {
+          return new Date(partes[0], partes[1] - 1, partes[2], 0, 0, 0, 0);
+        }
+        const fallback = new Date(fechaStr);
+        if (isNaN(fallback.getTime())) return null;
+        fallback.setHours(0, 0, 0, 0);
+        return fallback;
+      };
+
+      // Formateo seguro de timestamps de Audit Trail (evita "Invalid Date" en Safari/Firefox)
+      window.formatearFechaAudit = function(fechaRaw) {
+        if (!fechaRaw) return 'N/A';
+        const str = String(fechaRaw).trim();
+        const isoCandidate = str.includes('T') ? str : str.replace(' ', 'T') + 'Z';
+        const d = new Date(isoCandidate);
+        if (!isNaN(d.getTime())) return d.toLocaleString('es-CO');
+        return str;
+      };
+
+      // Verificación centralizada de credenciales y estado Activo (21 CFR Part 11)
+      window.verificarCredencialGxP = async function(loginInput, passPlano) {
+        const loginNorm = String(loginInput || '').trim().toLowerCase();
+        const passNorm = String(passPlano || '').trim();
+        if (!loginNorm || !passNorm) {
+          return { ok: false, motivo: 'Debe ingresar usuario/correo y contraseña.' };
+        }
+
+        const usr = (window.cachedUsuarios || []).find(u =>
+          (u.correo || '').trim().toLowerCase() === loginNorm ||
+          (u.username || '').trim().toLowerCase() === loginNorm
+        );
+
+        if (!usr) {
+          return { ok: false, motivo: 'Credenciales inválidas o usuario no registrado.' };
+        }
+        if (window.normalizarEstadoUI(usr.estado) !== 'Activo') {
+          return { ok: false, motivo: 'Control GxP: El usuario se encuentra INACTIVO y no puede autenticarse ni firmar.' };
+        }
+
+        const hashIngresado = await window.generarHashSHA256(passNorm);
+        const hashGuardado = (usr.pin_firma_hash || '').trim().toLowerCase();
+        const passGuardado = (usr.password || '').trim();
+
+        const coincideHash = Boolean(hashGuardado && hashIngresado && hashGuardado === hashIngresado);
+        const coincideLegacy = Boolean(passGuardado && (passGuardado === passNorm || passGuardado.toLowerCase() === hashIngresado));
+
+        if (!coincideHash && !coincideLegacy) {
+          return { ok: false, motivo: 'Contraseña incorrecta.' };
+        }
+
+        // Migración transparente a SHA-256 en memoria si aún estaba en texto plano
+        if (!hashGuardado && hashIngresado) {
+          usr.pin_firma_hash = hashIngresado;
+        }
+
+        return { ok: true, user: usr };
+      };
+
+      // Normalizador unificado para Copias Controladas (compatibilidad relacional <-> UI)
+      window.normalizarCopiaControlada = function(c = {}) {
+        const codigoCopia = c.codigoCopia || c.codigo || `COP-${Date.now()}`;
+        const docCodigo = c.docCodigo || (c.doc ? String(c.doc).split(' ')[0] : '');
+        const docVersion = c.docVersion || (c.doc && String(c.doc).includes('v') ? String(c.doc).split('v')[1] : '1.0');
+        const docTexto = c.doc || (docCodigo ? `${docCodigo} v${docVersion}` : 'N/A');
+        const areaDestino = c.areaDestino || c.area || 'Planta General';
+        const destinatario = c.destinatario || c.custodio || 'Sin asignar';
+        const estado = c.estado || 'Activa';
+
+        return {
+          ...c,
+          id: c.id || crypto.randomUUID(),
+          codigoCopia,
+          codigo: codigoCopia,
+          docId: c.docId || '',
+          docCodigo,
+          docTitulo: c.docTitulo || '',
+          docVersion,
+          doc: docTexto,
+          tipoCopia: c.tipoCopia || 'CONTROLADA',
+          destinatarioId: c.destinatarioId || '',
+          destinatario,
+          custodio: destinatario,
+          areaDestino,
+          area: areaDestino,
+          numeroCopia: parseInt(c.numeroCopia, 10) || 1,
+          totalCopias: parseInt(c.totalCopias, 10) || 1,
+          estado,
+          emitidoPor: c.emitidoPor || '',
+          fechaEmision: c.fechaEmision || new Date().toISOString().split('T')[0]
+        };
       };
 
       window.generarHashSHA256 = async function(texto) {
@@ -1761,7 +1860,8 @@
               empleadoId: row.id,
               username: row.username || correo.split('@')[0],
               correo: correo,
-              password: row.password || row.pin_firma || (backupUsr && backupUsr.password) || '',
+              password: '', // No conservar contraseñas planas en memoria/erp_state
+              pin_firma_hash: row.pin_firma_hash || (backupUsr && backupUsr.pin_firma_hash) || '',
               rolesIds: rolesFinales,
               areasAsignadas: areasFinales,
               estado: estadoUi,
@@ -1786,7 +1886,7 @@
         }
       };
 
-      window.upsertUsuarioEnSupabase = async function(usuarioObj, empleadoObj) {
+     window.upsertUsuarioEnSupabase = async function(usuarioObj, empleadoObj) {
         try {
           const correo = (usuarioObj.correo || empleadoObj?.correo || '').trim().toLowerCase();
           if (!correo) return null;
@@ -1796,7 +1896,11 @@
             : (usuarioObj.username || correo);
 
           const { rol, rol_id } = window.mapearRolIdsASupabase(usuarioObj.rolesIds, usuarioObj.rol_id);
-          const hashPin = await window.generarHashSHA256(usuarioObj.password);
+          const hashPin = usuarioObj.password
+            ? await window.generarHashSHA256(usuarioObj.password)
+            : (usuarioObj.pin_firma_hash || null);
+
+          if (hashPin) usuarioObj.pin_firma_hash = hashPin;
 
           const payload = {
             email: correo,
@@ -1807,11 +1911,12 @@
             rol: rol,
             rol_id: rol_id,
             estado: window.normalizarEstadoDB(usuarioObj.estado),
-            password: usuarioObj.password || '',
             pin_firma_hash: hashPin
           };
+          if (usuarioObj.password) {
+            payload.password = hashPin; // Almacena el digest SHA-256 en lugar de texto plano
+          }
 
-          // Verificar si ya existe por UUID o por email
           let targetId = window.esUUID(usuarioObj.id) ? usuarioObj.id : null;
           if (!targetId) {
             const checkRes = await fetch(`${SUPABASE_URL}/rest/v1/usuarios_gxp?email=eq.${encodeURIComponent(correo)}&select=id`, {
@@ -2423,13 +2528,13 @@
             }
           }
 
-          // 4. COPIAS CONTROLADAS
+          // 4. COPIAS CONTROLADAS (Unificación cachedCopiasControladas <-> cachedCopias)
           if (resCopias.ok) {
             const rowsCopias = await resCopias.json();
             if (Array.isArray(rowsCopias) && rowsCopias.length > 0) {
-              window.cachedCopiasControladas = rowsCopias.map(r => {
+              const normalizadas = rowsCopias.map(r => {
                 const docMatch = (window.cachedDocs || []).find(d => d.id === r.documento_id);
-                return {
+                return window.normalizarCopiaControlada({
                   id: r.id,
                   codigoCopia: r.codigo_copia,
                   docId: r.documento_id || docMatch?.id || '',
@@ -2449,9 +2554,16 @@
                   fechaRetiroProgramado: r.fecha_retiro_programado || '',
                   fechaConciliacion: r.fecha_conciliacion ? String(r.fecha_conciliacion).split('T')[0] : '',
                   observacionConciliacion: r.observacion_conciliacion || ''
-                };
+                });
               });
-            } else if ((window.cachedCopiasControladas || []).length > 0) {
+              window.cachedCopiasControladas = normalizadas;
+              window.cachedCopias = normalizadas;
+            } else if ((window.cachedCopiasControladas || window.cachedCopias || []).length > 0) {
+              const base = (window.cachedCopiasControladas && window.cachedCopiasControladas.length > 0)
+                ? window.cachedCopiasControladas
+                : window.cachedCopias;
+              window.cachedCopiasControladas = base.map(window.normalizarCopiaControlada);
+              window.cachedCopias = window.cachedCopiasControladas;
               for (const c of window.cachedCopiasControladas) {
                 await window.upsertCopiaControladaEnSupabase(c);
               }
@@ -2466,79 +2578,7 @@
       // ADAPTADOR RELACIONAL: DESVIACIONES (NC), CAUSA RAÍZ Y PLANES CAPA
       // ==========================================
       window.mapLegacyNcIdToUuid = {};
-
-      window.upsertNCEnSupabase = async function(nc) {
-        try {
-          const oldId = nc.id;
-          if (!window.esUUID(nc.id)) {
-            nc.id = crypto.randomUUID();
-            if (oldId) window.mapLegacyNcIdToUuid[oldId] = nc.id;
-          } else {
-            window.mapLegacyNcIdToUuid[nc.id] = nc.id;
-          }
-
-          let areaUuid = window.mapAreaCodeToUuid[nc.areaId] || null;
-          if (!areaUuid && nc.areaId) {
-            const areaFound = (window.cachedAreas || []).find(a => a.id === nc.areaId);
-            if (areaFound) areaUuid = await window.upsertAreaEnSupabase(areaFound);
-          }
-
-          let procUuid = window.mapProcesoCodeToUuid[nc.procesoId] || null;
-          if (!procUuid && nc.procesoId) {
-            const procFound = (window.cachedProcesos || []).find(p => p.id === nc.procesoId);
-            if (procFound) procUuid = await window.upsertProcesoEnSupabase(procFound);
-          }
-
-          const empMatch = (window.cachedEmpleados || []).find(e => String(e.id) === String(nc.responsableId));
-          const respNombre = nc.responsable || (empMatch ? `${empMatch.nombres || ''} ${empMatch.apellidos || ''}`.trim() : '');
-
-          const crObj = (nc.causaRaiz && typeof nc.causaRaiz === 'object') ? nc.causaRaiz : {};
-          const metodoCR = String(nc.metodoCausaRaiz || crObj.metodo || '5_PORQUES').substring(0, 30);
-          const fechaDet = nc.fechaDeteccion || nc.fecha || new Date().toISOString().split('T')[0];
-
-          const metaClone = { ...nc };
-          delete metaClone.evidenciaUrl;
-          delete metaClone.archivo_url;
-
-          const payload = {
-            id: nc.id,
-            codigo: String(nc.consecutivo || nc.codigo || `NC-${Date.now()}`).substring(0, 30),
-            origen: String(nc.origen || 'Proceso Interno').substring(0, 50),
-            clasificacion: String(nc.clasificacion || nc.tipo || 'Menor').substring(0, 20),
-            descripcion: String(nc.descripcion || 'Desviación registrada en sistema'),
-            area_id: window.esUUID(areaUuid) ? areaUuid : null,
-            proceso_id: window.esUUID(procUuid) ? procUuid : null,
-            equipo_o_doc: String(nc.referencia || nc.equipoDoc || nc.documento || '').substring(0, 150) || null,
-            evidencia_adjunta_url: nc.evidenciaUrl || nc.archivo_url || null,
-            metodo_causa_raiz: metodoCR,
-            analisis_causa_raiz: typeof nc.causaRaiz === 'string' ? { conclusion: nc.causaRaiz } : (nc.causaRaiz || null),
-            estado: String(nc.estado || 'Borrador').substring(0, 30),
-            fecha_deteccion: fechaDet,
-            reportado_por: String(nc.reportadoPor || window.activeGxpUser?.correo || 'Johan Aguilar').substring(0, 100),
-            responsable_id: nc.responsableId ? String(nc.responsableId).substring(0, 100) : null,
-            responsable_nombre: respNombre ? respNombre.substring(0, 150) : null,
-            lote_afectado: nc.lote ? String(nc.lote).substring(0, 100) : null,
-            accion_inmediata: nc.accionInmediata || nc.contencion || null,
-            fecha_cierre: nc.fechaCierre || null,
-            metadata_gxp: metaClone
-          };
-
-          const res = await fetch(`${SUPABASE_URL}/rest/v1/desviaciones?on_conflict=id`, {
-            method: 'POST',
-            headers: { ...HEADERS, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
-            body: JSON.stringify(payload)
-          });
-
-          if (!res.ok) {
-            console.warn('Supabase desviaciones upsert warning:', res.status, await res.text());
-          } else {
-            await window.upsertCausaRaizEnSupabase(nc);
-          }
-        } catch (e) {
-          console.warn('Error sincronizando NC con Supabase:', e);
-        }
-      };
-
+      
       window.upsertCausaRaizEnSupabase = async function(nc) {
         try {
           if (!window.esUUID(nc.id)) return;
@@ -2593,12 +2633,17 @@
               ncUuid = window.mapLegacyNcIdToUuid[capa.ncId];
               capa.ncId = ncUuid;
             } else {
-              const ncMatch = (window.cachedNCs || []).find(n => n.consecutivo === capa.ncConsecutivo);
+              const ncMatch = (window.cachedNCs || []).find(n => n.consecutivo === capa.ncConsecutivo || String(n.id) === String(capa.ncId));
               if (ncMatch && window.esUUID(ncMatch.id)) {
                 ncUuid = ncMatch.id;
                 capa.ncId = ncUuid;
               }
             }
+          }
+
+          const ncAsociada = (window.cachedNCs || []).find(n => String(n.id) === String(ncUuid || capa.ncId));
+          if (ncAsociada && !capa.ncConsecutivo) {
+            capa.ncConsecutivo = ncAsociada.consecutivo;
           }
 
           const acciones = Array.isArray(capa.plan) ? capa.plan : [];
@@ -2607,37 +2652,59 @@
             : String(capa.planAccion || capa.descripcion || 'Plan de acción CAPA');
 
           const defaultLimite = new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0];
-          const fechaLim = capa.fechaLimite || (acciones[0]?.fechaLimite) || defaultLimite;
+          const fechaLim = capa.fechaLimite || (acciones[0]?.fecha) || (acciones[0]?.fechaLimite) || defaultLimite;
 
-          const payload = {
+          const payloadBase = {
             id: capa.id,
             codigo: String(capa.consecutivo || capa.codigo || `CAPA-${Date.now()}`).substring(0, 30),
             desviacion_id: window.esUUID(ncUuid) ? ncUuid : null,
-            nc_consecutivo: capa.ncConsecutivo ? String(capa.ncConsecutivo).substring(0, 50) : null,
             tipo_accion: String(capa.tipo || 'Correctiva').substring(0, 30),
             plan_accion: resumenPlan,
-            acciones_json: acciones,
             responsable: String(capa.responsable || acciones[0]?.responsable || window.activeGxpUser?.correo || 'QA').substring(0, 100),
             fecha_limite: fechaLim,
             criterio_eficacia: String(capa.criterioEfectividad || capa.criterioEficacia || 'Verificación documental y ausencia de recurrencia'),
-            evaluador_eficacia: capa.evaluadorEfectividad ? String(capa.evaluadorEfectividad).substring(0, 100) : null,
-            resultado_eficacia: capa.resultadoEfectividad || null,
+            evaluador_eficacia: capa.evaluadorEfectividad || capa.efectividad?.firmadoPor ? String(capa.evaluadorEfectividad || capa.efectividad.firmadoPor).substring(0, 100) : null,
+            resultado_eficacia: capa.resultadoEfectividad || capa.efectividad?.resultados || null,
             eficaz: typeof capa.eficaz === 'boolean' ? capa.eficaz : (capa.estado === 'Cerrado Definitivo' ? true : null),
-            estado: String(capa.estado || 'Plan Aprobado').substring(0, 30),
-            fecha_cierre: capa.fechaCierre || null,
+            estado: String(capa.estado || 'Borrador').substring(0, 30),
+            fecha_cierre: capa.fechaCierre || (capa.estado === 'Cerrado Definitivo' ? new Date().toISOString().split('T')[0] : null)
+          };
+
+          const payloadExtendido = {
+            ...payloadBase,
+            nc_consecutivo: capa.ncConsecutivo ? String(capa.ncConsecutivo).substring(0, 50) : null,
+            acciones_json: acciones,
             metadata_gxp: { ...capa }
           };
 
-          const res = await fetch(`${SUPABASE_URL}/rest/v1/capas?on_conflict=id`, {
+          let res = await fetch(`${SUPABASE_URL}/rest/v1/capas?on_conflict=id`, {
             method: 'POST',
-            headers: { ...HEADERS, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
-            body: JSON.stringify(payload)
+            headers: { ...HEADERS, 'Prefer': 'resolution=merge-duplicates,return=representation' },
+            body: JSON.stringify(payloadExtendido)
           });
+
+          // Reintento automático si alguna columna extendida (metadata_gxp, nc_consecutivo, acciones_json) no existe en el esquema
           if (!res.ok) {
-            console.warn('Supabase capas upsert warning:', res.status, await res.text());
+            const errDetail = await res.text();
+            console.warn('Reintentando upsert en capas sin columnas extendidas:', res.status, errDetail);
+            res = await fetch(`${SUPABASE_URL}/rest/v1/capas?on_conflict=id`, {
+              method: 'POST',
+              headers: { ...HEADERS, 'Prefer': 'resolution=merge-duplicates,return=representation' },
+              body: JSON.stringify(payloadBase)
+            });
+
+            if (!res.ok) {
+              const finalErr = await res.text();
+              alert(`⚠️ Supabase rechazó guardar el Plan CAPA (${res.status}):\n${finalErr}`);
+              return false;
+            }
           }
+
+          return true;
         } catch (e) {
-          console.warn('Error sincronizando CAPA con Supabase:', e);
+          console.error('Error sincronizando CAPA con Supabase:', e);
+          alert(`⚠️ Error de red al sincronizar el Plan CAPA con Supabase: ${e.message}`);
+          return false;
         }
       };
 
@@ -2887,64 +2954,93 @@ let isSaving = false;
 let pendingSave = false;
 let saveTimeout = null;
 
-window.saveData = async function(inmediato = false) {
-  const ejecutarGuardado = async () => {
-    if (isSaving) {
-      pendingSave = true;
-      return;
-    }
-    isSaving = true;
-    pendingSave = false;
-    window.actualizarEstadoNube('guardando', 'Guardando...');
+window.cachedCopiasControladas = [];
+window.cachedCopias = window.cachedCopiasControladas;
 
-    const dbState = {
-      areas: window.cachedAreas, procesos: window.cachedProcesos, roles: window.cachedRoles,
-      matriz: window.cachedMatrizPermisos, empleados: window.cachedEmpleados, usuarios: window.cachedUsuarios,
-      docs: window.cachedDocs, copias: window.cachedCopias, obsoletos: window.cachedObsoletos,
-      audit: window.auditTrailLogs, equipos: window.cachedEquipos, calibraciones: window.cachedCalibraciones,
-      mantenimientos: window.cachedMantenimientos, infraestructura: window.cachedInfraestructura,
-      mantenimientosInfra: window.cachedMantenimientosInfra, ncs: window.cachedNCs, capas: window.cachedCAPAs,
-      tickets: window.cachedTicketsMantenimiento || []
-    };
+window.saveData = function(inmediato = false) {
+  return new Promise((resolve) => {
+    const ejecutarGuardado = async () => {
+      if (isSaving) {
+        pendingSave = true;
+        resolve(false);
+        return;
+      }
+      isSaving = true;
+      pendingSave = false;
+      window.actualizarEstadoNube('guardando', 'Guardando...');
 
-    try {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/erp_state`, {
-        method: 'POST',
-        headers: { ...HEADERS, 'Prefer': 'resolution=merge-duplicates' },
-        body: JSON.stringify({ id: 1, app_data: dbState })
+      const usuariosSanitizados = (window.cachedUsuarios || []).map(u => {
+        const copiaUsr = { ...u };
+        delete copiaUsr.password; // No persistir contraseñas en texto plano en erp_state
+        return copiaUsr;
       });
 
-      if (typeof window.sincronizarEstructuraYDocumentosConSupabase === 'function') {
-        await window.sincronizarEstructuraYDocumentosConSupabase();
-      }
-      if (typeof window.sincronizarQMSConSupabase === 'function') {
-        await window.sincronizarQMSConSupabase();
-      }
+      const copiasSincronizadas = (window.cachedCopiasControladas || window.cachedCopias || []).map(window.normalizarCopiaControlada);
+      window.cachedCopiasControladas = copiasSincronizadas;
+      window.cachedCopias = copiasSincronizadas;
 
-      if (res.ok) {
-        window.actualizarEstadoNube('conectado', 'Guardado');
-        setTimeout(() => window.actualizarEstadoNube('conectado', 'Conectado'), 2000);
-      } else {
-        window.actualizarEstadoNube('error', 'Fallo al guardar');
+      const dbState = {
+        areas: window.cachedAreas,
+        procesos: window.cachedProcesos,
+        roles: window.cachedRoles,
+        matriz: window.cachedMatrizPermisos,
+        empleados: window.cachedEmpleados,
+        usuarios: usuariosSanitizados,
+        docs: window.cachedDocs,
+        copias: copiasSincronizadas,
+        obsoletos: window.cachedObsoletos,
+        audit: window.auditTrailLogs,
+        equipos: window.cachedEquipos,
+        calibraciones: window.cachedCalibraciones,
+        mantenimientos: window.cachedMantenimientos,
+        infraestructura: window.cachedInfraestructura,
+        mantenimientosInfra: window.cachedMantenimientosInfra,
+        ncs: window.cachedNCs,
+        capas: window.cachedCAPAs,
+        tickets: window.cachedTicketsMantenimiento || []
+      };
+
+      try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/erp_state`, {
+          method: 'POST',
+          headers: { ...HEADERS, 'Prefer': 'resolution=merge-duplicates' },
+          body: JSON.stringify({ id: 1, app_data: dbState })
+        });
+
+        if (typeof window.sincronizarEstructuraYDocumentosConSupabase === 'function') {
+          await window.sincronizarEstructuraYDocumentosConSupabase();
+        }
+        if (typeof window.sincronizarQMSConSupabase === 'function') {
+          await window.sincronizarQMSConSupabase();
+        }
+
+        if (res.ok) {
+          window.actualizarEstadoNube('conectado', 'Guardado');
+          setTimeout(() => window.actualizarEstadoNube('conectado', 'Conectado'), 2000);
+        } else {
+          window.actualizarEstadoNube('error', 'Fallo al guardar');
+        }
+        resolve(res.ok);
+      } catch (err) {
+        console.error("Error al guardar:", err);
+        window.actualizarEstadoNube('error', 'Sin conexión');
+        resolve(false);
+      } finally {
+        isSaving = false;
+        if (pendingSave) {
+          pendingSave = false;
+          window.saveData(true);
+        }
       }
-    } catch (err) {
-      console.error("Error al guardar:", err);
-      window.actualizarEstadoNube('error', 'Sin conexión');
-    } finally {
-      isSaving = false;
-      if (pendingSave) {
-        pendingSave = false;
-        window.saveData(true);
-      }
+    };
+
+    clearTimeout(saveTimeout);
+    if (inmediato) {
+      ejecutarGuardado();
+    } else {
+      saveTimeout = setTimeout(ejecutarGuardado, 600);
     }
-  };
-
-  clearTimeout(saveTimeout);
-  if (inmediato) {
-    await ejecutarGuardado();
-  } else {
-    saveTimeout = setTimeout(ejecutarGuardado, 600);
-  }
+  });
 };
 
 window.upsertNCEnSupabase = async function(nc) {
@@ -3155,55 +3251,72 @@ window.upsertNCEnSupabase = async function(nc) {
         if(btnElement) { btnElement.classList.add('bg-slate-800', 'text-white'); btnElement.classList.remove('bg-slate-100', 'text-slate-700'); }
       };
   
-      window.ejecutarLoginPrincipal = function() {
-        const loginInput = document.getElementById('loginEmail').value.trim().toLowerCase(); 
-        const pass = document.getElementById('loginPassword').value.trim();
-        let usrData = null;
-        
-        if (loginInput === 'j.aguilar@pharmor.com.co' && (pass === '123' || pass === 'admin123')) {
-          usrData = (window.cachedUsuarios || []).find(u => (u.correo || '').trim().toLowerCase() === loginInput);
-          if (!usrData) {
-            usrData = { id: 1, empleadoId: 1, correo: 'j.aguilar@pharmor.com.co', password: pass, rolesIds: ['rol_admin'], areasAsignadas: ['ar_qa', 'ar_qc', 'ar_prod'], estado: 'Activo' };
-            window.cachedUsuarios.push(usrData);
-          } else {
-            usrData.password = pass;
-            usrData.estado = 'Activo';
-            if (!Array.isArray(usrData.rolesIds)) usrData.rolesIds = ['rol_admin'];
-            else if (!usrData.rolesIds.includes('rol_admin')) usrData.rolesIds.push('rol_admin');
+      window.cerrarSesionGxP = async function() {
+        try {
+          if (window.activeGxpUser) {
+            const correo = window.activeGxpUser.correo || 'usuario@pharmor.com.co';
+            const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 19);
+            window.auditTrailLogs.unshift({
+              fecha: timestamp,
+              usuario: correo,
+              accion: 'LOGOUT',
+              detalle: 'Cierre de sesión manual por el usuario.'
+            });
+            await window.insertarAuditTrailEnSupabase(correo, 'LOGOUT', 'Cierre de sesión manual por el usuario.');
+            await window.saveData(true);
           }
-        } else {
-          if (!window.cachedUsuarios || window.cachedUsuarios.length === 0) { alert("Base de datos no disponible."); return; }
-          usrData = window.cachedUsuarios.find(u =>
-            (u.correo || '').trim().toLowerCase() === loginInput ||
-            (u.username || '').trim().toLowerCase() === loginInput
-          );
-          if (!usrData) {
-            const empleadoSinUsuario = (window.cachedEmpleados || []).find(e => (e.correo || '').trim().toLowerCase() === loginInput);
-            if (empleadoSinUsuario) {
-              alert(`⚠️ ALERTA DEL SISTEMA GxP:\n\nEl correo ${loginInput} pertenece a un Empleado registrado, pero aún no tiene cuenta de "Usuario GxP".`);
-            } else {
-              alert("Credenciales incorrectas o usuario no registrado en la Nube.");
-            }
-            return;
-          }
-          if (!pass || (usrData.password || '').trim() !== pass) { alert("❌ Contraseña incorrecta. Por favor, inténtelo de nuevo."); return; }
-          if (usrData.estado !== 'Activo') { alert("Acceso denegado: Usuario INACTIVO."); return; }
+        } catch (e) {
+          console.warn('Error registrando LOGOUT en Audit Trail:', e);
+        } finally {
+          window.activeGxpUser = null;
+          window.location.reload();
         }
-  
-        window.saveData(); 
-        window.activeGxpUser = usrData; 
-        window.registrarAuditTrail(usrData.correo, 'LOGIN', 'Inicio de sesión exitoso.');
-        
-        document.getElementById('view-login').classList.add('hidden'); 
+      };
+
+      window.ejecutarLoginPrincipal = async function() {
+        const loginInput = document.getElementById('loginEmail').value.trim().toLowerCase();
+        const pass = document.getElementById('loginPassword').value.trim();
+
+        if (!window.cachedUsuarios || window.cachedUsuarios.length === 0) {
+          alert("Base de datos no disponible. Intente sincronizar nuevamente.");
+          return;
+        }
+
+        const usrExistente = window.cachedUsuarios.find(u =>
+          (u.correo || '').trim().toLowerCase() === loginInput ||
+          (u.username || '').trim().toLowerCase() === loginInput
+        );
+
+        if (!usrExistente) {
+          const empleadoSinUsuario = (window.cachedEmpleados || []).find(e => (e.correo || '').trim().toLowerCase() === loginInput);
+          if (empleadoSinUsuario) {
+            alert(`⚠️ ALERTA DEL SISTEMA GxP:\n\nEl correo ${loginInput} pertenece a un Empleado registrado, pero aún no tiene cuenta de "Usuario GxP".`);
+          } else {
+            alert("Credenciales incorrectas o usuario no registrado en la Nube.");
+          }
+          return;
+        }
+
+        const verificacion = await window.verificarCredencialGxP(loginInput, pass);
+        if (!verificacion.ok) {
+          alert(`⛔ ${verificacion.motivo}`);
+          return;
+        }
+
+        const usrData = verificacion.user;
+        window.activeGxpUser = usrData;
+        window.registrarAuditTrail(usrData.correo, 'LOGIN', 'Inicio de sesión exitoso (21 CFR Part 11).');
+        await window.saveData(true);
+
+        document.getElementById('view-login').classList.add('hidden');
         document.getElementById('app-portal').classList.remove('hidden');
-        
+
         const emp = (window.cachedEmpleados || []).find(e => String(e.id) === String(usrData.empleadoId))
           || (window.cachedEmpleados || []).find(e => (e.correo || '').trim().toLowerCase() === (usrData.correo || '').trim().toLowerCase())
           || { nombres: usrData.correo, apellidos: '' };
         window.actualizarAvatarUI(emp);
         window.renderAllData();
-  
-        // Redirección si se inició sesión desde un escaneo QR
+
         if (window.pendingScanEquipoId) {
           const eqToOpen = window.pendingScanEquipoId;
           window.pendingScanEquipoId = null;
@@ -3213,7 +3326,7 @@ window.upsertNCEnSupabase = async function(nc) {
             window.verHistorialEquipo(eqToOpen);
           }, 300);
         } else {
-          const btnDash = document.querySelector('[data-tab="dashboard"]'); 
+          const btnDash = document.querySelector('[data-tab="dashboard"]');
           if (btnDash) window.switchTab('dashboard', btnDash);
         }
       };
@@ -3373,29 +3486,35 @@ window.upsertNCEnSupabase = async function(nc) {
       window.calcularEstadoCalibracion = function(eq) {
         if (!eq.requiereCalibracion) return { label: 'N/A', badge: 'bg-slate-100 text-slate-600 border-slate-300' };
         if (!eq.fechaProximaCal) return { label: 'Sin Programar', badge: 'bg-amber-100 text-amber-800 border-amber-300' };
-        
-        const ultimaCalib = (window.cachedCalibraciones || []).filter(c => c.equipoId === eq.id).sort((a,b) => new Date(b.fecha) - new Date(a.fecha))[0];
+
+        const ultimaCalib = (window.cachedCalibraciones || []).filter(c => c.equipoId === eq.id).sort((a, b) => new Date(b.fecha) - new Date(a.fecha))[0];
         if (ultimaCalib && ultimaCalib.resultado === 'OOT') {
           return { label: 'FUERA DE ESPECIFICACIÓN (OOT)', badge: 'bg-rose-600 text-white font-bold border-rose-700 animate-pulse' };
         }
-  
-        const hoy = new Date(); hoy.setHours(0,0,0,0);
-        const prox = new Date(eq.fechaProximaCal); prox.setHours(0,0,0,0);
+
+        const hoy = new Date();
+        hoy.setHours(0, 0, 0, 0);
+        const prox = window.parseFechaLocal(eq.fechaProximaCal);
+        if (!prox) return { label: 'Fecha Inválida', badge: 'bg-rose-100 text-rose-800 border-rose-300' };
+
         const diffDays = Math.ceil((prox - hoy) / (1000 * 60 * 60 * 24));
-  
+
         if (diffDays < 0) return { label: 'VENCIDA', badge: 'bg-rose-100 text-rose-800 border-rose-300 font-bold' };
         if (diffDays <= 30) return { label: `POR VENCER (${diffDays}d)`, badge: 'bg-amber-100 text-amber-800 border-amber-300 font-bold' };
         return { label: 'VIGENTE', badge: 'bg-emerald-100 text-emerald-800 border-emerald-300 font-bold' };
       };
-  
+
       window.calcularEstadoMantenimiento = function(eq) {
         if (!eq.requiereMantenimiento) return { label: 'N/A', badge: 'bg-slate-100 text-slate-600 border-slate-300' };
         if (!eq.fechaProximoMaint) return { label: 'Sin Programar', badge: 'bg-amber-100 text-amber-800 border-amber-300' };
-  
-        const hoy = new Date(); hoy.setHours(0,0,0,0);
-        const prox = new Date(eq.fechaProximoMaint); prox.setHours(0,0,0,0);
+
+        const hoy = new Date();
+        hoy.setHours(0, 0, 0, 0);
+        const prox = window.parseFechaLocal(eq.fechaProximoMaint);
+        if (!prox) return { label: 'Fecha Inválida', badge: 'bg-rose-100 text-rose-800 border-rose-300' };
+
         const diffDays = Math.ceil((prox - hoy) / (1000 * 60 * 60 * 24));
-  
+
         if (diffDays < 0) return { label: 'VENCIDO', badge: 'bg-purple-100 text-purple-800 border-purple-300 font-bold' };
         if (diffDays <= 30) return { label: `POR VENCER (${diffDays}d)`, badge: 'bg-amber-100 text-amber-800 border-amber-300 font-bold' };
         return { label: 'AL DÍA', badge: 'bg-emerald-100 text-emerald-800 border-emerald-300 font-bold' };
@@ -3959,31 +4078,32 @@ window.upsertNCEnSupabase = async function(nc) {
         const resultado = document.getElementById('calResultado').value;
         const email = document.getElementById('calUserEmail').value.trim();
         const pass = document.getElementById('calUserPass').value.trim();
-  
+
         if (!eqId || !fecha || !realizadoPor) { alert("Complete los campos obligatorios."); return; }
-  
-        // Validación de Firma Part 11
-        const user = window.cachedUsuarios.find(u => u.correo.toLowerCase() === email.toLowerCase() && u.password === pass);
-        if (!user) { alert("⛔ Firma Part 11 rechazada: Credenciales de usuario inválidas."); return; }
-  
+
+        // Validación estricta de Firma Part 11 + Usuario Activo
+        const verif = await window.verificarCredencialGxP(email, pass);
+        if (!verif.ok) { alert(`⛔ Firma Part 11 rechazada: ${verif.motivo}`); return; }
+        const user = verif.user;
+
         const eq = window.cachedEquipos.find(e => e.id === eqId);
         if (!eq) return;
-  
+
         let certUrl = null;
         const certFile = document.getElementById('calCertFile').files[0];
         if (certFile) {
           if (certFile.size > 1048576) { alert("⛔ El certificado supera el límite de 1MB."); return; }
           try { certUrl = await window.readFileAsBase64(certFile); } catch(e) { console.error(e); }
         }
-  
-        // Cálculo próxima calibración
-        const d = new Date(fecha); d.setMonth(d.getMonth() + (eq.intervaloCalMonths || 6));
-        const proxCalDate = d.toISOString().split('T')[0];
-  
+
+        const d = window.parseFechaLocal(fecha) || new Date();
+        d.setMonth(d.getMonth() + (eq.intervaloCalMonths || 6));
+        const proxCalDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
         eq.fechaUltimaCal = fecha;
         eq.fechaProximaCal = proxCalDate;
         if (resultado === 'OOT') { eq.estado = 'Fuera de Servicio'; }
-  
+
         const calibObj = {
           id: `CAL-${String(window.cachedCalibraciones.length + 1).padStart(3, '0')}`,
           equipoId: eq.id,
@@ -3998,7 +4118,7 @@ window.upsertNCEnSupabase = async function(nc) {
           proximaFecha: proxCalDate,
           firmadaPor: user.correo
         };
-  
+
         window.cachedCalibraciones.unshift(calibObj);
         await window.registrarFirmaPart11EnSupabase({
           tabla: 'calibraciones',
@@ -4009,8 +4129,8 @@ window.upsertNCEnSupabase = async function(nc) {
           justificacion: `Equipo ${eq.tag} - ${eq.nombre} | Ejecutado por: ${realizadoPor} | Próx: ${proxCalDate}`
         });
         window.registrarAuditTrail(user.correo, 'CALIBRATION_PART11', `Firmó y registró calibración (${resultado}) para activo ${eq.tag}`);
-        
-        await window.saveData();
+
+        await window.saveData(true);
         window.toggleModal('modalCalibracion', false);
         window.renderAllData();
       };
@@ -4134,6 +4254,19 @@ window.upsertNCEnSupabase = async function(nc) {
         const vigentes = window.cachedDocs.filter(d => { if (d.estado !== 'VIGENTE') return false; if (!filtroVal) return true; const proc = window.cachedProcesos.find(p => p.id === d.procesoId); const area = window.cachedAreas.find(a => a.id === d.areaId); const texto = `${d.codigo} ${d.titulo} ${d.version} ${proc?.nombre || ''} ${area?.nombre || ''}`.toLowerCase(); return texto.includes(filtroVal); });
         const enProceso = window.cachedDocs.filter(d => { if (d.estado !== 'PROCESO') return false; if (!filtroVal) return true; const proc = window.cachedProcesos.find(p => p.id === d.procesoId); const area = window.cachedAreas.find(a => a.id === d.areaId); const texto = `${d.codigo} ${d.titulo} ${d.version} ${proc?.nombre || ''} ${area?.nombre || ''}`.toLowerCase(); return texto.includes(filtroVal); });
         const obsoletos = window.cachedObsoletos;
+
+        const enMigracion = window.cachedDocs.filter(d => {
+          if ((d.estado || '').trim().toUpperCase() !== 'MIGRACION') return false;
+          if (!filtroVal) return true;
+          const proc = window.cachedProcesos.find(p => p.id === d.procesoId);
+          const area = window.cachedAreas.find(a => a.id === d.areaId);
+          const texto = `${d.codigo} ${d.titulo} ${d.version} ${proc?.nombre || ''} ${area?.nombre || ''}`.toLowerCase();
+          return texto.includes(filtroVal);
+        });
+        const copiasList = (window.cachedCopiasControladas && window.cachedCopiasControladas.length > 0)
+          ? window.cachedCopiasControladas
+          : (window.cachedCopias || []);
+        const copiasActivasCount = copiasList.filter(c => (c.estado || 'Activa').toLowerCase() === 'activa').length;
   
         const esMaster = window.esAdminMaster(window.activeGxpUser);
         const puedeEmitir = window.usuarioPuedeEmitirCopias(window.activeGxpUser);
@@ -4148,7 +4281,9 @@ window.upsertNCEnSupabase = async function(nc) {
         document.getElementById('cnt-docs').innerText = window.cachedDocs.filter(d => d.estado === 'VIGENTE').length; 
         document.getElementById('count-vigente').innerText = vigentes.length;
         document.getElementById('count-proceso').innerText = enProceso.length;
-        document.getElementById('cnt-copias').innerText = window.cachedCopias.length;
+        const countMigEl = document.getElementById('count-migracion');
+        if (countMigEl) countMigEl.innerText = enMigracion.length;
+        document.getElementById('cnt-copias').innerText = copiasActivasCount;
         document.getElementById('count-obsoleto').innerText = obsoletos.length;
         document.getElementById('cnt-audit').innerText = window.auditTrailLogs.length;
         const elCapas = document.getElementById('cnt-capas');
@@ -4176,7 +4311,28 @@ if (elEqps) elEqps.innerText = (window.cachedEquipos || []).filter(e => (e.estad
         }).join('') : `<tr><td colspan="7" class="p-4 text-center text-slate-400">Sin documentos en proceso.</td></tr>`;
   
         document.getElementById('table-obsoleto').innerHTML = obsoletos.length ? obsoletos.map((o, idx) => `<tr class="hover:bg-slate-50 bg-rose-50/40"><td class="p-2 border text-center font-mono font-bold text-slate-500">${idx + 1}</td><td class="p-2 border font-mono font-bold text-rose-800">${o.codigo}</td><td class="p-2 border font-mono text-rose-600">v${o.version}</td><td class="p-2 border font-semibold">${o.titulo}</td><td class="p-2 border text-slate-700 italic">${o.motivo_cambio}</td><td class="p-2 border text-center"><button onclick="window.viewDocument('${o.id}')" class="bg-slate-100 border px-2 py-1 rounded font-bold text-slate-700 cursor-pointer">👁️ Ver</button></td></tr>`).join('') : `<tr><td colspan="6" class="p-4 text-center text-slate-400">Papelera vacía.</td></tr>`;
-        document.getElementById('list-copias-body').innerHTML = window.cachedCopias.length ? window.cachedCopias.map(c => `<tr class="hover:bg-slate-50"><td class="p-2 border font-bold text-amber-900">${c.codigo}</td><td class="p-2 border">${c.doc}</td><td class="p-2 border">${c.area}</td><td class="p-2 border">${c.custodio}</td><td class="p-2 border"><span class="bg-emerald-100 text-emerald-800 px-2 rounded text-[10px] font-bold">ACTIVA</span></td></tr>`).join('') : `<tr><td colspan="5" class="p-4 text-center text-slate-400">Sin copias emitidas.</td></tr>`;
+        const tableMigEl = document.getElementById('table-migracion');
+        if (tableMigEl) {
+          tableMigEl.innerHTML = enMigracion.length ? enMigracion.map((d, idx) => `
+            <tr class="hover:bg-slate-50 bg-indigo-50/30">
+              <td class="p-2 border text-center font-mono font-bold text-slate-500">${idx + 1}</td>
+              <td class="p-2 border font-mono font-bold text-indigo-800">${d.codigo}</td>
+              <td class="p-2 border font-mono">v${d.version}</td>
+              <td class="p-2 border font-semibold">${d.titulo}</td>
+              <td class="p-2 border text-center space-x-2">
+                <span class="bg-indigo-100 text-indigo-800 border border-indigo-300 px-2 py-0.5 rounded font-bold text-[10px]">🔄 ${d.fase || 'EN MIGRACIÓN'}</span>
+                ${d.archivo_url ? `<button onclick="window.viewDocument('${d.id}')" class="bg-slate-100 border px-2 py-0.5 rounded font-bold text-slate-700 cursor-pointer">👁️ Ver</button>` : ''}
+              </td>
+            </tr>`).join('') : `<tr><td colspan="5" class="p-4 text-center text-slate-400">Sin documentos en proceso de migración.</td></tr>`;
+        }
+        document.getElementById('list-copias-body').innerHTML = copiasList.length ? copiasList.map(raw => {
+          const c = window.normalizarCopiaControlada(raw);
+          const esActiva = (c.estado || 'Activa').toLowerCase() === 'activa';
+          const badgeEstado = esActiva
+            ? '<span class="bg-emerald-100 text-emerald-800 px-2 rounded text-[10px] font-bold">ACTIVA</span>'
+            : `<span class="bg-rose-100 text-rose-800 px-2 rounded text-[10px] font-bold">${c.estado.toUpperCase()}</span>`;
+          return `<tr class="hover:bg-slate-50"><td class="p-2 border font-bold text-amber-900">${c.codigoCopia}</td><td class="p-2 border">${c.doc}</td><td class="p-2 border">${c.areaDestino}</td><td class="p-2 border">${c.destinatario}</td><td class="p-2 border">${badgeEstado}</td></tr>`;
+        }).join('') : `<tr><td colspan="5" class="p-4 text-center text-slate-400">Sin copias emitidas.</td></tr>`;
         const auditDiv = document.getElementById('list-auds'); if(auditDiv) auditDiv.innerHTML = window.auditTrailLogs.map(l => `[${l.fecha}] <strong>${l.usuario}</strong> [${l.accion}]: ${l.detalle}`).join('<br><hr class="border-slate-100">');
         
         window.renderConfigTablas();
@@ -4267,14 +4423,15 @@ if (elEqps) elEqps.innerText = (window.cachedEquipos || []).filter(e => (e.estad
         window.toggleModal('modalUsuario', true); 
       };
   
-      window.abrirModalEditarUsuario = function(idx) { 
-        const usr = window.cachedUsuarios[idx]; 
-        document.getElementById('usrEditIndex').value = idx; 
-        window.poblarCheckboxesModalUsuario(usr.rolesIds, usr.areasAsignadas, usr.empleadoId); 
-        document.getElementById('usrCorreoInput').value = usr.correo; 
-        document.getElementById('usrPasswordInput').value = usr.password; 
-        document.getElementById('usrEstadoSelect').value = usr.estado; 
-        window.toggleModal('modalUsuario', true); 
+      window.abrirModalEditarUsuario = function(idx) {
+        const usr = window.cachedUsuarios[idx];
+        document.getElementById('usrEditIndex').value = idx;
+        window.poblarCheckboxesModalUsuario(usr.rolesIds, usr.areasAsignadas, usr.empleadoId);
+        document.getElementById('usrCorreoInput').value = usr.correo;
+        document.getElementById('usrPasswordInput').value = '';
+        document.getElementById('usrPasswordInput').placeholder = 'Dejar vacío para mantener contraseña actual';
+        document.getElementById('usrEstadoSelect').value = usr.estado;
+        window.toggleModal('modalUsuario', true);
       };
   
       window.poblarCheckboxesModalUsuario = function(rolesSeleccionados = [], areasSeleccionadas = [], empId = null) {
@@ -4298,9 +4455,18 @@ if (elEqps) elEqps.innerText = (window.cachedEquipos || []).filter(e => (e.estad
           rolesIds: Array.from(document.querySelectorAll('#contenedorRolesCheckboxes input:checked')).map(cb => cb.value),
           areasAsignadas: Array.from(document.querySelectorAll('#contenedorAreasCheckboxes input:checked')).map(cb => cb.value)
         };
-            if (!data.correo || !data.password) {
-          alert("⚠️ Debe ingresar tanto el correo como una contraseña para el usuario GxP.");
+            const passIngresada = document.getElementById('usrPasswordInput').value.trim();
+        if (editIdX === -1 && (!data.correo || !passIngresada)) {
+          alert("⚠️ Debe ingresar tanto el correo como una contraseña para el nuevo usuario GxP.");
           return;
+        }
+        if (editIdX > -1 && !data.correo) {
+          alert("⚠️ Debe ingresar el correo del usuario GxP.");
+          return;
+        }
+        data.password = passIngresada;
+        if (editIdX > -1 && !passIngresada) {
+          data.pin_firma_hash = window.cachedUsuarios[editIdX].pin_firma_hash || '';
         }
 
         let usuarioGuardado = null;
@@ -4494,12 +4660,9 @@ if (elEqps) elEqps.innerText = (window.cachedEquipos || []).filter(e => (e.estad
         const nc = window.cachedNCs.find(n => String(n.id) === String(ncId));
         if (!nc) { alert("⛔ No Conformidad no encontrada."); return; }
 
-        const usr = window.cachedUsuarios.find(u =>
-          (u.correo || '').trim().toLowerCase() === email.toLowerCase() &&
-          (u.password || '').trim() === pass
-        );
-        if (!usr) { alert("⛔ Credenciales inválidas."); return; }
-        if (usr.estado !== 'Activo') { alert("⛔ Control GxP: El usuario firmante está INACTIVO."); return; }
+        const verifNC = await window.verificarCredencialGxP(email, pass);
+        if (!verifNC.ok) { alert(`⛔ ${verifNC.motivo}`); return; }
+        const usr = verifNC.user;
 
         if (!nc.firmas || typeof nc.firmas !== 'object') {
           nc.firmas = { elaborado: null, revisado: null, aprobado: null };
@@ -4561,8 +4724,10 @@ if (elEqps) elEqps.innerText = (window.cachedEquipos || []).filter(e => (e.estad
       // ----------------------------------------
 
       // --- LÓGICA ORIGINAL PARA FIRMAR DOCUMENTOS ---
-      const user = window.cachedUsuarios.find(u => u.correo.toLowerCase() === email.toLowerCase() && u.password === pass);
-      if (!user) { alert("⛔ Credenciales inválidas."); return; }
+      if (!doc) { alert("⛔ Documento no encontrado."); return; }
+      const verifDoc = await window.verificarCredencialGxP(email, pass);
+      if (!verifDoc.ok) { alert(`⛔ ${verifDoc.motivo}`); return; }
+      const user = verifDoc.user;
       
       const isAdmin = user.rolesIds.includes('rol_admin');
       const isQA = user.areasAsignadas && user.areasAsignadas.includes('ar_qa');
@@ -4633,35 +4798,79 @@ if (elEqps) elEqps.innerText = (window.cachedEquipos || []).filter(e => (e.estad
       // INYECCIÓN DE PDF CON MARCA DE AGUA Y QR CONTROLADO
       window.ejecutarInyeccionPDF = async function() {
         const doc = window.cachedDocs.find(x => x.id === window.selectedDocId);
-        const area = document.getElementById('copiaAreaSelect').value; const custodio = document.getElementById('copiaCustodioInput').value; const cantidad = parseInt(document.getElementById('copiaCantidadInput').value) || 1;
+        const area = document.getElementById('copiaAreaSelect').value;
+        const custodio = document.getElementById('copiaCustodioInput').value.trim();
+        const cantidad = parseInt(document.getElementById('copiaCantidadInput').value, 10) || 1;
         if (!doc || !doc.archivo_url) { alert("Sin PDF adjunto."); return; }
-        const btn = document.getElementById('btn-confirmar-emitir'); btn.innerText = "Generando QR y Marcas..."; btn.disabled = true;
+        if (!custodio) { alert("⚠️ Debe indicar el custodio responsable de la copia controlada."); return; }
+
+        const btn = document.getElementById('btn-confirmar-emitir');
+        btn.innerText = "Generando QR y Marcas...";
+        btn.disabled = true;
+
         try {
           const existingPdfBytes = await fetch(doc.archivo_url).then(res => res.arrayBuffer());
           const { PDFDocument, rgb, degrees } = PDFLib;
-          const mergedPdf = await PDFDocument.create(); const srcPdf = await PDFDocument.load(existingPdfBytes); const srcIndices = srcPdf.getPageIndices(); 
+          const mergedPdf = await PDFDocument.create();
+          const srcPdf = await PDFDocument.load(existingPdfBytes);
+          const srcIndices = srcPdf.getPageIndices();
+
+          if (!Array.isArray(window.cachedCopiasControladas)) window.cachedCopiasControladas = [];
+          window.cachedCopias = window.cachedCopiasControladas;
+
           for (let i = 1; i <= cantidad; i++) {
-            const indexCopiaGlobal = window.cachedCopias.length + 1;
+            const indexCopiaGlobal = window.cachedCopiasControladas.length + 1;
             const copiaIdFormato = `COP-${doc.codigo}-C${String(indexCopiaGlobal).padStart(3, '0')}`;
-            
+
             const urlValidacion = `${window.location.origin}${window.location.pathname}?validarDoc=${doc.codigo}&copia=${copiaIdFormato}`;
             const qrDataUrl = await window.generarQRCodeBase64(urlValidacion);
             const qrImageEmbed = await mergedPdf.embedPng(qrDataUrl);
-  
+
             const copiedPages = await mergedPdf.copyPages(srcPdf, srcIndices);
-            copiedPages.forEach(page => { 
-              mergedPdf.addPage(page); 
-              const { width, height } = page.getSize(); 
-              page.drawText('COPIA CONTROLADA', { x: width / 2 - 220, y: height / 2 + 40, size: 50, color: rgb(0.8, 0, 0), rotate: degrees(-30), opacity: 0.25 }); 
-              page.drawText(`VIGENTE - Destino: ${area} (${custodio}) - Emisión: ${new Date().toLocaleDateString()} - ID: ${copiaIdFormato} (${i}/${cantidad})`, { x: 100, y: 25, size: 8, color: rgb(0.5, 0, 0) }); 
+            copiedPages.forEach(page => {
+              mergedPdf.addPage(page);
+              const { width, height } = page.getSize();
+              page.drawText('COPIA CONTROLADA', { x: width / 2 - 220, y: height / 2 + 40, size: 50, color: rgb(0.8, 0, 0), rotate: degrees(-30), opacity: 0.25 });
+              page.drawText(`VIGENTE - Destino: ${area} (${custodio}) - Emisión: ${new Date().toLocaleDateString()} - ID: ${copiaIdFormato} (${i}/${cantidad})`, { x: 100, y: 25, size: 8, color: rgb(0.5, 0, 0) });
               page.drawImage(qrImageEmbed, { x: 25, y: 15, width: 65, height: 65 });
             });
-            window.cachedCopias.unshift({ codigo: copiaIdFormato, doc: `${doc.codigo} v${doc.version}`, area: area, custodio: custodio });
-            window.registrarAuditTrail(window.activeGxpUser.correo, 'EMIT_COPY', `Copia Controlada con QR [${copiaIdFormato}] de ${doc.codigo} a ${area} (${i}/${cantidad})`); 
+
+            const copiaObj = window.normalizarCopiaControlada({
+              id: crypto.randomUUID(),
+              codigoCopia: copiaIdFormato,
+              docId: doc.id,
+              docCodigo: doc.codigo,
+              docTitulo: doc.titulo,
+              docVersion: doc.version,
+              tipoCopia: 'CONTROLADA',
+              destinatario: custodio,
+              areaDestino: area,
+              numeroCopia: i,
+              totalCopias: cantidad,
+              estado: 'Activa',
+              emitidoPorId: window.activeGxpUser?.id || null,
+              emitidoPor: window.activeGxpUser?.correo || '',
+              fechaEmision: new Date().toISOString()
+            });
+
+            window.cachedCopiasControladas.unshift(copiaObj);
+            await window.upsertCopiaControladaEnSupabase(copiaObj);
+            window.registrarAuditTrail(window.activeGxpUser.correo, 'EMIT_COPY', `Copia Controlada con QR [${copiaIdFormato}] de ${doc.codigo} a ${area} (${i}/${cantidad})`);
           }
-          const pdfBytesModified = await mergedPdf.save(); const blob = new Blob([pdfBytesModified], { type: 'application/pdf' });
-          await window.saveData(); window.open(URL.createObjectURL(blob), '_blank'); window.toggleModal('modalEmitirCopia', false); window.renderAllData();
-        } catch (err) { console.error("Error GxP en inyección de QR:", err); alert("Error al generar las copias con QR."); } finally { btn.innerText = "Generar e Imprimir"; btn.disabled = false; }
+
+          const pdfBytesModified = await mergedPdf.save();
+          const blob = new Blob([pdfBytesModified], { type: 'application/pdf' });
+          await window.saveData(true);
+          window.open(URL.createObjectURL(blob), '_blank');
+          window.toggleModal('modalEmitirCopia', false);
+          window.renderAllData();
+        } catch (err) {
+          console.error("Error GxP en inyección de QR:", err);
+          alert("Error al generar las copias con QR.");
+        } finally {
+          btn.innerText = "Generar e Imprimir";
+          btn.disabled = false;
+        }
       };
   
       window.toggleUserMenu = function() { const menu = document.getElementById('userDropdown'); if(menu) menu.classList.toggle('hidden'); };
@@ -4732,21 +4941,32 @@ if (elEqps) elEqps.innerText = (window.cachedEquipos || []).filter(e => (e.estad
       window.abrirModalPassword = function() { document.getElementById('myPassOld').value = ''; document.getElementById('myPassNew').value = ''; document.getElementById('myPassConfirm').value = ''; window.toggleModal('modalPassword', true); };
       window.guardarPassword = async function() {
         const oldP = document.getElementById('myPassOld').value;
-        const newP = document.getElementById('myPassNew').value;
-        const confP = document.getElementById('myPassConfirm').value;
-        if (oldP !== window.activeGxpUser.password) { alert("La contraseña actual es incorrecta."); return; }
-        if (newP.length < 3) { alert("La nueva contraseña es demasiado corta."); return; }
+        const newP = document.getElementById('myPassNew').value.trim();
+        const confP = document.getElementById('myPassConfirm').value.trim();
+
+        const verifActual = await window.verificarCredencialGxP(window.activeGxpUser.correo, oldP);
+        if (!verifActual.ok) { alert("La contraseña actual es incorrecta."); return; }
+        if (newP.length < 4) { alert("La nueva contraseña debe tener al menos 4 caracteres."); return; }
         if (newP !== confP) { alert("Las contraseñas nuevas no coinciden."); return; }
 
+        const nuevoHash = await window.generarHashSHA256(newP);
         window.activeGxpUser.password = newP;
+        window.activeGxpUser.pin_firma_hash = nuevoHash;
+
         const usrIdx = window.cachedUsuarios.findIndex(u => u.correo === window.activeGxpUser.correo);
-        if (usrIdx > -1) window.cachedUsuarios[usrIdx].password = newP;
+        if (usrIdx > -1) {
+          window.cachedUsuarios[usrIdx].password = newP;
+          window.cachedUsuarios[usrIdx].pin_firma_hash = nuevoHash;
+        }
 
         const emp = window.cachedEmpleados.find(e => String(e.id) === String(window.activeGxpUser.empleadoId));
         await window.upsertUsuarioEnSupabase(window.activeGxpUser, emp);
 
+        window.activeGxpUser.password = '';
+        if (usrIdx > -1) window.cachedUsuarios[usrIdx].password = '';
+
         window.registrarAuditTrail(window.activeGxpUser.correo, 'CHANGE_PASSWORD', 'El usuario actualizó su credencial de acceso 21 CFR Part 11.');
-        await window.saveData();
+        await window.saveData(true);
         alert("Contraseña actualizada con éxito.");
         window.toggleModal('modalPassword', false);
       };
@@ -4778,12 +4998,16 @@ if (elEqps) elEqps.innerText = (window.cachedEquipos || []).filter(e => (e.estad
             // 1. Buscamos el documento por su código, sin importar el estado
             const doc = (window.cachedDocs || []).find(d => d.codigo && d.codigo.trim().toUpperCase() === codigoEscaneado);
             
-            if (doc) {
-              // 2. Si el documento existe, verificamos su estado
-              if (doc.estado && doc.estado.trim().toUpperCase() === 'VIGENTE') {
+           if (doc) {
+              const copiaReg = copiaId
+                ? (window.cachedCopiasControladas || []).find(c => (c.codigoCopia || c.codigo || '').trim().toUpperCase() === copiaId.trim().toUpperCase())
+                : null;
+
+              if (copiaReg && (copiaReg.estado || 'Activa').trim().toUpperCase() !== 'ACTIVA') {
+                alert(`🚨 ALERTA CRÍTICA GxP - COPIA CONTROLADA INACTIVA\n\nLa copia ${copiaId} del documento ${doc.codigo} figura en estado: ${copiaReg.estado}.\n\nFavor retirar esta copia impresa inmediatamente.`);
+              } else if (doc.estado && doc.estado.trim().toUpperCase() === 'VIGENTE') {
                 alert(`✅ VERIFICACIÓN GxP EXITOSA\n\nEl documento ${doc.codigo} (Versión ${doc.version}) se encuentra actualmente VIGENTE.\nCopia verificada: ${copiaId || 'N/A'}`);
               } else {
-                // Existe pero no está vigente (está Obsoleto, En Proceso, etc.)
                 alert(`🚨 ALERTA CRÍTICA GxP - DOCUMENTO NO VIGENTE\n\nEl documento ${doc.codigo} se encuentra en estado: ${doc.estado || 'DESCONOCIDO'}.\nCopia verificada: ${copiaId || 'N/A'}\n\nFavor retirar esta copia impresa del área de trabajo inmediatamente.`);
               }
             } else {
@@ -4999,406 +5223,321 @@ window.renderNCs = function() {
   }).join('');
 };
 
-    window.renderCAPAs = function() {
-      const tbody = document.getElementById('table-capas');
-      if (!tbody) return;
-      
-      const kpiTotal = document.getElementById('kpi-capa-total');
-      const kpiEjec = document.getElementById('kpi-capa-ejecucion');
-      const kpiEfec = document.getElementById('kpi-capa-efectividad');
-      const kpiCerr = document.getElementById('kpi-capa-cerradas');
+    window.usuarioPuedeVerCAPA = function(capa, usr = window.activeGxpUser) {
+  if (!usr || !capa) return false;
+  const roles = usr.rolesIds || [];
+  const areas = usr.areasAsignadas || [];
+  const isAdmin = roles.includes('rol_admin') || window.esAdminMaster(usr);
+  if (isAdmin) return true;
 
-      if (kpiTotal) kpiTotal.innerText = window.cachedCAPAs.length;
-      if (kpiEjec) kpiEjec.innerText = window.cachedCAPAs.filter(c => c.estado === 'En Ejecución').length;
-      if (kpiEfec) kpiEfec.innerText = window.cachedCAPAs.filter(c => c.estado === 'En Evaluación de Efectividad').length;
-      if (kpiCerr) kpiCerr.innerText = window.cachedCAPAs.filter(c => c.estado === 'Cerrado Definitivo').length;
+  // Aseguramiento de Calidad (QA) tiene visibilidad transversal
+  const esQA = areas.some(aId => {
+    if (aId === 'ar_qa') return true;
+    const areaObj = (window.cachedAreas || []).find(a => a.id === aId);
+    return areaObj && /aseguramiento|\bqa\b/i.test(areaObj.nombre || '');
+  });
+  if (esQA) return true;
 
-      const filtro = document.getElementById('filtroCAPAInput').value.toLowerCase();
-      const estadoFiltro = document.getElementById('filtroCAPAEstado').value;
+  // Visibilidad heredada desde la NC asociada
+  if (capa.ncId) {
+    const nc = (window.cachedNCs || []).find(n => String(n.id) === String(capa.ncId));
+    if (nc && window.usuarioPuedeVerNC(nc, usr)) return true;
+  }
 
-      const filtered = window.cachedCAPAs.filter(capa => {
-        const matchFiltro = capa.consecutivo.toLowerCase().includes(filtro) || (capa.ncId && capa.ncId.toLowerCase().includes(filtro));
-        const matchEstado = estadoFiltro ? capa.estado === estadoFiltro : true;
-        return matchFiltro && matchEstado;
-      });
+  // Responsable de la CAPA o de alguna actividad del plan
+  const emp = (window.cachedEmpleados || []).find(e => String(e.id) === String(usr.empleadoId));
+  const nombreCompleto = emp ? `${emp.nombres} ${emp.apellidos}`.trim().toLowerCase() : '';
+  const correoLow = (usr.correo || '').trim().toLowerCase();
 
-      tbody.innerHTML = filtered.map(capa => {
-        const nc = window.cachedNCs.find(n => n.id === capa.ncId);
-        const ncStr = nc ? nc.consecutivo : 'N/A';
-        
-        let colorEstado = 'bg-slate-100 text-slate-700';
-        if (capa.estado.includes('Cerrado')) colorEstado = 'bg-emerald-100 text-emerald-700';
-        else if (capa.estado === 'En Ejecución') colorEstado = 'bg-amber-100 text-amber-700';
+  if (capa.responsable) {
+    const respLow = String(capa.responsable).trim().toLowerCase();
+    if (respLow === correoLow || (nombreCompleto && respLow === nombreCompleto)) return true;
+  }
 
-        const totalActs = capa.plan ? capa.plan.length : 0;
-        const compActs = capa.plan ? capa.plan.filter(a => a.estado === 'Completado').length : 0;
-        const pct = totalActs > 0 ? Math.round((compActs / totalActs) * 100) : 0;
+  return (capa.plan || []).some(a => {
+    const actResp = String(a.responsable || '').trim().toLowerCase();
+    return (nombreCompleto && actResp === nombreCompleto) || (correoLow && actResp === correoLow);
+  });
+};
 
-        return `<tr class="hover:bg-slate-50 transition">
-          <td class="p-2 border font-mono font-bold text-purple-700">${capa.consecutivo}</td>
-          <td class="p-2 border font-mono text-slate-600">${ncStr}</td>
-          <td class="p-2 border">${capa.metodologia}</td>
-          <td class="p-2 border"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${colorEstado}">${capa.estado}</span></td>
-          <td class="p-2 border">
-            <div class="flex items-center space-x-2">
-              <div class="w-full bg-slate-200 rounded-full h-2">
-                <div class="bg-purple-600 h-2 rounded-full" style="width: ${pct}%"></div>
-              </div>
-              <span class="text-[10px] font-mono font-bold">${pct}%</span>
-            </div>
-          </td>
-          <td class="p-2 border text-center space-x-1">
-            <button onclick="window.verDetalleCAPA('${capa.id}')" class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-[10px] font-bold hover:bg-blue-200 cursor-pointer" title="Ver Detalle">👁️</button>
-            ${(capa.estado !== 'Cerrado Definitivo') ? 
-              `<button onclick="window.abrirModalEditarCAPA('${capa.id}')" class="bg-amber-100 text-amber-700 px-2 py-1 rounded text-[10px] font-bold hover:bg-amber-200 cursor-pointer" title="Editar">✏️</button>` 
-              : ''}
-            <button onclick="window.avanzarEstadoCAPA('${capa.id}')" class="bg-slate-100 text-slate-700 px-2 py-1 rounded text-[10px] font-bold hover:bg-slate-200 cursor-pointer" title="Avanzar Estado / Ejecutar">⏭️</button>
-          </td>
-        </tr>`;
-      }).join('');
-    };
+window.renderCAPAs = function() {
+  const tbody = document.getElementById('table-capas');
+  if (!tbody) return;
 
-    window.verDetalleNC = function(id) {
-      const nc = window.cachedNCs.find(n => String(n.id) === String(id));
-      if (!nc) return;
+  const visibles = (window.cachedCAPAs || []).filter(capa => window.usuarioPuedeVerCAPA(capa, window.activeGxpUser));
 
-      // Bloqueo por área/rol (QA, área origen o responsable)
-      if (typeof window.usuarioPuedeVerNC === 'function' && !window.usuarioPuedeVerNC(nc)) {
-        alert("⛔ Control GxP: Acceso denegado. Esta No Conformidad pertenece a otra área.");
-        return;
-      }
+  const kpiTotal = document.getElementById('kpi-capa-total');
+  const kpiEjec = document.getElementById('kpi-capa-ejecucion');
+  const kpiEfec = document.getElementById('kpi-capa-efectividad');
+  const kpiCerr = document.getElementById('kpi-capa-cerradas');
 
-      // Evita TypeError en registros importados sin objeto firmas
-      if (!nc.firmas || typeof nc.firmas !== 'object') {
-        nc.firmas = { elaborado: null, revisado: null, aprobado: null };
-      }
+  if (kpiTotal) kpiTotal.innerText = visibles.length;
+  if (kpiEjec) kpiEjec.innerText = visibles.filter(c => c.estado === 'En Ejecución').length;
+  if (kpiEfec) kpiEfec.innerText = visibles.filter(c => c.estado === 'En Evaluación de Efectividad').length;
+  if (kpiCerr) kpiCerr.innerText = visibles.filter(c => c.estado === 'Cerrado Definitivo').length;
 
-      const proc = window.cachedProcesos.find(p => String(p.id) === String(nc.procesoId))?.nombre || nc.procesoId || 'N/A';
-      const resp = window.cachedEmpleados.find(e => String(e.id) === String(nc.responsableId));
-      const respName = resp ? `${resp.nombres} ${resp.apellidos}` : (nc.responsable || 'N/A');
+  const filtro = (document.getElementById('filtroCAPAInput')?.value || '').toLowerCase();
+  const estadoFiltro = document.getElementById('filtroCAPAEstado')?.value || '';
 
-      document.getElementById('viewNCTitle').innerText = `Detalle NC: ${nc.consecutivo}`;
-      document.getElementById('viewNCBody').innerHTML = `
-        <div class="grid grid-cols-2 gap-2 bg-slate-50 p-3 rounded border">
-          <div><strong>Proceso:</strong> ${proc}</div>
-          <div><strong>Responsable:</strong> ${respName}</div>
-          <div><strong>Fecha:</strong> ${nc.fecha || 'N/A'}</div>
-          <div><strong>Fuente:</strong> ${nc.fuente || 'N/A'} | <strong>Reincidencia:</strong> ${nc.reincidencia || 'No'}</div>
-          <div><strong>Criticidad:</strong> <span class="font-bold text-rose-600">${nc.criticidad || 'Mayor'}</span></div>
-          <div><strong>Estado Actual:</strong> ${nc.estado}</div>
-        </div>
-        <div><strong>Descripción del Hallazgo:</strong><br><p class="p-2 bg-white border rounded mt-1">${nc.descripcion || ''}</p></div>
-        <div><strong>Delimitación de Alcance:</strong><br><p class="p-2 bg-white border rounded mt-1">${nc.alcance || 'No especificado'}</p></div>
-        <div><strong>Evaluación de Impacto:</strong><br><p class="p-2 bg-white border rounded mt-1">${nc.impacto || 'No especificado'}</p></div>
-        <div><strong>Corrección Inmediata:</strong><br><p class="p-2 bg-amber-50 border border-amber-200 rounded mt-1">${nc.correccion || nc.accionInmediata || ''}</p></div>
-        <div class="border-t pt-2 mt-2">
-          <strong>Firmas Electrónicas (Part 11):</strong>
-          <ul class="list-disc pl-5 mt-1 text-slate-600">
-            <li>Elaborado: ${nc.firmas.elaborado || 'Pendiente'}</li>
-            <li>Revisado: ${nc.firmas.revisado || 'Pendiente'}</li>
-            <li>Aprobado: ${nc.firmas.aprobado || 'Pendiente'}</li>
-          </ul>
-        </div>
-      `;
-      const capaAsociada = window.cachedCAPAs.find(c => String(c.ncId) === String(nc.id));
-      if (capaAsociada && capaAsociada.efectividad) {
-        document.getElementById('viewNCBody').innerHTML += `
-          <div class="border-t pt-2 mt-2">
-            <strong>Efectividad del CAPA (Cierre QA):</strong><br>
-            <p class="p-2 bg-emerald-50 border border-emerald-200 rounded mt-1 text-[11px]">
-              ${capaAsociada.efectividad.resultados}
-            </p>
-            <p class="text-[10px] text-slate-500 mt-1">Aprobado por: <strong>${capaAsociada.efectividad.firmadoPor}</strong></p>
+  const filtered = visibles.filter(capa => {
+    const nc = window.cachedNCs.find(n => String(n.id) === String(capa.ncId));
+    const ncRef = (nc?.consecutivo || capa.ncConsecutivo || capa.ncId || '').toLowerCase();
+    const matchFiltro = (capa.consecutivo || '').toLowerCase().includes(filtro) || ncRef.includes(filtro);
+    const matchEstado = estadoFiltro ? capa.estado === estadoFiltro : true;
+    return matchFiltro && matchEstado;
+  });
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400 italic">No hay Planes CAPA autorizados para su área/perfil.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(capa => {
+    const nc = window.cachedNCs.find(n => String(n.id) === String(capa.ncId));
+    const ncStr = nc ? nc.consecutivo : (capa.ncConsecutivo || 'N/A');
+
+    let colorEstado = 'bg-slate-100 text-slate-700';
+    if (capa.estado.includes('Cerrado')) colorEstado = 'bg-emerald-100 text-emerald-700';
+    else if (capa.estado === 'En Ejecución') colorEstado = 'bg-amber-100 text-amber-700';
+
+    const totalActs = capa.plan ? capa.plan.length : 0;
+    const compActs = capa.plan ? capa.plan.filter(a => a.estado === 'Completado').length : 0;
+    const pct = totalActs > 0 ? Math.round((compActs / totalActs) * 100) : 0;
+
+    return `<tr class="hover:bg-slate-50 transition">
+      <td class="p-2 border font-mono font-bold text-purple-700">${capa.consecutivo}</td>
+      <td class="p-2 border font-mono text-slate-600">${ncStr}</td>
+      <td class="p-2 border">${capa.metodologia}</td>
+      <td class="p-2 border"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${colorEstado}">${capa.estado}</span></td>
+      <td class="p-2 border">
+        <div class="flex items-center space-x-2">
+          <div class="w-full bg-slate-200 rounded-full h-2">
+            <div class="bg-purple-600 h-2 rounded-full" style="width: ${pct}%"></div>
           </div>
-        `;
-      }
-      window.toggleModal('modalVerDetalleNC', true);
-    };
-
-    window.verDetalleCAPA = function(id) {
-      const capa = window.cachedCAPAs.find(c => c.id === id);
-      if (!capa) return;
-      const nc = window.cachedNCs.find(n => n.id === capa.ncId);
-      
-      const planHtml = capa.plan.map(a => `
-        <tr class="border-b">
-          <td class="p-1">${a.actividad}</td>
-          <td class="p-1">${a.responsable}</td>
-          <td class="p-1 font-mono">${a.fecha}</td>
-          <td class="p-1">
-            <span class="px-1.5 py-0.5 rounded text-[10px] font-bold ${a.estado === 'Completado' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}">${a.estado}</span>
-          </td>
-          <td class="p-1 text-center">
-            ${a.estado !== 'Completado' ? 
-              `<button onclick="window.completarActividadCAPA('${capa.id}', '${a.id}')" class="bg-emerald-500 hover:bg-emerald-600 text-white px-2 py-1 rounded text-[10px] font-bold cursor-pointer">✔️ Completar</button>` 
-              : `<span class="text-emerald-600 font-bold">✅ Listo</span>`}
-          </td>
-        </tr>
-      `).join('');
-
-      document.getElementById('viewCAPATitle').innerText = `Detalle CAPA: ${capa.consecutivo}`;
-      document.getElementById('viewCAPABody').innerHTML = `
-        <div class="grid grid-cols-2 gap-2 bg-slate-50 p-3 rounded border">
-          <div><strong>NC Asociada:</strong> ${nc ? nc.consecutivo : 'N/A'}</div>
-          <div><strong>Metodología:</strong> ${capa.metodologia}</div>
-          <div><strong>Estado:</strong> ${capa.estado}</div>
+          <span class="text-[10px] font-mono font-bold">${pct}%</span>
         </div>
-        <div><strong>Análisis de Causa Raíz:</strong><br><p class="p-2 bg-purple-50 border border-purple-200 rounded mt-1">${capa.analisis}</p></div>
-        <div>
-          <strong>Plan de Acción:</strong>
-          <table class="w-full border-collapse text-left mt-1 bg-white border">
-            <thead><tr class="bg-slate-100"><th class="p-1 border">Actividad</th><th class="p-1 border">Responsable</th><th class="p-1 border">Fecha</th><th class="p-1 border">Estado</th><th class="p-1 border text-center">Acción</th></tr></thead>
-            <tbody>${planHtml}</tbody>
-          </table>
-        </div>
-        ${capa.efectividad ? `
-        <div class="border-t pt-2 mt-2">
-          <strong>Evaluación de Efectividad:</strong><br>
-          <p class="text-xs mt-1 p-2 bg-emerald-50 border border-emerald-200 rounded">${capa.efectividad.resultados}</p>
-          <p class="text-xs mt-1">Conclusión: <span class="font-bold text-emerald-700">${capa.efectividad.conclusion}</span> | Firmado QA: ${capa.efectividad.firmadoPor}</p>
-        </div>` : ''}
-      `;
-      window.toggleModal('modalVerDetalleCAPA', true);
-    };
-          window.completarActividadCAPA = function(capaId, actId) {
-      const capa = window.cachedCAPAs.find(c => c.id === capaId);
-      if (!capa) return;
+      </td>
+      <td class="p-2 border text-center space-x-1">
+        <button onclick="window.verDetalleCAPA('${capa.id}')" class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-[10px] font-bold hover:bg-blue-200 cursor-pointer" title="Ver Detalle">👁️</button>
+        ${(capa.estado !== 'Cerrado Definitivo') ?
+          `<button onclick="window.abrirModalEditarCAPA('${capa.id}')" class="bg-amber-100 text-amber-700 px-2 py-1 rounded text-[10px] font-bold hover:bg-amber-200 cursor-pointer" title="Editar">✏️</button>`
+          : ''}
+        <button onclick="window.avanzarEstadoCAPA('${capa.id}')" class="bg-slate-100 text-slate-700 px-2 py-1 rounded text-[10px] font-bold hover:bg-slate-200 cursor-pointer" title="Avanzar Estado / Ejecutar">⏭️</button>
+      </td>
+    </tr>`;
+  }).join('');
+};
 
-      const actividad = capa.plan.find(a => a.id === actId);
-      if (actividad) {
-        actividad.estado = 'Completado';
-        window.saveData(); // Guarda en la nube
-        window.renderCAPAs(); // Actualiza la barra de progreso
-        window.verDetalleCAPA(capaId); // Recarga el modal para que se vea el cambio
-        window.logAudit('CAPA_ACTIVIDAD', `Actividad completada en CAPA ${capa.consecutivo}: ${actividad.actividad}`);
-      }
-    };
+window.completarActividadCAPA = async function(capaId, actId) {
+  const capa = window.cachedCAPAs.find(c => String(c.id) === String(capaId));
+  if (!capa) return;
 
-          window.abrirModalEditarNC = function(id) {
-      const nc = window.cachedNCs.find(n => String(n.id) === String(id));
-      if (!nc) return;
+  if (!window.usuarioPuedeVerCAPA(capa)) {
+    alert("⛔ Control GxP: Acceso denegado. No tiene permisos sobre este Plan CAPA.");
+    return;
+  }
 
-      if (typeof window.usuarioPuedeVerNC === 'function' && !window.usuarioPuedeVerNC(nc)) {
-        alert("⛔ Control GxP: Acceso denegado. No tiene permisos sobre esta No Conformidad.");
-        return;
-      }
+  const actividad = (capa.plan || []).find(a => String(a.id) === String(actId));
+  if (!actividad) return;
 
-      // Poblar Selects antes de asignar valores (evita pérdida de datos si no se abrió antes Nuevo NC)
-      const selProc = document.getElementById('ncProcesoOrigen');
-      selProc.innerHTML = (window.cachedProcesos || []).map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
+  const usr = window.activeGxpUser;
+  const roles = usr?.rolesIds || [];
+  const areas = usr?.areasAsignadas || [];
+  const isAdminOQA = roles.includes('rol_admin') || window.esAdminMaster(usr) || areas.includes('ar_qa');
+  const emp = (window.cachedEmpleados || []).find(e => String(e.id) === String(usr?.empleadoId));
+  const miNombre = emp ? `${emp.nombres} ${emp.apellidos}`.trim().toLowerCase() : '';
+  const esAsignadoActividad = miNombre && String(actividad.responsable || '').trim().toLowerCase() === miNombre;
 
-      const selResp = document.getElementById('ncResponsable');
-      selResp.innerHTML = (window.cachedEmpleados || []).map(e => `<option value="${e.id}">${e.nombres} ${e.apellidos}</option>`).join('');
+  if (!isAdminOQA && !esAsignadoActividad) {
+    alert(`⛔ Control GxP: Esta actividad está asignada a "${actividad.responsable}". Solo el responsable asignado o QA/Admin pueden marcarla como completada.`);
+    return;
+  }
 
-      document.getElementById('modalNCTitle').innerText = `✏️ Editar No Conformidad: ${nc.consecutivo}`;
-      document.getElementById('ncEditId').value = nc.id;
-      document.getElementById('ncConsecutivo').value = nc.consecutivo || '';
-      document.getElementById('ncFecha').value = nc.fecha || '';
-      selProc.value = nc.procesoId || '';
-      selResp.value = nc.responsableId || '';
-      document.getElementById('ncFuente').value = nc.fuente || 'Auditoría Interna';
-      document.getElementById('ncReincidencia').value = nc.reincidencia || 'No';
-      document.getElementById('ncDescripcion').value = nc.descripcion || '';
-      document.getElementById('ncAlcance').value = nc.alcance || '';
-      document.getElementById('ncImpacto').value = nc.impacto || '';
-      document.getElementById('ncCriticidad').value = nc.criticidad || 'Mayor';
-      document.getElementById('ncCorreccion').value = nc.correccion || nc.accionInmediata || '';
+  actividad.estado = 'Completado';
+  await window.upsertCAPAEnSupabase(capa);
+  await window.saveData(true);
+  window.renderCAPAs();
+  window.verDetalleCAPA(capaId);
+  window.logAudit('CAPA_ACTIVIDAD', `Actividad completada en CAPA ${capa.consecutivo}: ${actividad.actividad}`);
+};
 
-      window.toggleModal('modalNC', true);
-    };
+window.guardarCAPACompleta = async function() {
+  const id = document.getElementById('capaEditId').value;
+  const ncId = document.getElementById('capaNCSelect').value;
+  const consecutivo = document.getElementById('capaConsecutivo').value.trim();
 
-    window.abrirModalEditarCAPA = function(id) {
-      const capa = window.cachedCAPAs.find(c => c.id === id);
-      if (!capa) return;
-
-      document.getElementById('modalCAPATitle').innerText = `✏️ Editar Plan CAPA: ${capa.consecutivo}`;
-      document.getElementById('capaEditId').value = capa.id;
-      document.getElementById('capaConsecutivo').value = capa.consecutivo;
-      
-      // Poblar el select de NCs
-      const selNC = document.getElementById('capaNCSelect');
-      selNC.innerHTML = window.cachedNCs.map(n => `<option value="${n.id}">${n.consecutivo} - ${n.descripcion.substring(0, 30)}...</option>`).join('');
-      selNC.value = capa.ncId;
-
-      document.getElementById('capaMetodologia').value = capa.metodologia;
-      document.getElementById('capaAnalisis').value = capa.analisis;
-
-      // Reconstruir el Plan de Acción
-      const container = document.getElementById('contenedorPlanAccion');
-      container.innerHTML = '';
-      if (capa.plan && capa.plan.length > 0) {
-        capa.plan.forEach(act => window.agregarActividadPlan(act));
-      } else {
-        window.agregarActividadPlan(); // Si no hay, agrega una fila vacía
-      }
-
-      window.toggleModal('modalCAPA', true);
-    };
-
-    window.avanzarEstadoNC = async function(id) {
-      const nc = window.cachedNCs.find(n => String(n.id) === String(id));
-      if (!nc) return;
-
-      if (!nc.firmas || typeof nc.firmas !== 'object') {
-        nc.firmas = { elaborado: null, revisado: null, aprobado: null };
-      }
-
-      const isAdmin = window.activeGxpUser.rolesIds.includes('rol_admin') || window.esAdminMaster(window.activeGxpUser);
-      const isResponsable = String(window.activeGxpUser.empleadoId) === String(nc.responsableId);
-
-      if (!isAdmin && !isResponsable) {
-        alert("⛔ Control GxP: Acceso Denegado. Solo el Administrador o el Responsable asignado a esta NC pueden cambiar su estado.");
-        return;
-      }
-
-      const flujo = ['Borrador', 'En Análisis', 'Plan Aprobado', 'En Ejecución', 'Cerrado Operativo', 'En Evaluación de Efectividad', 'Cerrado Definitivo'];
-      const idx = flujo.indexOf(nc.estado);
-
-      if (idx > -1 && idx < flujo.length - 1) {
-        if (nc.estado === 'Borrador' && (!nc.firmas.elaborado || !nc.firmas.revisado || !nc.firmas.aprobado)) {
-          alert("⚠️ Se requieren las 3 firmas Part 11 (Elaborado, Revisado, Aprobado) para avanzar del estado Borrador.");
-          return;
-        }
-        nc.estado = flujo[idx + 1];
-        if (typeof window.upsertNCEnSupabase === 'function') {
-          await window.upsertNCEnSupabase(nc);
-        }
-        await window.saveData(true);
-        window.renderNCs();
-        window.logAudit('NC_ESTADO', `NC ${nc.consecutivo} avanzó a ${nc.estado}`);
-      }
-    };
-
-            window.abrirModalNuevaCAPA = function() {
-      if (!window.activeGxpUser) { alert("Sesión no válida."); return; }
-      
-      const userRoles = window.activeGxpUser.rolesIds || [];
-      const isAdmin = userRoles.includes('rol_admin') || window.esAdminMaster(window.activeGxpUser);
-      
-      let ncsPermitidas = window.cachedNCs || [];
-      if (!isAdmin) {
-        // Usamos '==' para evitar fallos si el ID es número en un lado y texto en el otro
-        ncsPermitidas = ncsPermitidas.filter(nc => nc.responsableId == window.activeGxpUser.empleadoId);
-      }
-
-      if (ncsPermitidas.length === 0) {
-        alert("⛔ Control GxP: No tienes No Conformidades asignadas a tu nombre, o no tienes permisos para crear CAPAs.");
-        return;
-      }
-
-      document.getElementById('modalCAPATitle').innerText = '☑️ Plan CAPA';
-      document.getElementById('capaEditId').value = '';
-      
-      // Validación segura para el consecutivo
-      document.getElementById('capaConsecutivo').value = window.generarConsecutivo('CAPA', window.cachedCAPAs || []);
-      
-      const selNC = document.getElementById('capaNCSelect');
-      if (selNC) {
-        selNC.innerHTML = ncsPermitidas.map(nc => {
-          const desc = nc.descripcion ? nc.descripcion.substring(0, 30) : 'Sin descripción';
-          return `<option value="${nc.id}">${nc.consecutivo || 'S/N'} - ${desc}...</option>`;
-        }).join('');
-      }
-      
-      document.getElementById('capaMetodologia').value = '5 Porqués';
-      document.getElementById('capaAnalisis').value = '';
-      
-      const container = document.getElementById('contenedorPlanAccion');
-      if (container) container.innerHTML = '';
-      
-      window.agregarActividadPlan();
-
-      window.toggleModal('modalCAPA', true);
-    };
-
-             window.agregarActividadPlan = function(act = null) {
-      const container = document.getElementById('contenedorPlanAccion');
-      if (!container) return;
-
-      const div = document.createElement('div');
-      div.className = 'flex space-x-2 items-center bg-white p-2 border rounded shadow-sm';
-      
-      const id = act ? act.id : 'act_' + Date.now() + Math.random().toString(36).substr(2, 5);
-      
-      // Creamos las opciones del select basadas en los empleados
-      const opcionesEmpleados = window.cachedEmpleados.map(e => {
-        const nombreCompleto = `${e.nombres} ${e.apellidos}`;
-        return `<option value="${nombreCompleto}" ${act && act.responsable === nombreCompleto ? 'selected' : ''}>${nombreCompleto}</option>`;
-      }).join('');
-
-      div.innerHTML = `
-        <input type="text" class="act-id" value="${id}" hidden>
-        <input type="text" placeholder="Actividad" value="${act ? act.actividad : ''}" class="act-desc w-1/2 p-1.5 border rounded text-xs">
-        
-        <select class="act-resp w-1/4 p-1.5 border rounded text-xs">
-          <option value="" disabled ${!act ? 'selected' : ''}>Seleccione Responsable</option>
-          ${opcionesEmpleados}
-        </select>
-
-        <input type="date" value="${act ? act.fecha : ''}" class="act-fecha w-1/4 p-1.5 border rounded text-xs font-mono">
-        <select class="act-estado p-1.5 border rounded text-xs">
-          <option value="Pendiente" ${act && act.estado === 'Pendiente' ? 'selected' : ''}>Pendiente</option>
-          <option value="Completado" ${act && act.estado === 'Completado' ? 'selected' : ''}>Completado</option>
-        </select>
-        <button type="button" onclick="this.parentElement.remove()" class="text-rose-500 font-bold px-1 hover:text-rose-700">✕</button>
-      `;
-      container.appendChild(div);
-    };
-
-    window.guardarCAPACompleta = function() {
-      const id = document.getElementById('capaEditId').value;
-      const ncId = document.getElementById('capaNCSelect').value;
-      const consecutivo = document.getElementById('capaConsecutivo').value.trim();
-      
-      const actividades = [];
-      document.querySelectorAll('#contenedorPlanAccion > div').forEach(div => {
-        const actDesc = div.querySelector('.act-desc').value.trim();
-        if (actDesc) {
-            actividades.push({
-              id: div.querySelector('.act-id').value,
-              actividad: actDesc,
-              responsable: div.querySelector('.act-resp').value,
-              fecha: div.querySelector('.act-fecha').value,
-              estado: div.querySelector('.act-estado').value
-            });
-        }
+  const actividades = [];
+  document.querySelectorAll('#contenedorPlanAccion > div').forEach(div => {
+    const actDesc = div.querySelector('.act-desc').value.trim();
+    if (actDesc) {
+      actividades.push({
+        id: div.querySelector('.act-id').value,
+        actividad: actDesc,
+        responsable: div.querySelector('.act-resp').value,
+        fecha: div.querySelector('.act-fecha').value,
+        estado: div.querySelector('.act-estado').value
       });
+    }
+  });
 
-      const capaData = {
-        consecutivo: consecutivo,
-        ncId: ncId,
-        metodologia: document.getElementById('capaMetodologia').value,
-        analisis: document.getElementById('capaAnalisis').value,
-        plan: actividades,
-        estado: 'Borrador',
-        efectividad: null
-      };
+  const ncMatch = (window.cachedNCs || []).find(n => String(n.id) === String(ncId));
+  const capaData = {
+    consecutivo: consecutivo,
+    ncId: ncId,
+    ncConsecutivo: ncMatch ? ncMatch.consecutivo : '',
+    metodologia: document.getElementById('capaMetodologia').value,
+    analisis: document.getElementById('capaAnalisis').value.trim(),
+    plan: actividades,
+    estado: 'Borrador',
+    efectividad: null
+  };
 
-      if (!capaData.analisis || actividades.length === 0) {
-        alert("Complete el análisis y agregue al menos una actividad al plan."); return;
-      }
+  if (!capaData.analisis || actividades.length === 0) {
+    alert("Complete el análisis y agregue al menos una actividad al plan.");
+    return;
+  }
 
-      const existeDuplicadoCAPA = window.cachedCAPAs.some(c => c.consecutivo === capaData.consecutivo && c.id !== id);
-      if (existeDuplicadoCAPA) {
-        alert(`⚠️ Error GxP: Ya existe un plan CAPA con el consecutivo ${capaData.consecutivo}.`);
-        return;
-      }
+  const existeDuplicadoCAPA = window.cachedCAPAs.some(c => c.consecutivo === capaData.consecutivo && c.id !== id);
+  if (existeDuplicadoCAPA) {
+    alert(`⚠️ Error GxP: Ya existe un plan CAPA con el consecutivo ${capaData.consecutivo}.`);
+    return;
+  }
 
-      if (id) {
-        const idx = window.cachedCAPAs.findIndex(c => c.id === id);
-        const estadoActual = window.cachedCAPAs[idx].estado;
-        window.cachedCAPAs[idx] = { ...window.cachedCAPAs[idx], ...capaData, estado: estadoActual };
-      } else {
-        capaData.id = 'capa_' + Date.now();
-        window.cachedCAPAs.push(capaData);
-      }
+  let capaTarget = null;
+  if (id) {
+    const idx = window.cachedCAPAs.findIndex(c => c.id === id);
+    const estadoActual = window.cachedCAPAs[idx].estado;
+    window.cachedCAPAs[idx] = { ...window.cachedCAPAs[idx], ...capaData, estado: estadoActual };
+    capaTarget = window.cachedCAPAs[idx];
+  } else {
+    capaData.id = crypto.randomUUID();
+    window.cachedCAPAs.push(capaData);
+    capaTarget = capaData;
+  }
 
-      window.saveData();
+  const okSupa = await window.upsertCAPAEnSupabase(capaTarget);
+  if (!okSupa) return;
+
+  await window.saveData(true);
+  window.renderCAPAs();
+  window.toggleModal('modalCAPA', false);
+  window.logAudit('CAPA_GUARDADA', `Se registró/actualizó el CAPA ${capaTarget.consecutivo}`);
+};
+
+window.avanzarEstadoCAPA = async function(id) {
+  const capa = window.cachedCAPAs.find(c => c.id === id);
+  if (!capa) return;
+
+  const isAdmin = window.activeGxpUser.rolesIds.includes('rol_admin') || window.esAdminMaster(window.activeGxpUser);
+  if (!isAdmin) {
+    const esParticipante = capa.plan.some(a => {
+      const emp = window.cachedEmpleados.find(e => `${e.nombres} ${e.apellidos}` === a.responsable);
+      return emp && String(emp.id) === String(window.activeGxpUser.empleadoId);
+    });
+    if (!esParticipante) {
+      alert("⛔ Control GxP: Solo el Administrador o un participante del Plan de Acción pueden avanzar este CAPA.");
+      return;
+    }
+  }
+
+  if (capa.estado === 'En Ejecución') {
+    const total = capa.plan.length;
+    const comp = capa.plan.filter(a => a.estado === 'Completado').length;
+    if (comp < total) {
+      alert("⚠️ Debe completar todas las actividades del plan antes de cerrar operativamente.");
+      return;
+    }
+    capa.estado = 'En Evaluación de Efectividad';
+
+    document.getElementById('efecCapaId').value = capa.id;
+    document.getElementById('efecResultados').value = '';
+    const qaEmail = document.getElementById('efecQAEmail');
+    const qaPass = document.getElementById('efecQAPass');
+    if (qaEmail) qaEmail.value = '';
+    if (qaPass) qaPass.value = '';
+
+    window.toggleModal('modalEfectividad', true);
+    await window.upsertCAPAEnSupabase(capa);
+    await window.saveData(true);
+    window.renderCAPAs();
+  } else if (capa.estado === 'En Evaluación de Efectividad') {
+    document.getElementById('efecCapaId').value = capa.id;
+    document.getElementById('efecResultados').value = (capa.efectividad && capa.efectividad.resultados) || '';
+    const qaEmail = document.getElementById('efecQAEmail');
+    const qaPass = document.getElementById('efecQAPass');
+    if (qaEmail) qaEmail.value = '';
+    if (qaPass) qaPass.value = '';
+
+    window.toggleModal('modalEfectividad', true);
+  } else if (capa.estado === 'Cerrado Definitivo') {
+    alert("ℹ️ Este plan CAPA ya está Cerrado Definitivamente.");
+  } else {
+    const flujo = ['Borrador', 'En Análisis', 'Plan Aprobado', 'En Ejecución'];
+    const idx = flujo.indexOf(capa.estado);
+    if (idx >= 0 && idx < flujo.length - 1) {
+      capa.estado = flujo[idx + 1];
+      await window.upsertCAPAEnSupabase(capa);
+      await window.saveData(true);
       window.renderCAPAs();
-      window.toggleModal('modalCAPA', false);
-      window.logAudit('CAPA_GUARDADA', `Se registró/actualizó el CAPA ${capaData.consecutivo}`);
-    };
+      window.logAudit('CAPA_ESTADO', `CAPA ${capa.consecutivo} avanzó a ${capa.estado}`);
+    }
+  }
+};
 
+window.guardarEfectividad = async function() {
+  const capaId = document.getElementById('efecCapaId').value;
+  const capa = window.cachedCAPAs.find(c => c.id === capaId);
+  const emailQA = document.getElementById('efecQAEmail').value.trim();
+  const passQA = document.getElementById('efecQAPass').value.trim();
+  const resultados = document.getElementById('efecResultados').value.trim();
+
+  if (!resultados) { alert("Debe ingresar los resultados de la verificación."); return; }
+
+  const verifQA = await window.verificarCredencialGxP(emailQA, passQA);
+  if (!verifQA.ok) { alert(`⛔ ${verifQA.motivo}`); return; }
+  const userQA = verifQA.user;
+
+  const puedeAprobar = userQA.rolesIds.includes('rol_aprobador') || userQA.rolesIds.includes('rol_admin') || window.esAdminMaster(userQA);
+  if (!puedeAprobar) {
+    alert("⛔ Control GxP: El usuario no tiene el rol de 'Aprobador QA' para cerrar esta CAPA.");
+    return;
+  }
+
+  capa.efectividad = {
+    resultados: resultados,
+    conclusion: 'Efectivo y Verificado',
+    fecha: new Date().toISOString(),
+    firmadoPor: userQA.correo
+  };
+
+  capa.estado = 'Cerrado Definitivo';
+  capa.fechaCierre = new Date().toISOString().split('T')[0];
+
+  const nc = window.cachedNCs.find(n => String(n.id) === String(capa.ncId));
+  if (nc) {
+    nc.estado = 'Cerrado Definitivo';
+    nc.fechaCierre = capa.fechaCierre;
+    if (!nc.firmas || typeof nc.firmas !== 'object') nc.firmas = { elaborado: null, revisado: null, aprobado: null };
+    nc.firmas.aprobado = userQA.correo;
+    await window.upsertNCEnSupabase(nc);
+  }
+
+  await window.registrarFirmaPart11EnSupabase({
+    tabla: 'capas',
+    registroId: capa.id,
+    referenciaTexto: capa.consecutivo,
+    userObj: userQA,
+    significado: 'Cierre Definitivo CAPA (QA)',
+    justificacion: resultados
+  });
+
+  await window.upsertCAPAEnSupabase(capa);
+  await window.saveData(true);
+  window.renderCAPAs();
+  window.renderNCs();
+  window.toggleModal('modalEfectividad', false);
+  window.logAudit('CAPA_CIERRE_QA', `CAPA ${capa.consecutivo} cerrada definitivamente y firmada por QA: ${userQA.correo}`);
+};
     window.abrirModalEditarCAPA = function(id) {
       const capa = window.cachedCAPAs.find(c => c.id === id);
       if (!capa) return;
@@ -5430,116 +5569,6 @@ window.renderNCs = function() {
       }
 
       window.toggleModal('modalCAPA', true);
-    };
-        
-          window.avanzarEstadoCAPA = function(id) {
-      const capa = window.cachedCAPAs.find(c => c.id === id);
-      if (!capa) return;
-
-      const isAdmin = window.activeGxpUser.rolesIds.includes('rol_admin') || window.esAdminMaster(window.activeGxpUser);
-      if (!isAdmin) {
-         const esParticipante = capa.plan.some(a => {
-            const emp = window.cachedEmpleados.find(e => e.nombres + ' ' + e.apellidos === a.responsable);
-            return emp && emp.id === window.activeGxpUser.empleadoId;
-         });
-         if (!esParticipante) {
-            alert("⛔ Control GxP: Solo el Administrador o un participante del Plan de Acción pueden avanzar este CAPA.");
-            return;
-         }
-      }
-      
-      if (capa.estado === 'En Ejecución') {
-        const total = capa.plan.length;
-        const comp = capa.plan.filter(a => a.estado === 'Completado').length;
-        if (comp < total) {
-          alert("⚠️ Debe completar todas las actividades del plan antes de cerrar operativamente."); return;
-        }
-        capa.estado = 'En Evaluación de Efectividad';
-        
-        document.getElementById('efecCapaId').value = capa.id;
-        document.getElementById('efecResultados').value = '';
-        
-        // Limpiamos los campos de firma del QA
-        const qaEmail = document.getElementById('efecQAEmail');
-        const qaPass = document.getElementById('efecQAPass');
-        if (qaEmail) qaEmail.value = '';
-        if (qaPass) qaPass.value = '';
-
-        window.toggleModal('modalEfectividad', true);
-        window.saveData(); 
-        window.renderCAPAs();
-      } else if (capa.estado === 'En Evaluación de Efectividad') {
-        document.getElementById('efecCapaId').value = capa.id;
-        document.getElementById('efecResultados').value = (capa.efectividad && capa.efectividad.resultados) || '';
-
-        const qaEmail = document.getElementById('efecQAEmail');
-        const qaPass = document.getElementById('efecQAPass');
-        if (qaEmail) qaEmail.value = '';
-        if (qaPass) qaPass.value = '';
-
-        window.toggleModal('modalEfectividad', true);
-      } else if (capa.estado === 'Cerrado Definitivo') {
-        alert("ℹ️ Este plan CAPA ya está Cerrado Definitivamente.");
-      } else {
-        const flujo = ['Borrador', 'En Análisis', 'Plan Aprobado', 'En Ejecución'];
-        const idx = flujo.indexOf(capa.estado);
-        if (idx >= 0 && idx < flujo.length - 1) {
-          capa.estado = flujo[idx + 1];
-          window.saveData(); window.renderCAPAs();
-          window.logAudit('CAPA_ESTADO', `CAPA ${capa.consecutivo} avanzó a ${capa.estado}`);
-        }
-      }
-    };
-  
-          window.guardarEfectividad = async function() {
-      const capaId = document.getElementById('efecCapaId').value;
-      const capa = window.cachedCAPAs.find(c => c.id === capaId);
-      const emailQA = document.getElementById('efecQAEmail').value.trim();
-      const passQA = document.getElementById('efecQAPass').value.trim();
-      const resultados = document.getElementById('efecResultados').value;
-
-      if (!resultados) { alert("Debe ingresar los resultados de la verificación."); return; }
-
-      // Validar Credenciales del QA
-      const userQA = window.cachedUsuarios.find(u => u.correo.toLowerCase() === emailQA.toLowerCase() && u.password === passQA);
-      if (!userQA) { alert("⛔ Credenciales QA inválidas."); return; }
-
-      // Validar que tenga rol de aprobador o admin
-      const puedeAprobar = userQA.rolesIds.includes('rol_aprobador') || userQA.rolesIds.includes('rol_admin');
-      if (!puedeAprobar) {
-        alert("⛔ Control GxP: El usuario no tiene el rol de 'Aprobador QA' para cerrar esta CAPA.");
-        return;
-      }
-      
-      capa.efectividad = {
-        resultados: resultados,
-        conclusion: 'Efectivo y Verificado',
-        fecha: new Date().toISOString(),
-        firmadoPor: emailQA
-      };
-      
-      // Cierre Definitivo
-      capa.estado = 'Cerrado Definitivo';
-      const nc = window.cachedNCs.find(n => n.id === capa.ncId);
-      if (nc) {
-        nc.estado = 'Cerrado Definitivo';
-        // Registrar firma en la NC también
-        nc.firmas.aprobado = emailQA; 
-      }
-            await window.registrarFirmaPart11EnSupabase({
-        tabla: 'capas',
-        registroId: capa.id,
-        referenciaTexto: capa.consecutivo,
-        userObj: userQA,
-        significado: 'Cierre Definitivo CAPA (QA)',
-        justificacion: resultados
-      });
-      
-      window.saveData(); 
-      window.renderCAPAs(); 
-      window.renderNCs();
-      window.toggleModal('modalEfectividad', false);
-      window.logAudit('CAPA_CIERRE_QA', `CAPA ${capa.consecutivo} cerrada definitivamente y firmada por QA: ${emailQA}`);
     };
   
       window.abrirModalFirmaPart11NC = function(id) {
@@ -6071,16 +6100,16 @@ window.renderNCs = function() {
 
       // Dibujar logs
       list.innerHTML = filteredLogs.map(log => `
-        <div class="p-2 border-b hover:bg-slate-50 flex justify-between transition">
-          <div>
-            <span class="text-slate-400 text-[10px] mr-2">[${new Date(log.fecha).toLocaleString()}]</span>
-            <span class="font-bold text-cyan-700">${log.usuario}</span> 
-            <span class="mx-1">➔</span>
-            <span class="font-bold text-slate-700">${log.accion}</span>: 
-            <span class="text-slate-600">${log.detalle}</span>
-          </div>
-        </div>
-      `).join('');
+  <div class="p-2 border-b hover:bg-slate-50 flex justify-between transition">
+    <div>
+      <span class="text-slate-400 text-[10px] mr-2">[${window.formatearFechaAudit(log.fecha)}]</span>
+      <span class="font-bold text-cyan-700">${log.usuario}</span> 
+      <span class="mx-1">➔</span>
+      <span class="font-bold text-slate-700">${log.accion}</span>: 
+      <span class="text-slate-600">${log.detalle}</span>
+    </div>
+  </div>
+`).join('');
     };
 
           // ==========================================
@@ -6138,7 +6167,7 @@ window.renderNCs = function() {
       window.toggleModal('modalNuevoTicket', true);
     };
 
-        window.guardarTicket = function() {
+        window.guardarTicket = async function() {
       const idEdit = document.getElementById('editTktId').value;
       const tipo = document.getElementById('tktTipoSelect').value;
       const itemId = document.getElementById('tktItemSelect').value;
@@ -6188,7 +6217,7 @@ window.renderNCs = function() {
         window.logAudit('TICKET_CREADO', `Ticket ${consecutivo} creado y asignado a ${nombreTecnico}`);
       }
 
-      window.saveData();
+      await window.saveData(true);
       window.renderTickets();
       if(window.renderNotificaciones) window.renderNotificaciones(); 
       window.toggleModal('modalNuevoTicket', false);
@@ -6258,42 +6287,43 @@ window.renderNCs = function() {
     };
 
     window.guardarCierreTicket = async function() {
-      const id = document.getElementById('cerrarTktId').value;
-      const solucion = document.getElementById('tktSolucion').value.trim();
-      const email = document.getElementById('tktEmailTecnico').value.trim();
-      const pass = document.getElementById('tktPassTecnico').value.trim();
+  const id = document.getElementById('cerrarTktId').value;
+  const solucion = document.getElementById('tktSolucion').value.trim();
+  const email = document.getElementById('tktEmailTecnico').value.trim();
+  const pass = document.getElementById('tktPassTecnico').value.trim();
 
-      if (!solucion) { alert("Debe ingresar la solución."); return; }
+  if (!solucion) { alert("Debe ingresar la solución."); return; }
 
-      const user = window.cachedUsuarios.find(u => u.correo.toLowerCase() === email.toLowerCase() && u.password === pass);
-      if (!user) { alert("⛔ Credenciales inválidas."); return; }
+  const verif = await window.verificarCredencialGxP(email, pass);
+  if (!verif.ok) { alert(`⛔ ${verif.motivo}`); return; }
+  const user = verif.user;
 
-      const tkt = window.cachedTicketsMantenimiento.find(t => t.id === id);
-      if (!tkt) return;
+  const tkt = window.cachedTicketsMantenimiento.find(t => t.id === id);
+  if (!tkt) return;
 
-      tkt.estado = 'Cerrado';
-      tkt.fechaCierre = new Date().toISOString();
-      tkt.solucion = solucion;
-      tkt.firmaTecnico = email;
-      
-      const emp = window.cachedEmpleados.find(e => e.correo === email);
-      tkt.tecnicoAsignado = emp ? `${emp.nombres} ${emp.apellidos}` : email;
-      
-      await window.registrarFirmaPart11EnSupabase({
-        tabla: 'tickets_mantenimiento',
-        registroId: tkt.id,
-        referenciaTexto: tkt.consecutivo,
-        userObj: user,
-        significado: 'Cierre Técnico Mantenimiento',
-        justificacion: solucion
-      });
+  tkt.estado = 'Cerrado';
+  tkt.fechaCierre = new Date().toISOString();
+  tkt.solucion = solucion;
+  tkt.firmaTecnico = user.correo;
 
-      window.saveData();
-      window.renderTickets();
-      if(window.renderNotificaciones) window.renderNotificaciones();
-      window.toggleModal('modalCerrarTicket', false);
-      window.logAudit('TICKET_CERRADO', `Ticket ${tkt.consecutivo} cerrado y firmado por ${email}`);
-    };
+  const emp = window.cachedEmpleados.find(e => (e.correo || '').toLowerCase() === user.correo.toLowerCase());
+  tkt.tecnicoAsignado = emp ? `${emp.nombres} ${emp.apellidos}` : user.correo;
+
+  await window.registrarFirmaPart11EnSupabase({
+    tabla: 'tickets_mantenimiento',
+    registroId: tkt.id,
+    referenciaTexto: tkt.consecutivo,
+    userObj: user,
+    significado: 'Cierre Técnico Mantenimiento',
+    justificacion: solucion
+  });
+
+  await window.saveData(true);
+  window.renderTickets();
+  if (window.renderNotificaciones) window.renderNotificaciones();
+  window.toggleModal('modalCerrarTicket', false);
+  window.logAudit('TICKET_CERRADO', `Ticket ${tkt.consecutivo} cerrado y firmado por ${user.correo}`);
+};
       
     </script>
   </body>
