@@ -2277,11 +2277,11 @@
           };
           if (window.esUUID(areaObj._uuid)) payload.id = areaObj._uuid;
 
-          const res = await fetch(`${SUPABASE_URL}/rest/v1/areas?on_conflict=codigo`, {
-            method: 'POST',
-            headers: { ...HEADERS, 'Prefer': 'resolution=merge-duplicates,return=representation' },
-            body: JSON.stringify(payload)
-          });
+          const resAreas = await fetch(`${SUPABASE_URL}/rest/v1/areas?on_conflict=id`, {
+  method: 'POST',
+  headers: { ...HEADERS, 'Prefer': 'resolution=merge-duplicates,return=representation' },
+  body: JSON.stringify(payloadAreas)
+});
           if (res.ok) {
             const rows = await res.json();
             if (rows && rows[0]) {
@@ -3313,7 +3313,7 @@ window.upsertNCEnSupabase = async function(nc) {
           usrData.password = '';
         }
         window.registrarAuditTrail(usrData.correo, 'LOGIN', 'Inicio de sesión exitoso (21 CFR Part 11).');
-        await window.saveData(true);
+     window.saveData(false); // Persiste erp_state en segundo plano sin congelar la transición de pantalla
 
         document.getElementById('view-login').classList.add('hidden');
         document.getElementById('app-portal').classList.remove('hidden');
