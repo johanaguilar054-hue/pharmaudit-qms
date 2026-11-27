@@ -3258,15 +3258,12 @@ window.upsertNCEnSupabase = async function(nc) {
         try {
           if (window.activeGxpUser) {
             const correo = window.activeGxpUser.correo || 'usuario@pharmor.com.co';
-            const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 19);
-            window.auditTrailLogs.unshift({
-              fecha: timestamp,
-              usuario: correo,
-              accion: 'LOGOUT',
-              detalle: 'Cierre de sesión manual por el usuario.'
-            });
-            await window.insertarAuditTrailEnSupabase(correo, 'LOGOUT', 'Cierre de sesión manual por el usuario.');
-            await window.saveData(true);
+            const resAudit = window.registrarAuditTrail(correo, 'LOGOUT', 'Cierre de sesión manual por el usuario.');
+            if (resAudit && typeof resAudit.then === 'function') {
+              await resAudit;
+            } else {
+              await new Promise(resolve => setTimeout(resolve, 400));
+            }
           }
         } catch (e) {
           console.warn('Error registrando LOGOUT en Audit Trail:', e);
