@@ -2309,14 +2309,16 @@
             if (areaFound) areaUuid = await window.upsertAreaEnSupabase(areaFound);
           }
 
-          const payload = {
+         const payload = {
             codigo: code,
             nombre: String(procObj.nombre || 'Proceso GxP').substring(0, 150),
             area_id: window.esUUID(areaUuid) ? areaUuid : null
           };
-          if (window.esUUID(procObj._uuid)) payload.id = procObj._uuid;
+          const tieneUuid = window.esUUID(procObj._uuid);
+          if (tieneUuid) payload.id = procObj._uuid;
+          const conflictCol = tieneUuid ? 'id' : 'codigo';
 
-          const res = await fetch(`${SUPABASE_URL}/rest/v1/procesos?on_conflict=codigo`, {
+          const res = await fetch(`${SUPABASE_URL}/rest/v1/procesos?on_conflict=${conflictCol}`, {
             method: 'POST',
             headers: { ...HEADERS, 'Prefer': 'resolution=merge-duplicates,return=representation' },
             body: JSON.stringify(payload)
@@ -2369,7 +2371,7 @@
             fecha_vigencia: doc.fechaVenc || null,
             archivo_url: doc.archivo_url || null,
             creado_por: String(doc.creado_por || window.activeGxpUser?.correo || 'Johan Aguilar').substring(0, 100),
-            justificacion_cambio: doc.justificacion_cambio || null,
+            justificacion_cambio: doc.justificacion_cambio || doc.motivo_cambio || null,
             es_version_actual: doc.estado === 'VIGENTE'
           };
 
@@ -2504,11 +2506,11 @@
             }
           }
 
-          // 3. DOCUMENTOS
+        // 3. DOCUMENTOS
           if (resDocs.ok) {
             const rowsDocs = await resDocs.json();
             if (Array.isArray(rowsDocs) && rowsDocs.length > 0) {
-              window.cachedDocs = rowsDocs.map(r => ({
+              const todosDocs = rowsDocs.map(r => ({
                 id: r.id,
                 codigo: r.codigo,
                 titulo: r.titulo,
@@ -2522,8 +2524,11 @@
                 fechaVenc: r.fecha_vigencia || '',
                 archivo_url: r.archivo_url || '',
                 creado_por: r.creado_por || '',
-                justificacion_cambio: r.justificacion_cambio || ''
+                justificacion_cambio: r.justificacion_cambio || '',
+                motivo_cambio: r.justificacion_cambio || 'Reemplazado por nueva versión'
               }));
+              window.cachedDocs = todosDocs.filter(d => (d.estado || '').toUpperCase() !== 'OBSOLETO');
+              window.cachedObsoletos = todosDocs.filter(d => (d.estado || '').toUpperCase() === 'OBSOLETO');
             } else if ((window.cachedDocs || []).length > 0) {
               for (const d of window.cachedDocs) {
                 await window.upsertDocumentoEnSupabase(d);
@@ -4782,6 +4787,29 @@ if (elEqps) elEqps.innerText = (window.cachedEquipos || []).filter(e => (e.estad
         if(significado !== 'Autorización Final de Versión Vigente') { alert("⛔ Control GxP: El significado de la firma debe ser 'Autorización Final de Versión Vigente'."); return; }
         doc.fase = 'Aprobado'; 
         doc.estado = 'VIGENTE';
+
+        // Obsolescer automáticamente versiones vigentes anteriores del mismo código
+        const prevVigentes = window.cachedDocs.filter(d => d.codigo === doc.codigo && d.id !== doc.id && d.estado === 'VIGENTE');
+        for (const prevDoc of prevVigentes) {
+          prevDoc.estado = 'OBSOLETO';
+          prevDoc.fase = 'Obsoleto';
+          prevDoc.motivo_cambio = doc.motivo_cambio || doc.justificacion_cambio || `Reemplazado por versión ${doc.version}`;
+          window.cachedDocs = window.cachedDocs.filter(d => d.id !== prevDoc.id);
+          window.cachedObsoletos.unshift(prevDoc);
+          await window.upsertDocumentoEnSupabase(prevDoc);
+
+          // Marcar como obsoletas las copias controladas activas de la versión anterior
+          const copiasPrevias = (window.cachedCopiasControladas || []).filter(c =>
+            (c.docId === prevDoc.id || (c.docCodigo === prevDoc.codigo && c.docVersion === prevDoc.version)) &&
+            (c.estado || 'Activa').toLowerCase() === 'activa'
+          );
+          for (const cp of copiasPrevias) {
+            cp.estado = 'Obsoleta';
+            cp.fechaConciliacion = new Date().toISOString();
+            cp.observacionConciliacion = `Retiro automático por entrada en vigencia de ${doc.codigo} v${doc.version}`;
+            await window.upsertCopiaControladaEnSupabase(cp);
+          }
+        }
       }
 
        await window.registrarFirmaPart11EnSupabase({
@@ -4903,11 +4931,24 @@ if (elEqps) elEqps.innerText = (window.cachedEquipos || []).filter(e => (e.estad
   
       window.abrirModalUpdateData = function() {
         if(!window.activeGxpUser) return;
-        const emp = window.cachedEmpleados.find(e => e.id === window.activeGxpUser.empleadoId);
+        const emp = window.cachedEmpleados.find(e => String(e.id) === String(window.activeGxpUser.empleadoId));
         if(emp) { 
           document.getElementById('myAvatar').value = ''; 
           document.getElementById('myNombres').value = emp.nombres; 
           document.getElementById('myApellidos').value = emp.apellidos; 
+          const img = document.getElementById('avatarPreviewImg');
+          const icon = document.getElementById('avatarPreviewIcon');
+          if (img && icon) {
+            if (emp.avatar) {
+              img.src = emp.avatar;
+              img.classList.remove('hidden');
+              icon.classList.add('hidden');
+            } else {
+              img.src = '';
+              img.classList.add('hidden');
+              icon.classList.remove('hidden');
+            }
+          }
           window.toggleModal('modalUpdateData', true); 
         }
       };
@@ -5563,6 +5604,145 @@ window.guardarEfectividad = async function() {
   window.toggleModal('modalEfectividad', false);
   window.logAudit('CAPA_CIERRE_QA', `CAPA ${capa.consecutivo} cerrada definitivamente y firmada por QA: ${userQA.correo}`);
 };
+    window.agregarActividadPlan = function(actData = null) {
+      const container = document.getElementById('contenedorPlanAccion');
+      if (!container) return;
+
+      const actId = (actData && actData.id) ? actData.id : `act_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+      const actDesc = (actData && actData.actividad) ? actData.actividad : '';
+      const actResp = (actData && actData.responsable) ? actData.responsable : '';
+      const defaultFecha = new Date(Date.now() + 15 * 86400000).toISOString().split('T')[0];
+      const actFecha = (actData && actData.fecha) ? actData.fecha : defaultFecha;
+      const actEstado = (actData && actData.estado) ? actData.estado : 'Pendiente';
+
+      const opcionesEmpleados = (window.cachedEmpleados || []).map(e => {
+        const nombreComp = `${e.nombres} ${e.apellidos}`.trim();
+        const selected = nombreComp.toLowerCase() === actResp.trim().toLowerCase() ? 'selected' : '';
+        return `<option value="${nombreComp}" ${selected}>${nombreComp}</option>`;
+      }).join('');
+
+      const row = document.createElement('div');
+      row.className = 'grid grid-cols-1 md:grid-cols-12 gap-2 items-center bg-white p-2 rounded border border-slate-200';
+      row.innerHTML = `
+        <input type="hidden" class="act-id" value="${actId}" />
+        <div class="md:col-span-5">
+          <input type="text" class="act-desc w-full p-1.5 border rounded text-xs" placeholder="Descripción de la actividad..." value="${actDesc.replace(/"/g, '&quot;')}" />
+        </div>
+        <div class="md:col-span-3">
+          <select class="act-resp w-full p-1.5 border rounded text-xs bg-slate-50">${opcionesEmpleados}</select>
+        </div>
+        <div class="md:col-span-2">
+          <input type="date" class="act-fecha w-full p-1.5 border rounded font-mono text-[11px]" value="${actFecha}" />
+        </div>
+        <div class="md:col-span-2 flex items-center space-x-1">
+          <select class="act-estado w-full p-1.5 border rounded text-[11px] font-bold">
+            <option value="Pendiente" ${actEstado === 'Pendiente' ? 'selected' : ''}>Pendiente</option>
+            <option value="Completado" ${actEstado === 'Completado' ? 'selected' : ''}>Completado</option>
+          </select>
+          <button type="button" onclick="this.closest('div.grid').remove()" class="text-rose-500 hover:text-rose-700 font-bold px-1 cursor-pointer" title="Eliminar fila">✕</button>
+        </div>
+      `;
+      container.appendChild(row);
+    };
+
+    window.abrirModalNuevaCAPA = function() {
+      document.getElementById('modalCAPATitle').innerText = '☑️ Crear Nuevo Plan CAPA';
+      document.getElementById('capaEditId').value = '';
+      document.getElementById('capaConsecutivo').value = window.generarConsecutivo('CAPA', window.cachedCAPAs);
+
+      const selNC = document.getElementById('capaNCSelect');
+      const ncsVisibles = (window.cachedNCs || []).filter(n => window.usuarioPuedeVerNC(n));
+      if (selNC) {
+        selNC.innerHTML = ncsVisibles.length
+          ? ncsVisibles.map(n => {
+              const desc = n.descripcion ? n.descripcion.substring(0, 35) : 'Sin descripción';
+              return `<option value="${n.id}">${n.consecutivo || 'S/N'} - ${desc}...</option>`;
+            }).join('')
+          : `<option value="">-- No hay NC disponibles --</option>`;
+      }
+
+      document.getElementById('capaMetodologia').value = '5 Porqués';
+      document.getElementById('capaAnalisis').value = '';
+
+      const container = document.getElementById('contenedorPlanAccion');
+      if (container) {
+        container.innerHTML = '';
+        window.agregarActividadPlan();
+      }
+
+      window.toggleModal('modalCAPA', true);
+    };
+
+    window.verDetalleCAPA = function(id) {
+      const capa = (window.cachedCAPAs || []).find(c => String(c.id) === String(id));
+      if (!capa) return;
+
+      if (!window.usuarioPuedeVerCAPA(capa)) {
+        alert("⛔ Control GxP: No tiene permisos para consultar este Plan CAPA.");
+        return;
+      }
+
+      const nc = (window.cachedNCs || []).find(n => String(n.id) === String(capa.ncId));
+      const ncStr = nc ? `${nc.consecutivo} (${nc.criticidad})` : (capa.ncConsecutivo || 'N/A');
+
+      const filasPlan = (capa.plan || []).map((act, idx) => {
+        const esComp = act.estado === 'Completado';
+        const btnAccion = esComp
+          ? `<span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-[10px] font-bold">✅ Completado</span>`
+          : `<button type="button" onclick="window.completarActividadCAPA('${capa.id}', '${act.id}')" class="bg-purple-600 hover:bg-purple-700 text-white px-2 py-0.5 rounded text-[10px] font-bold cursor-pointer">✔ Marcar Completada</button>`;
+
+        return `
+          <tr class="border-b hover:bg-slate-50">
+            <td class="p-1.5 border text-center font-mono">${idx + 1}</td>
+            <td class="p-1.5 border">${act.actividad}</td>
+            <td class="p-1.5 border font-semibold">${act.responsable}</td>
+            <td class="p-1.5 border font-mono">${act.fecha || 'N/A'}</td>
+            <td class="p-1.5 border text-center">${btnAccion}</td>
+          </tr>
+        `;
+      }).join('');
+
+      const bloqueEfectividad = capa.efectividad ? `
+        <div class="p-3 rounded-lg border border-cyan-200 bg-cyan-50/70 space-y-1">
+          <div class="font-bold text-cyan-900">📊 Evaluación de Efectividad y Cierre QA</div>
+          <p><strong>Resultados:</strong> ${capa.efectividad.resultados}</p>
+          <p><strong>Conclusión:</strong> ${capa.efectividad.conclusion} | <strong>Firmado QA:</strong> <span class="font-mono">${capa.efectividad.firmadoPor}</span></p>
+        </div>
+      ` : '';
+
+      document.getElementById('viewCAPATitle').innerText = `Detalle CAPA: ${capa.consecutivo}`;
+      document.getElementById('viewCAPABody').innerHTML = `
+        <div class="grid grid-cols-2 gap-2 bg-purple-50/60 p-3 rounded-lg border border-purple-200">
+          <div><strong>Consecutivo CAPA:</strong> <span class="font-mono font-bold text-purple-900">${capa.consecutivo}</span></div>
+          <div><strong>NC Asociada:</strong> <span class="font-mono">${ncStr}</span></div>
+          <div><strong>Metodología Causa Raíz:</strong> ${capa.metodologia || '5 Porqués'}</div>
+          <div><strong>Estado Actual:</strong> <span class="bg-purple-800 text-white px-2 py-0.5 rounded text-[10px] font-bold">${capa.estado}</span></div>
+        </div>
+        <div class="p-2.5 border rounded bg-slate-50">
+          <strong>Análisis de Causa Raíz:</strong>
+          <p class="mt-1 text-slate-700">${capa.analisis || 'N/A'}</p>
+        </div>
+        <div class="space-y-1">
+          <strong class="text-purple-900">Plan de Acción (${(capa.plan || []).length} actividades):</strong>
+          <table class="w-full border-collapse text-left text-[11px] bg-white">
+            <thead>
+              <tr class="bg-slate-100 border font-bold">
+                <th class="p-1.5 border text-center w-8">#</th>
+                <th class="p-1.5 border">Actividad</th>
+                <th class="p-1.5 border">Responsable</th>
+                <th class="p-1.5 border">Fecha Límite</th>
+                <th class="p-1.5 border text-center">Estado / Ejecución</th>
+              </tr>
+            </thead>
+            <tbody>${filasPlan || '<tr><td colspan="5" class="p-2 text-center text-slate-400">Sin actividades</td></tr>'}</tbody>
+          </table>
+        </div>
+        ${bloqueEfectividad}
+      `;
+
+      window.toggleModal('modalVerDetalleCAPA', true);
+    };
+
     window.abrirModalEditarCAPA = function(id) {
       const capa = window.cachedCAPAs.find(c => c.id === id);
       if (!capa) return;
@@ -5596,7 +5776,132 @@ window.guardarEfectividad = async function() {
       window.toggleModal('modalCAPA', true);
     };
   
-      window.abrirModalFirmaPart11NC = function(id) {
+     window.abrirModalEditarNC = function(id) {
+  const nc = (window.cachedNCs || []).find(n => String(n.id) === String(id));
+  if (!nc) return;
+
+  if (!window.usuarioPuedeVerNC(nc)) {
+    alert("⛔ Control GxP: No tiene permisos para editar esta No Conformidad.");
+    return;
+  }
+
+  document.getElementById('modalNCTitle').innerText = `✏️ Editar No Conformidad: ${nc.consecutivo}`;
+  document.getElementById('ncEditId').value = nc.id;
+  document.getElementById('ncConsecutivo').value = nc.consecutivo || '';
+  document.getElementById('ncFecha').value = nc.fecha || new Date().toISOString().split('T')[0];
+
+  const selProc = document.getElementById('ncProcesoOrigen');
+  selProc.innerHTML = (window.cachedProcesos || []).map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
+  if (nc.procesoId) selProc.value = nc.procesoId;
+
+  const selResp = document.getElementById('ncResponsable');
+  selResp.innerHTML = (window.cachedEmpleados || []).map(e => `<option value="${e.id}">${e.nombres} ${e.apellidos}</option>`).join('');
+  if (nc.responsableId) selResp.value = nc.responsableId;
+
+  document.getElementById('ncFuente').value = nc.fuente || 'Auditoría Interna';
+  document.getElementById('ncReincidencia').value = nc.reincidencia || 'No';
+  document.getElementById('ncDescripcion').value = nc.descripcion || '';
+  document.getElementById('ncAlcance').value = nc.alcance || '';
+  document.getElementById('ncImpacto').value = nc.impacto || '';
+  document.getElementById('ncCriticidad').value = nc.criticidad || 'Mayor';
+  document.getElementById('ncCorreccion').value = nc.correccion || '';
+
+  window.toggleModal('modalNC', true);
+};
+
+window.verDetalleNC = function(id) {
+  const nc = (window.cachedNCs || []).find(n => String(n.id) === String(id));
+  if (!nc) return;
+
+  if (!window.usuarioPuedeVerNC(nc)) {
+    alert("⛔ Control GxP: No tiene autorización para consultar esta No Conformidad.");
+    return;
+  }
+
+  const proc = (window.cachedProcesos || []).find(p => String(p.id) === String(nc.procesoId))?.nombre || nc.procesoId || 'N/A';
+  const resp = (window.cachedEmpleados || []).find(e => String(e.id) === String(nc.responsableId));
+  const respName = resp ? `${resp.nombres} ${resp.apellidos}` : (nc.responsable || 'N/A');
+  const firmas = nc.firmas || {};
+
+  document.getElementById('viewNCTitle').innerText = `Detalle NC: ${nc.consecutivo}`;
+  document.getElementById('viewNCBody').innerHTML = `
+    <div class="grid grid-cols-2 gap-2 bg-amber-50/60 p-3 rounded-lg border border-amber-200">
+      <div><strong>Consecutivo:</strong> <span class="font-mono text-amber-800 font-bold">${nc.consecutivo}</span></div>
+      <div><strong>Fecha Identificación:</strong> <span class="font-mono">${nc.fecha || 'N/A'}</span></div>
+      <div><strong>Proceso Origen:</strong> ${proc}</div>
+      <div><strong>Responsable:</strong> ${respName}</div>
+      <div><strong>Fuente:</strong> ${nc.fuente || 'N/A'}</div>
+      <div><strong>Criticidad:</strong> <span class="font-bold">${nc.criticidad}</span> | <strong>Reincidencia:</strong> ${nc.reincidencia || 'No'}</div>
+      <div class="col-span-2"><strong>Estado Actual:</strong> <span class="bg-slate-800 text-white px-2 py-0.5 rounded text-[10px] font-bold">${nc.estado}</span></div>
+    </div>
+    <div class="space-y-2">
+      <div class="p-2.5 border rounded bg-slate-50"><strong>1. Descripción del Hallazgo:</strong><p class="mt-1 text-slate-700">${nc.descripcion || 'N/A'}</p></div>
+      <div class="p-2.5 border rounded bg-slate-50"><strong>2. Delimitación de Alcance:</strong><p class="mt-1 text-slate-700">${nc.alcance || 'N/A'}</p></div>
+      <div class="p-2.5 border rounded bg-slate-50"><strong>3. Evaluación de Impacto:</strong><p class="mt-1 text-slate-700">${nc.impacto || 'No evaluado'}</p></div>
+      <div class="p-2.5 border rounded bg-slate-50"><strong>4. Corrección Inmediata (Contención):</strong><p class="mt-1 text-slate-700">${nc.correccion || 'N/A'}</p></div>
+    </div>
+    <div class="grid grid-cols-3 gap-2 pt-2 border-t text-center text-[11px]">
+      <div class="p-2 bg-slate-50 rounded border"><strong>Elaborado:</strong><br><span class="font-mono text-cyan-800">${firmas.elaborado || 'Pendiente'}</span></div>
+      <div class="p-2 bg-slate-50 rounded border"><strong>Revisado:</strong><br><span class="font-mono text-cyan-800">${firmas.revisado || 'Pendiente'}</span></div>
+      <div class="p-2 bg-slate-50 rounded border"><strong>Aprobado:</strong><br><span class="font-mono text-cyan-800">${firmas.aprobado || 'Pendiente'}</span></div>
+    </div>
+  `;
+
+  window.toggleModal('modalVerDetalleNC', true);
+};
+
+window.avanzarEstadoNC = async function(id) {
+  const nc = (window.cachedNCs || []).find(n => String(n.id) === String(id));
+  if (!nc) return;
+
+  if (!window.usuarioPuedeVerNC(nc)) {
+    alert("⛔ Control GxP: No tiene permisos sobre esta No Conformidad.");
+    return;
+  }
+
+  if (nc.estado === 'Cerrado Definitivo') {
+    alert("ℹ️ Esta No Conformidad ya se encuentra en estado Cerrado Definitivo.");
+    return;
+  }
+
+  const firmas = nc.firmas || {};
+  if (nc.estado === 'Borrador' && !firmas.elaborado) {
+    alert("⛔ Control 21 CFR Part 11: Debe aplicar primero la firma de 'Creación / Edición' (botón ✍️) antes de avanzar a En Análisis.");
+    return;
+  }
+  if (nc.estado === 'En Análisis' && !firmas.revisado) {
+    alert("⛔ Control 21 CFR Part 11: Se requiere la firma de 'Revisión Técnica' (botón ✍️) antes de aprobar el plan.");
+    return;
+  }
+  if (nc.estado === 'En Evaluación de Efectividad' && !firmas.aprobado) {
+    alert("⛔ Control 21 CFR Part 11: Se requiere la firma de 'Aprobación' (botón ✍️) por QA/Aprobador para el Cierre Definitivo.");
+    return;
+  }
+
+  const flujo = [
+    'Borrador',
+    'En Análisis',
+    'Plan Aprobado',
+    'En Ejecución',
+    'Cerrado Operativo',
+    'En Evaluación de Efectividad',
+    'Cerrado Definitivo'
+  ];
+
+  const idx = flujo.indexOf(nc.estado);
+  if (idx >= 0 && idx < flujo.length - 1) {
+    nc.estado = flujo[idx + 1];
+    if (nc.estado === 'Cerrado Definitivo') {
+      nc.fechaCierre = new Date().toISOString().split('T')[0];
+    }
+    await window.upsertNCEnSupabase(nc);
+    await window.saveData(true);
+    window.renderNCs();
+    window.logAudit('NC_ESTADO', `NC ${nc.consecutivo} avanzó al estado: ${nc.estado}`);
+  }
+};
+
+window.abrirModalFirmaPart11NC = function(id) {
   const nc = window.cachedNCs.find(n => String(n.id) === String(id));
   if (!nc) return;
   if (!nc.firmas || typeof nc.firmas !== 'object') {
